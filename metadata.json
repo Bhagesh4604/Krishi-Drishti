@@ -1,0 +1,9 @@
+{
+  "name": "Krishi-Drishti",
+  "description": "A comprehensive agricultural companion for farmers featuring AI disease diagnosis, satellite farm monitoring, expert chat, and market insights.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
