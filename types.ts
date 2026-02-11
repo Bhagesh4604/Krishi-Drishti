@@ -1,5 +1,5 @@
 
-export type Screen = 'auth' | 'profile' | 'home' | 'chat' | 'vision' | 'vision-result' | 'map' | 'market' | 'market-detail' | 'finance' | 'forecast' | 'live-audio' | 'carbon-vault' | 'scheme-setu' | 'crop-stress';
+export type Screen = 'landing' | 'auth' | 'profile' | 'home' | 'chat' | 'vision' | 'vision-result' | 'map' | 'market' | 'market-detail' | 'finance' | 'forecast' | 'live-audio' | 'carbon-vault' | 'scheme-setu' | 'crop-stress' | 'social' | 'globe' | 'contracts';
 
 export type Language = 'en' | 'hi' | 'mr' | 'bn' | 'te' | 'ta' | 'pa' | 'kn';
 
@@ -8,12 +8,13 @@ export type VisionMode = 'diagnosis' | 'grading' | 'verify-qr';
 export interface UserProfile {
   name: string;
   district: string;
-  crops: string[];
+  crops?: string | string[];
   language?: Language;
-  landSize?: number; // Acres
-  trustScore?: number;
+  land_size?: number; // Acres
+  trust_score?: number;
   category?: 'General' | 'OBC' | 'SC' | 'ST';
-  farmingType?: 'Organic' | 'Conventional' | 'Mixed';
+  farming_type?: 'Organic' | 'Conventional' | 'Mixed';
+  location?: { lat: number; lng: number };
 }
 
 export interface ChatMessage {

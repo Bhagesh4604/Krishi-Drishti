@@ -1,0 +1,15 @@
+{
+    "name": "Krishi-Drishti",
+    "short_name": "Krishi",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#16a34a",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml"
+        }
+    ]
+}

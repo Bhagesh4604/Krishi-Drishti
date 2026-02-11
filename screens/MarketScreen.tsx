@@ -55,9 +55,41 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
   const [sortBy, setSortBy] = useState<'distance' | 'grade'>('distance');
   const recognitionRef = useRef<any>(null);
 
-  // Mock Land Size for Volume-Lock (2 Acres)
-  const VERIFIED_LAND_ACRES = 2;
-  const ESTIMATED_MAX_QUOTA = 10000;
+  // Use real land size from Profile if available, else default to 2
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // GPS State
+  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
+
+  useEffect(() => {
+    // 1. Fetch user profile for Land Size
+    const loadUser = async () => {
+      try {
+        const { userService } = await import('../src/services/api');
+        const p = await userService.getProfile();
+        setUserProfile(p);
+      } catch (e) { }
+    }
+    loadUser();
+
+    // 2. Get GPS Location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error("Error getting location", error);
+        }
+      );
+    }
+  }, []);
+
+  const VERIFIED_LAND_ACRES = userProfile?.land_size || 2.5;
+  const ESTIMATED_MAX_QUOTA = VERIFIED_LAND_ACRES * 5000; // 5000kg per acre assumption
 
   const [newListing, setNewListing] = useState({
     crop: '',
@@ -93,15 +125,18 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
     });
   }, [listings, tab, searchQuery, sortBy]);
 
-  // Load listings on mount
+  // Load listings on mount or when location changes
   useEffect(() => {
     fetchListings();
-  }, []);
+  }, [location]);
 
   const fetchListings = async () => {
     try {
       setLoading(true);
-      const data = await marketService.getListings();
+      const data = await marketService.getListings({
+        lat: location?.lat,
+        lng: location?.lng
+      });
       setListings(data);
     } catch (e) {
       console.error("Failed to load listings", e);
@@ -197,7 +232,7 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
     setIsSearchingPrice(true);
     setLivePrice(null);
     try {
-      const result = await marketService.checkPrice(searchQuery);
+      const result = await marketService.checkPrice(searchQuery, location?.lat, location?.lng);
       setLivePrice({
         text: result.text || "Price data unavailable.",
         urls: [] // Backend might not return URLs yet, or we need to parse them.

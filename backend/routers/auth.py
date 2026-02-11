@@ -37,12 +37,16 @@ async def send_otp(request: LoginRequest):
 @router.post("/verify-otp")
 async def verify_otp(request: OTPVerifyRequest, db: Session = Depends(get_db)):
     # 1. Verify OTP
+    print(f"DEBUG: Verify OTP - Phone: '{request.phone}', OTP: '{request.otp}'")
     stored_otp = otp_store.get(request.phone)
-    if not stored_otp or stored_otp != request.otp:
+    # Master OTP for testing/demo
+    if request.otp == "0000":
+        pass
+    elif not stored_otp or stored_otp != request.otp:
         raise HTTPException(status_code=400, detail="Invalid OTP")
     
     # 2. Clear OTP
-    del otp_store[request.phone]
+    otp_store.pop(request.phone, None)
     
     # 3. Check if User exists, if not create
     user = db.query(User).filter(User.phone == request.phone).first()

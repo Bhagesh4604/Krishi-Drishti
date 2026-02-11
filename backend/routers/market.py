@@ -28,6 +28,8 @@ class ListingResponse(BaseModel):
     is_organic: bool
     grade: str
     seller_name: Optional[str] = None
+    seller_phone: Optional[str] = None
+    seller_district: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -50,6 +52,8 @@ async def get_listings(
     for l in listings:
         resp = ListingResponse.model_validate(l)
         resp.seller_name = l.seller.name if l.seller else "Unknown"
+        resp.seller_phone = l.seller.phone if l.seller else None
+        resp.seller_district = l.seller.district if l.seller else None
         results.append(resp)
     return results
 
@@ -67,6 +71,8 @@ async def create_listing(
         
         resp = ListingResponse.model_validate(db_listing)
         resp.seller_name = current_user.name
+        resp.seller_phone = current_user.phone
+        resp.seller_district = current_user.district
         return resp
     except Exception as e:
         import traceback
@@ -74,20 +80,20 @@ async def create_listing(
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @router.get("/price-check")
-async def check_price(query: str):
+async def check_price(query: str, lat: Optional[float] = None, lng: Optional[float] = None):
     api_key = os.getenv("GEMINI_API_KEY")
-    if notQUery: return {"error": "Query required"}
+    if not query: return {"error": "Query required"}
     
     # Use Gemini with Google Search Tool
     genai.configure(api_key=api_key)
     
-    # In a real app, define the tool. 
-    # For now, we simulate the output text generation which would ideally use the tool.
-    # Note: genai python sdk 'google_search_retrieval' might need specific config.
+    location_context = ""
+    if lat and lng:
+        location_context = f"near coordinates {lat}, {lng}"
     
     model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content(
-        f"What is the current market price of {query} in Indian mandis? Provide a concise summary with prices.",
+        f"What is the current market price of {query} in Indian mandis {location_context}? Provide a concise summary with prices specific to the nearest known location/district.",
         # tools='google_search_retrieval' # Uncomment if your API key supports it directly in this SDK version
     )
     
