@@ -1,8 +1,6 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Screen, VisionMode } from '../types';
-import { ArrowLeft, Zap, Info, Camera as CameraIcon, ShieldCheck, Microscope, Search } from 'lucide-react';
-import { COLORS } from '../constants';
+import { ArrowLeft, Zap, Camera as CameraIcon, Image as ImageIcon, ScanLine, X } from 'lucide-react';
 
 interface VisionScreenProps {
   navigateTo: (screen: Screen, data?: any) => void;
@@ -14,46 +12,25 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [mode, setMode] = useState<VisionMode>('diagnosis');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [imageDetails, setImageDetails] = useState<string | null>(null); // To show preview if file uploaded
 
-  const requestCameraPermission = async () => {
-    // Check if browser supports camera API
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setHasPermission(false);
-      setErrorMessage('Your browser does not support camera access. Please use Chrome, Firefox, or Safari on HTTPS/localhost.');
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1080 }, height: { ideal: 1080 } }
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setHasPermission(true);
-      setErrorMessage('');
-    } catch (err: any) {
-      setHasPermission(false);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setErrorMessage('Camera access denied. Please enable camera permissions in your browser settings.');
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setErrorMessage('No camera detected on this device.');
-      } else if (err.name === 'NotReadableError') {
-        setErrorMessage('Camera is already in use by another application.');
-      } else if (err.name === 'NotSupportedError') {
-        setErrorMessage('Camera access requires HTTPS or localhost.');
-      } else {
-        setErrorMessage(`Camera error: ${err.message || 'Unknown error'}`);
-      }
-      console.error('Camera permission error:', err);
-    }
-  };
-
+  // Camera Setup
   useEffect(() => {
-    requestCameraPermission();
-
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        setHasPermission(true);
+      } catch (err) {
+        console.error("Camera Error:", err);
+        setHasPermission(false);
+      }
+    };
+    startCamera();
     return () => {
       if (videoRef.current?.srcObject) {
         (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
@@ -65,160 +42,145 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
+      // Capture square
       const size = Math.min(video.videoWidth, video.videoHeight);
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(
-          video,
-          (video.videoWidth - size) / 2,
-          (video.videoHeight - size) / 2,
-          size, size,
-          0, 0, size, size
-        );
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
-        navigateTo('vision-result', { image: imageData, mode });
+        ctx.drawImage(video, (video.videoWidth - size) / 2, (video.videoHeight - size) / 2, size, size, 0, 0, size, size);
+        navigateTo('vision-result', { image: canvas.toDataURL('image/jpeg', 0.8), mode: 'diagnosis' });
       }
     }
   };
 
-  const handleGalleryUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as string;
-        navigateTo('vision-result', { image: imageData, mode });
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          navigateTo('vision-result', { image: ev.target.result as string, mode: 'diagnosis' });
+        }
       };
       reader.readAsDataURL(file);
     }
   };
 
   return (
-    <div className="relative h-full bg-black flex flex-col overflow-hidden">
+    <div className="relative h-full bg-black flex flex-col items-center justify-between text-white overflow-hidden font-sans">
       <canvas ref={canvasRef} className="hidden" />
-      {hasPermission === false ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-white p-10 text-center">
-          <Info size={48} className="mb-4 text-red-400" />
-          <p className="text-lg font-bold mb-2">Camera Access Required</p>
-          <p className="text-sm opacity-80 mt-2 mb-6 max-w-xs leading-relaxed">
-            {errorMessage || 'Enable camera access to diagnose your crops.'}
-          </p>
-          <button
-            onClick={requestCameraPermission}
-            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-sm flex items-center gap-2"
-          >
-            <CameraIcon size={18} /> Grant Camera Access
-          </button>
-          <p className="text-xs opacity-40 mt-4">
-            Tap the button above and allow camera permissions when prompted
-          </p>
-        </div>
-      ) : (
-        <video ref={videoRef} autoPlay playsInline className="flex-1 w-full h-full object-cover opacity-90" />
-      )}
+      <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileUpload} />
 
-      {/* Mode Selector Overlay */}
-      <div className="absolute top-24 left-1/2 -translate-x-1/2 flex bg-black/40 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 z-20">
-        <button
-          onClick={() => setMode('diagnosis')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${mode === 'diagnosis' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400'
-            }`}
-        >
-          <Microscope size={14} /> Diagnosis
-        </button>
-        <button
-          onClick={() => setMode('grading')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${mode === 'grading' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400'
-            }`}
-        >
-          <ShieldCheck size={14} /> QC
-        </button>
-        <button
-          onClick={() => setMode('verify-qr')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${mode === 'verify-qr' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-400'
-            }`}
-        >
-          <Search size={14} /> Verify QR
-        </button>
+      {/* Video Feed Layer */}
+      <div className="absolute inset-0 z-0">
+        {hasPermission === false ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center bg-gray-900">
+            <span className="text-gray-400">Camera permission denied.</span>
+            <button onClick={() => fileInputRef.current?.click()} className="text-green-400 font-bold underline">Upload Image</button>
+          </div>
+        ) : (
+          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+        )}
       </div>
 
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="bg-gradient-to-b from-black/70 to-transparent p-6 flex justify-between items-center pointer-events-auto">
-          <button onClick={() => navigateTo('home')} className="text-white p-2.5 bg-white/10 backdrop-blur-lg rounded-2xl">
-            <ArrowLeft size={24} />
-          </button>
-          <div className="text-white text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-green-400 mb-0.5">Krishi-Drishti AI</p>
-            <p className="text-sm font-semibold">
-              {mode === 'verify-qr' ? 'Scan QR for Fraud Check' : mode === 'diagnosis' ? t.align_leaf : 'Align Produce for Grading'}
-            </p>
-          </div>
-          <button className="text-white p-2.5 bg-white/10 backdrop-blur-lg rounded-2xl">
-            <Zap size={24} />
-          </button>
+      {/* Deep Green Gradient Overlay (Top) */}
+      <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-green-950/90 via-green-900/60 to-transparent z-10 pointer-events-none" />
+
+      {/* Custom Scan Overlay (SVG Mask for "Medical Scanner" Look) */}
+      <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+        {/* The dark overlay with a "Soft Rect" hole */}
+        <svg className="absolute w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <mask id="scan-mask">
+              <rect width="100%" height="100%" fill="white" />
+              <rect x="15%" y="25%" width="70%" height="45%" rx="40" fill="black" />
+            </mask>
+          </defs>
+          <rect width="100%" height="100%" fill="rgba(10, 40, 20, 0.75)" mask="url(#scan-mask)" />
+
+          {/* Animated Scanner Bar */}
+          <rect x="15%" y="25%" width="70%" height="2" fill="#4ade80" className="animate-scan-line opacity-80" />
+        </svg>
+
+        {/* Decorative Corners */}
+        <div className="w-[70%] h-[45%] border border-white/20 rounded-[42px] absolute pointer-events-none">
+          {/* Corners */}
+          <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-3xl" />
+          <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-3xl" />
+          <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-3xl" />
+          <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-3xl" />
         </div>
 
-        <div className="flex-1 flex items-center justify-center">
-          <div className={`w-72 h-72 border-2 ${mode === 'verify-qr' ? 'border-amber-500/30' :
-            mode === 'diagnosis' ? 'border-green-500/30' : 'border-blue-500/30'
-            } rounded-[40px] relative transition-colors`}>
-            <div className={`absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 ${mode === 'verify-qr' ? 'border-amber-500' : mode === 'diagnosis' ? 'border-green-500' : 'border-blue-500'} rounded-tl-[30px]`}></div>
-            <div className={`absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 ${mode === 'verify-qr' ? 'border-amber-500' : mode === 'diagnosis' ? 'border-green-500' : 'border-blue-500'} rounded-tr-[30px]`}></div>
-            <div className={`absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 ${mode === 'verify-qr' ? 'border-amber-500' : mode === 'diagnosis' ? 'border-green-500' : 'border-blue-500'} rounded-bl-[30px]`}></div>
-            <div className={`absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 ${mode === 'verify-qr' ? 'border-amber-500' : mode === 'diagnosis' ? 'border-green-500' : 'border-blue-500'} rounded-br-[30px]`}></div>
-            <div className={`absolute top-0 left-0 w-full h-1 ${mode === 'verify-qr' ? 'bg-amber-400/50 shadow-[0_0_20px_rgba(251,191,36,0.6)]' : mode === 'diagnosis' ? 'bg-green-400/50 shadow-[0_0_20px_rgba(74,222,128,0.6)]' : 'bg-blue-400/50 shadow-[0_0_20px_rgba(59,130,246,0.6)]'} animate-scan-line`}></div>
+        <div className="absolute top-[20%] text-center">
+          <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 inline-flex items-center gap-2">
+            <ScanLine size={14} className="text-green-400" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-green-100">AI Plant Doctor</span>
           </div>
         </div>
       </div>
 
-      <div className="bg-black/90 backdrop-blur-2xl px-10 pt-8 pb-14 flex flex-col items-center gap-6">
-        {/* Hidden File Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleGalleryUpload}
-          className="hidden"
-        />
+      {/* UI Controls Layer */}
+      <div className="relative z-20 w-full flex flex-col h-full justify-between p-6 pt-12">
 
-        <div className="flex items-center gap-6">
-          {/* Gallery Upload Button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-16 h-16 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center active:scale-90 transition-all border-2 border-white/40"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
-            </svg>
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <button onClick={() => navigateTo('home')} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
+            <ArrowLeft size={20} />
           </button>
-
-          {/* Camera Capture Button */}
-          <button
-            onClick={handleCapture}
-            className="w-24 h-24 bg-white rounded-full flex items-center justify-center active:scale-90 transition-all p-1.5 shadow-[0_0_40px_rgba(255,255,255,0.2)]"
-          >
-            <div className="w-full h-full bg-white rounded-full border-[3px] border-black flex items-center justify-center">
-              <CameraIcon size={36} className="text-black" />
-            </div>
+          <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
+            <Zap size={20} strokeWidth={1.5} className={hasPermission ? "text-yellow-400 fill-yellow-400/20" : "text-gray-400"} />
           </button>
         </div>
 
-        <p className="text-xs text-white/60 font-medium">Tap camera or choose from gallery</p>
+        {/* Bottom Actions */}
+        <div className="flex flex-col items-center gap-8 mb-6">
+          <p className="text-white/80 text-sm font-medium text-center max-w-[200px] leading-relaxed">
+            Scan leaves, fruits, or stems to detect diseases instantly.
+          </p>
+
+          <div className="flex items-center justify-center gap-8 w-full px-4">
+            {/* Gallery Button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className="w-12 h-12 rounded-full border border-white/30 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                <ImageIcon size={20} />
+              </div>
+              <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">Upload</span>
+            </button>
+
+            {/* Shutter Button */}
+            <button
+              onClick={handleCapture}
+              className="w-20 h-20 rounded-full border-4 border-white/30 p-1 flex items-center justify-center active:scale-95 transition-transform"
+            >
+              <div className="w-full h-full bg-white rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.4)]">
+                <div className="w-14 h-14 bg-green-500 rounded-full border-4 border-white"></div>
+              </div>
+            </button>
+
+            {/* History / Info Button */}
+            <button className="flex flex-col items-center gap-2 group">
+              <div className="w-12 h-12 rounded-full border border-white/30 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                <X size={20} />
+              </div>
+              <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">Cancel</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <style>{`
         @keyframes scan-line {
-          0% { top: 0; opacity: 0; }
+          0% { y: 25%; opacity: 0; }
           10% { opacity: 1; }
           90% { opacity: 1; }
-          100% { top: 100%; opacity: 0; }
+          100% { y: 70%; opacity: 0; }
         }
         .animate-scan-line {
-          animation: scan-line 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          animation: scan-line 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
       `}</style>
     </div>

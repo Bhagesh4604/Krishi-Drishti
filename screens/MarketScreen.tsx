@@ -33,7 +33,9 @@ import {
   LayoutGrid,
   Map,
   ArrowUpDown,
-  BarChart3
+  BarChart3,
+  ShoppingCart,
+  Bell
 } from 'lucide-react';
 import { COLORS } from '../constants';
 
@@ -43,16 +45,12 @@ interface MarketScreenProps {
 }
 
 const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
-  const [tab, setTab] = useState<'pulse' | 'store'>('pulse');
+  const [tab, setTab] = useState<'all' | 'grains' | 'fruits' | 'vegetables'>('all');
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [livePrice, setLivePrice] = useState<{ text: string, urls: { title: string, uri: string }[] } | null>(null);
-  const [isSearchingPrice, setIsSearchingPrice] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [compareItem, setCompareItem] = useState<Listing | null>(null);
-  const [sortBy, setSortBy] = useState<'distance' | 'grade'>('distance');
   const recognitionRef = useRef<any>(null);
 
   // Use real land size from Profile if available, else default to 2
@@ -98,32 +96,26 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
     loc: '',
     category: 'Crop',
     description: '',
-    isOrganic: false
+    isOrganic: false,
+    image: ''
   });
 
   const isOverQuota = parseInt(newListing.quantity) > ESTIMATED_MAX_QUOTA && newListing.isOrganic;
 
   const filteredListings = useMemo(() => {
     let result = listings;
-    // Client-side filtering for now, but backend supports parameters too. 
-    // We fetch all for demo simplicity or could add 'tab' to API fetch.
-    if (tab === 'store') {
-      result = listings.filter(l => l.seller === 'Me' || (l as any).seller_name === 'Me'); // Check backend response mapping
-    } else {
-      // In Pulse, show everything
-    }
+
+    // Filter by Tab (Category) - Mock logic, assume all crops for now or filter by name
+    if (tab === 'grains') result = result.filter(l => ['wheat', 'rice', 'corn', 'soybean'].some(c => l.crop.toLowerCase().includes(c)));
+    if (tab === 'fruits') result = result.filter(l => ['mango', 'apple', 'banana', 'grapes'].some(c => l.crop.toLowerCase().includes(c)));
+    if (tab === 'vegetables') result = result.filter(l => ['potato', 'onion', 'tomato', 'brinjal'].some(c => l.crop.toLowerCase().includes(c)));
 
     if (searchQuery) {
       result = result.filter(l => l.crop.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
-    return result.sort((a, b) => {
-      // Distance mock logic requires user loc. For now, rely on random or 0.
-      if (sortBy === 'distance') return (a.distanceKm || 0) - (b.distanceKm || 0);
-      if (sortBy === 'grade') return (a.grade || 'C').localeCompare(b.grade || 'C');
-      return 0;
-    });
-  }, [listings, tab, searchQuery, sortBy]);
+    return result;
+  }, [listings, tab, searchQuery]);
 
   // Load listings on mount or when location changes
   useEffect(() => {
@@ -181,10 +173,6 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
     }
   };
 
-  const generateTrackingId = () => {
-    return 'KS-' + Math.random().toString(36).substring(2, 9).toUpperCase();
-  };
-
   const handleAddListing = async () => {
     if (!newListing.crop || !newListing.price || !newListing.quantity) return;
     if (isOverQuota) return;
@@ -196,15 +184,15 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
       price: `₹${newListing.price}/${newListing.category === 'Crop' ? 'kg' : 'unit'}`,
       location: newListing.loc || 'My Farm',
       description: newListing.description || 'Fresh produce listed via Mandi Direct.',
-      is_organic: newListing.isOrganic
+      is_organic: newListing.isOrganic,
+      image_url: newListing.image
     };
 
     try {
       setLoading(true);
-      await marketService.createListing(entryData);
+      const createdListing = await marketService.createListing(entryData);
 
-      // Refresh listings
-      await fetchListings();
+      setListings(prev => [createdListing, ...prev]);
 
       setShowAddForm(false);
       setNewListing({
@@ -214,222 +202,130 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
         loc: '',
         category: 'Crop',
         description: '',
-        isOrganic: false
+        isOrganic: false,
+        image: ''
       });
-      setTab('store');
-      setTab('store');
     } catch (e: any) {
       console.error("Failed to create listing", e);
-      const msg = e.response?.data?.detail || e.message || "Unknown error";
-      alert(`Failed to create listing: ${JSON.stringify(msg)}`);
+      alert("Failed to create listing");
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePriceLookup = async () => {
-    if (!searchQuery.trim()) return;
-    setIsSearchingPrice(true);
-    setLivePrice(null);
-    try {
-      const result = await marketService.checkPrice(searchQuery, location?.lat, location?.lng);
-      setLivePrice({
-        text: result.text || "Price data unavailable.",
-        urls: [] // Backend might not return URLs yet, or we need to parse them.
-      });
-    } catch (err) {
-      console.error(err);
-      alert("Price check failed");
-    } finally {
-      setIsSearchingPrice(false);
-    }
-  };
-
-  const getMarketAverage = (cropName: string) => {
-    const relevant = listings.filter(l => l.crop.toLowerCase().includes(cropName.toLowerCase()));
-    if (relevant.length === 0) return 0;
-    const sum = relevant.reduce((acc, l) => acc + parseInt(l.price.replace(/\D/g, '')), 0);
-    return Math.round(sum / relevant.length);
-  };
 
   return (
-    <div className="bg-[#f8fafc] min-h-full pb-24 relative">
-      <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-gray-100">
-        <div className="p-6 pb-2 flex justify-between items-center">
-          <h2 className="text-2xl font-black text-gray-900 leading-none">{t.market_direct}</h2>
+    <div className="bg-[#f8fafc] min-h-full pb-24 relative font-sans">
+
+      {/* 1. Minimalist Header */}
+      <div className="pt-12 px-6 pb-4 bg-white sticky top-0 z-30 flex justify-between items-center shadow-sm">
+        <h2 className="text-2xl font-black text-gray-900 tracking-tight">Marketplace</h2>
+        <div className="flex gap-3 items-center">
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 bg-green-700 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all"
+            className="bg-black text-white px-4 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform flex items-center gap-2"
           >
-            <Plus size={14} strokeWidth={3} />
-            Sell My Crop
+            <Plus size={14} strokeWidth={3} /> Sell
           </button>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="px-6 flex gap-6 pb-4">
-          <button
-            onClick={() => setTab('pulse')}
-            className={`text-xs font-black uppercase tracking-widest pb-1 transition-all relative ${tab === 'pulse' ? 'text-green-700' : 'text-gray-400'
-              }`}
-          >
-            {t.mandi_pulse}
-            {tab === 'pulse' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-700 rounded-full animate-in slide-in-from-left duration-300"></div>}
+          <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 active:scale-95 transition-transform">
+            <Search size={20} />
           </button>
-          <button
-            onClick={() => setTab('store')}
-            className={`text-xs font-black uppercase tracking-widest pb-1 transition-all relative ${tab === 'store' ? 'text-green-700' : 'text-gray-400'
-              }`}
-          >
-            {t.my_store}
-            {tab === 'store' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-700 rounded-full animate-in slide-in-from-left duration-300"></div>}
+          <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 active:scale-95 transition-transform relative">
+            <ShoppingCart size={20} />
+            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></div>
           </button>
-        </div>
-
-        <div className="px-6 pb-4 space-y-3">
-          <div className="flex gap-3">
-            <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3 flex items-center border border-gray-100 focus-within:ring-2 focus-within:ring-green-500 transition-all">
-              <Search size={18} className="text-gray-400 mr-2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={tab === 'pulse' ? "Check Price Discovery..." : "Search My Store..."}
-                className="bg-transparent outline-none text-sm text-gray-900 w-full font-bold"
-              />
-            </div>
-            {tab === 'pulse' && (
-              <button
-                onClick={handlePriceLookup}
-                disabled={isSearchingPrice || !searchQuery}
-                className={`p-3 rounded-2xl shadow-sm transition-all active:scale-95 ${isSearchingPrice ? 'bg-gray-100 text-gray-400' : 'bg-gray-900 text-white'
-                  }`}
-              >
-                {isSearchingPrice ? <Loader2 size={20} className="animate-spin" /> : <Globe size={20} />}
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSortBy('distance')}
-                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${sortBy === 'distance' ? 'bg-green-700 text-white shadow-md' : 'bg-gray-100 text-gray-400'
-                  }`}
-              >
-                <MapPin size={10} className="inline mr-1" /> {t.sort_nearest}
-              </button>
-              <button
-                onClick={() => setSortBy('grade')}
-                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${sortBy === 'grade' ? 'bg-green-700 text-white shadow-md' : 'bg-gray-100 text-gray-400'
-                  }`}
-              >
-                <BarChart3 size={10} className="inline mr-1" /> {t.sort_best}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="p-6 pt-4">
-        {/* Live Price Result (Search Grounded) */}
-        {livePrice && tab === 'pulse' && (
-          <div className="bg-white rounded-[2rem] p-6 border border-green-100 shadow-xl shadow-green-100/20 mb-6 animate-in fade-in slide-in-from-top-4">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-xs font-black text-green-700 uppercase tracking-widest flex items-center gap-1.5">
-                <TrendingUp size={14} /> Today's Live Rates
-              </h4>
-              <button onClick={() => setLivePrice(null)} className="text-gray-400"><X size={14} /></button>
-            </div>
-            <p className="text-sm font-bold text-gray-700 leading-relaxed mb-4">
-              {livePrice.text}
-            </p>
-            {livePrice.urls.length > 0 && (
-              <div className="pt-3 border-t border-gray-50">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Sources</p>
-                {livePrice.urls.map((u, i) => (
-                  <a key={i} href={u.uri} target="_blank" rel="noopener" className="flex items-center gap-2 text-[10px] text-blue-600 font-bold mb-1 truncate">
-                    <Globe size={10} /> {u.title}
-                  </a>
-                ))}
+      {/* 2. Hero Card (3D Style) */}
+      <div className="px-6 mt-6">
+        <div className="bg-[#E9F4E9] rounded-[2.5rem] p-6 relative overflow-hidden h-48 flex flex-col justify-center">
+          <div className="relative z-10 max-w-[60%]">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="bg-white p-1.5 rounded-lg shadow-sm">
+                <TrendingUp size={16} className="text-green-600" />
               </div>
-            )}
+              <span className="text-xs font-bold text-green-800 uppercase tracking-widest">Top Commodity</span>
+            </div>
+            <h3 className="text-3xl font-black text-green-900 leading-none mb-4">Organic<br />Wheat</h3>
+            <button className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-green-200 active:scale-95 transition-transform">
+              View Trends
+            </button>
           </div>
-        )}
+
+          {/* 3D Illustration Placeholder */}
+          <img
+            src="https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&auto=format&fit=crop&q=60"
+            className="absolute -right-4 top-4 w-40 h-40 object-contain drop-shadow-2xl rotate-12"
+            style={{ clipPath: 'circle(50%)' }}
+          />
+        </div>
+      </div>
+
+      {/* 3. Categories (Pill Tabs) */}
+      <div className="px-6 mt-8">
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+          {['All', 'Grains', 'Vegetables', 'Fruits', 'Machinery'].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setTab(cat.toLowerCase() as any)}
+              className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${tab === cat.toLowerCase() || (tab === 'all' && cat === 'All')
+                ? 'bg-green-700 text-white shadow-lg shadow-green-200'
+                : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
+                }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Listings Grid (2-Column) */}
+      <div className="px-6 mt-6">
+        <div className="flex justify-between items-end mb-4">
+          <h3 className="text-xl font-bold text-gray-900">Fresh Listings</h3>
+          <button className="text-xs font-bold text-gray-400">Filter</button>
+        </div>
 
         {filteredListings.length === 0 ? (
           <div className="py-20 flex flex-col items-center text-center opacity-40">
-            <LayoutGrid size={64} className="mb-4 text-gray-300" />
-            <p className="text-sm font-black text-gray-500 uppercase tracking-widest">No listings found</p>
+            <LayoutGrid size={48} className="mb-4 text-gray-300" />
+            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">No listings found</p>
           </div>
         ) : (
-          <div className="grid gap-6">
-            {filteredListings.map((item: any) => (
+          <div className="grid grid-cols-2 gap-4">
+            {filteredListings.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl shadow-gray-200/40 active:scale-[0.99] transition-all relative group"
+                onClick={() => navigateTo('market-detail', { listing: item })}
+                className="bg-white p-3 rounded-[2rem] shadow-sm border border-gray-50 active:scale-[0.98] transition-transform group"
               >
-                <div className="relative h-48" onClick={() => navigateTo('market-detail', { listing: item })}>
-                  <img src={item.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={item.crop} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-
-                  <div className="absolute top-4 left-4 flex flex-wrap gap-2 pr-12">
-                    <div className="bg-white/20 backdrop-blur-md text-white px-2 py-1 rounded-lg flex items-center gap-1 border border-white/30">
-                      <BarChart3 size={10} className="text-amber-400" />
-                      <span className="text-[8px] font-black uppercase tracking-widest">Grade {item.grade}</span>
-                    </div>
-                    {item.isOrganic && (
-                      <div className="bg-green-700 text-white px-2 py-1 rounded-lg flex items-center gap-1 border border-green-500 shadow-lg">
-                        <Leaf size={10} fill="white" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">Organic</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="absolute bottom-4 left-5">
-                    <h4 className="text-xl font-black text-white leading-tight drop-shadow-md">{item.crop}</h4>
-                    <div className="flex items-center text-white/80 text-[10px] font-bold mt-1">
-                      <MapPin size={10} className="mr-1 text-green-400" /> {item.loc} • {item.distanceKm} km away
-                    </div>
-                  </div>
-
-                  {item.seller === 'Me' && (
-                    <div className="absolute top-4 right-4">
-                      <div className="bg-green-600 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-xl">My Store</div>
+                <div className="relative h-32 rounded-[1.5rem] overflow-hidden mb-3">
+                  <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  {item.isOrganic && (
+                    <div className="absolute top-2 left-2 bg-green-500/90 backdrop-blur-sm text-white px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">
+                      Organic
                     </div>
                   )}
+                  <button className="absolute top-2 right-2 w-6 h-6 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-white active:bg-red-500 transition-colors">
+                    <span className="text-[10px]">♥</span>
+                  </button>
                 </div>
 
-                <div className="p-6">
-                  <div className="flex justify-between items-end mb-6">
-                    <div>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Stock Status</p>
-                      <p className="text-sm font-black text-gray-900">{item.quantity} Left</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-black text-green-700 leading-none">{item.price}</p>
-                      <div className="flex items-center justify-end gap-1 mt-1">
-                        <TrendingUp size={10} className="text-green-600" />
-                        <p className="text-[9px] font-black text-green-600 uppercase">Strong Demand</p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="px-1">
+                  <h4 className="text-sm font-bold text-gray-900 mb-0.5 truncate">{item.crop}</h4>
+                  <p className="text-[10px] text-gray-400 font-medium mb-2 flex items-center gap-1">
+                    <MapPin size={10} /> {item.loc}
+                  </p>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => navigateTo('market-detail', { listing: item })}
-                      className="flex-1 py-4 bg-gray-900 text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-colors"
-                    >
-                      <ChevronRight size={14} /> {tab === 'pulse' ? 'Details' : 'Manage'}
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">Price</p>
+                      <p className="text-lg font-black text-green-700 leading-none">{item.price.split('/')[0]}</p>
+                    </div>
+                    <button className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+                      <Plus size={16} />
                     </button>
-                    {tab === 'pulse' && (
-                      <button
-                        onClick={() => setCompareItem(item)}
-                        className="flex-1 py-4 bg-green-50 text-green-700 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-green-100 hover:bg-green-100 transition-colors"
-                      >
-                        <Scale size={14} /> {t.compare_price}
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -438,208 +334,154 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
         )}
       </div>
 
-      {/* PRICE COMPARISON MODAL */}
-      {compareItem && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="w-full bg-white rounded-[3rem] shadow-2xl animate-in zoom-in duration-300 p-8 overflow-hidden relative">
-            <button onClick={() => setCompareItem(null)} className="absolute top-6 right-6 text-gray-300 hover:text-gray-900"><X size={24} /></button>
+      {/* Floating Sell Button */}
+      <button
+        onClick={() => setShowAddForm(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-green-600 text-white rounded-full shadow-[0_4px_20px_rgba(22,163,74,0.4)] flex items-center justify-center active:scale-90 transition-transform z-40 border-4 border-white"
+      >
+        <Plus size={24} strokeWidth={3} />
+      </button>
 
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 rounded-3xl bg-green-50 flex items-center justify-center text-green-700">
-                <Scale size={32} />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-gray-900">{t.compare_price}</h3>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">{compareItem.crop} Analysis</p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-5 rounded-3xl border border-gray-100">
-                  <p className="text-[9px] font-black text-gray-400 uppercase mb-2">{t.market_avg}</p>
-                  <h4 className="text-2xl font-black text-gray-900">₹{getMarketAverage(compareItem.crop)}/kg</h4>
-                  <p className="text-[8px] font-bold text-gray-400 uppercase mt-1">District Wide</p>
-                </div>
-                <div className="bg-green-700 p-5 rounded-3xl text-white shadow-xl shadow-green-100">
-                  <p className="text-[9px] font-black text-white/60 uppercase mb-2">Item Price</p>
-                  <h4 className="text-2xl font-black">{compareItem.price.split('/')[0]}</h4>
-                  <p className="text-[8px] font-bold text-white/60 uppercase mt-1">This Listing</p>
-                </div>
-              </div>
-
-              <div className="p-6 bg-green-50 rounded-3xl border border-green-100">
-                <div className="flex items-center gap-3 mb-3">
-                  <Sparkles size={18} className="text-green-700" />
-                  <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider">{t.your_edge}</h4>
-                </div>
-                <p className="text-sm font-bold text-gray-700 leading-relaxed italic">
-                  {parseInt(compareItem.price.replace(/\D/g, '')) < getMarketAverage(compareItem.crop)
-                    ? "This is a Great Deal! Price is 12% below the district average. Potential for high profit margin if you buy and re-sell at mandi peaks."
-                    : "Premium Pricing: This seller is asking for 5% above the average, justified by Grade A quality and Organic certification."}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setCompareItem(null)}
-                className="w-full py-5 bg-gray-900 text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em]"
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SELL MY CROP MODAL FORM */}
+      {/* SELL FORM MODAL (Simplified for Redesign) */}
       {showAddForm && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="w-full max-w-md bg-white rounded-t-[3rem] shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[95vh] flex flex-col">
-            <div className="p-8 pb-4 flex justify-between items-center border-b border-gray-50">
-              <div>
-                <h3 className="text-2xl font-black text-gray-900">Direct Listing</h3>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Direct from Farm to Mandi</p>
-              </div>
-              <button onClick={() => setShowAddForm(false)} className="p-3 bg-gray-50 rounded-2xl text-gray-400 active:bg-gray-100 transition-colors">
-                <X size={24} />
-              </button>
+          <div className="w-full max-w-md bg-white rounded-t-[3rem] shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] flex flex-col p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-black text-gray-900">New Listing</h3>
+              <button onClick={() => setShowAddForm(false)} className="p-2 bg-gray-50 rounded-full text-gray-400"><X size={20} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 pt-6 space-y-6">
-              {/* Volume-Lock Mathematical Defense Display */}
-              <div className="p-5 bg-gray-900 rounded-[2rem] border border-gray-800 shadow-xl mb-2">
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center gap-2 text-white">
-                    <Globe size={16} className="text-green-400" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Satellite Quota-Check</span>
-                  </div>
-                  <div className="px-2 py-1 bg-green-500/10 text-green-400 rounded-lg text-[8px] font-black">2.0 ACRES VERIFIED</div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Total Organic Capacity</p>
-                    <h4 className="text-xl font-black text-white">{ESTIMATED_MAX_QUOTA.toLocaleString()}kg</h4>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Mandi Quota Used</p>
-                    <h4 className={`text-lg font-black ${isOverQuota ? 'text-red-400' : 'text-green-400'}`}>
-                      {newListing.quantity ? parseInt(newListing.quantity).toLocaleString() : 0}kg
-                    </h4>
-                  </div>
-                </div>
-                <div className="w-full h-1.5 bg-white/10 rounded-full mt-4 overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${isOverQuota ? 'bg-red-500' : 'bg-green-500'}`}
-                    style={{ width: `${Math.min((parseInt(newListing.quantity || '0') / ESTIMATED_MAX_QUOTA) * 100, 100)}%` }}
-                  ></div>
-                </div>
-                {isOverQuota && (
-                  <div className="mt-3 flex items-center gap-2 text-red-400 animate-pulse">
-                    <ShieldAlert size={14} />
-                    <p className="text-[9px] font-black uppercase">Volume Lock Active: Quota Exceeded</p>
-                  </div>
-                )}
-              </div>
+            <div className="space-y-4 overflow-y-auto pb-4">
 
-              <div className="flex items-center justify-between p-4 bg-green-50 rounded-3xl border border-green-100 mb-2">
-                <div className="flex items-center gap-3">
-                  <Leaf className="text-green-700" size={24} />
-                  <div>
-                    <p className="text-xs font-black text-gray-900">Organic Listing</p>
-                    <p className="text-[9px] font-bold text-gray-500 uppercase">Earn 2x Premium</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setNewListing({ ...newListing, isOrganic: !newListing.isOrganic })}
-                  className={`w-12 h-6 rounded-full transition-all relative ${newListing.isOrganic ? 'bg-green-600' : 'bg-gray-300'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${newListing.isOrganic ? 'right-1' : 'left-1'}`}></div>
-                </button>
-              </div>
+              {/* Product Details Section */}
+              <div className="space-y-4">
+                {/* Image Generation */}
+                <div className="relative h-48 rounded-[1.5rem] bg-gray-100 overflow-hidden border border-gray-200 group">
+                  {newListing.image ? (
+                    <div className="relative w-full h-full">
+                      <img src={newListing.image} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setNewListing({ ...newListing, image: '' })}
+                        className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-full hover:bg-black/80 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-2">
+                      <Camera size={32} />
+                      <span className="text-xs font-bold uppercase">AI Generating Preview...</span>
+                    </div>
+                  )}
 
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-2">What are you selling?</label>
-                <div className="flex items-center bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 focus-within:ring-2 focus-within:ring-green-500 transition-all">
-                  <Package size={20} className="text-green-600 mr-3" />
+                  {!newListing.image && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                        className="px-4 py-2 bg-white rounded-full shadow-lg text-xs font-bold uppercase tracking-widest"
+                      >
+                        Upload Custom
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setNewListing({ ...newListing, image: reader.result as string });
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+
+                {/* Simplified Fields */}
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Crop Name</label>
                   <input
                     type="text"
-                    placeholder="e.g. Alphonso Mangoes"
-                    className="bg-transparent outline-none w-full text-base font-bold text-gray-900"
+                    className="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                    placeholder="e.g. Tomato"
                     value={newListing.crop}
-                    onChange={(e) => setNewListing({ ...newListing, crop: e.target.value })}
+                    onChange={e => {
+                      const crop = e.target.value;
+                      setNewListing({
+                        ...newListing,
+                        crop,
+                        // Enhanced AI Auto Image: Use specific robust source
+                        image: crop.length > 2 ? `https://source.unsplash.com/800x600/?${crop},agriculture,food` : ''
+                      });
+                    }}
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
+                {/* Description */}
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-2">Price (₹)</label>
-                  <div className="flex items-center bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 focus-within:ring-2 focus-within:ring-green-500 transition-all">
-                    <span className="font-black text-gray-400 mr-2">₹</span>
-                    <input
-                      type="number"
-                      placeholder="120"
-                      className="bg-transparent outline-none w-full text-base font-bold text-gray-900"
-                      value={newListing.price}
-                      onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-2">Quantity (kg)</label>
-                  <div className="flex items-center bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 focus-within:ring-2 focus-within:ring-green-500 transition-all">
-                    <input
-                      type="number"
-                      placeholder="500"
-                      className="bg-transparent outline-none w-full text-base font-bold text-gray-900"
-                      value={newListing.quantity}
-                      onChange={(e) => setNewListing({ ...newListing, quantity: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Enhanced Voice Description UI */}
-              <div className="space-y-3">
-                <div className="flex justify-between items-center px-2">
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Crop Description</label>
-                  <button
-                    onClick={toggleVoiceNote}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${isRecording
-                      ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-100'
-                      : 'bg-green-50 text-green-800 border border-green-200 hover:bg-green-100'
-                      }`}
-                  >
-                    {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
-                    {isRecording ? 'Listening...' : 'Voice Note'}
-                  </button>
-                </div>
-                <div className="flex flex-col bg-gray-50 rounded-3xl p-5 border border-gray-100 focus-within:ring-2 focus-within:ring-green-500 transition-all min-h-[140px] relative">
+                  <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Description</label>
                   <textarea
-                    placeholder="Describe harvest quality, color, texture, or pesticide usage..."
-                    className="bg-transparent outline-none w-full text-sm font-bold text-gray-900 resize-none flex-1 placeholder:text-gray-300 leading-relaxed"
+                    className="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none focus:ring-2 focus:ring-green-500 transition-all min-h-[100px] resize-none"
+                    placeholder="Describe quality, harvest date, etc..."
                     value={newListing.description}
-                    onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
+                    onChange={e => setNewListing({ ...newListing, description: e.target.value })}
                   />
-                  <div className="absolute bottom-4 right-4 opacity-10 pointer-events-none">
-                    <Volume2 size={32} className="text-green-900" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Price (₹)</label>
+                    <input
+                      type="number"
+                      className="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                      placeholder="40"
+                      value={newListing.price}
+                      onChange={e => setNewListing({ ...newListing, price: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Qty (kg)</label>
+                    <input
+                      type="number"
+                      className="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-900 outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                      placeholder="100"
+                      value={newListing.quantity}
+                      onChange={e => setNewListing({ ...newListing, quantity: e.target.value })}
+                    />
                   </div>
                 </div>
-              </div>
 
-              <div className="pb-16 pt-2">
+                {/* Quota Indicator */}
+                <div className="p-4 bg-gray-900 rounded-2xl text-white flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Quota Usage</p>
+                    <p className={`text-sm font-black ${isOverQuota ? 'text-red-400' : 'text-green-400'}`}>
+                      {parseInt(newListing.quantity || '0')}/{ESTIMATED_MAX_QUOTA} kg
+                    </p>
+                  </div>
+                  <div className="h-10 w-10 rounded-full border-2 border-white/20 flex items-center justify-center">
+                    <span className="text-[10px] font-bold">{Math.round((parseInt(newListing.quantity || '0') / ESTIMATED_MAX_QUOTA) * 100)}%</span>
+                  </div>
+                </div>
+
                 <button
                   onClick={handleAddListing}
-                  disabled={!newListing.crop || !newListing.price || !newListing.quantity || isOverQuota}
-                  className="w-full py-5 bg-green-700 text-white rounded-[2rem] font-black text-sm shadow-2xl shadow-green-100 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+                  disabled={isOverQuota || !newListing.crop}
+                  className="w-full py-4 bg-green-600 text-white rounded-[1.5rem] font-bold shadow-xl shadow-green-200 mt-4 active:scale-95 transition-transform"
                 >
-                  {isOverQuota ? 'Quota Blocked' : 'Confirm Listing'} <ArrowRight size={20} />
+                  Post Listing
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };

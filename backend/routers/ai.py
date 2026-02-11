@@ -47,7 +47,7 @@ async def analyze_stress(
             Format response as JSON: {{ "stress_level": "...", "recommendation": "..." }}
             """
             
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             response = model.generate_content(prompt)
             
             ai_text = response.text
@@ -114,7 +114,7 @@ async def ai_chat(
         full_prompt = f"{context}\n\nHistory:\n{chat_history}\n\nUser: {request.message}\nAssistant:"
         
         # 3. Call Gemini
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(full_prompt)
         answer = response.text
         
@@ -147,13 +147,49 @@ async def diagnose_crop(
     content = await file.read()
     image = Image.open(io.BytesIO(content))
     
-    prompt = "Analyze this crop image."
-    if mode == "diagnosis":
-        prompt = "Identify any diseases or pests in this crop. Provide cure and prevention steps."
-    elif mode == "grading":
-        prompt = "Grade this produce (A/B/C) based on visual quality, shape, and color. Explain why."
+    prompt = """
+    You are an expert agronomist. Analyze this crop image.
+    Format your response EXACTLY as a JSON object with the following fields:
+    {
+        "diagnosis": "Name of disease or pest (or 'Healthy')",
+        "confidence": 0-100 (integer),
+        "summary": "Brief 1-sentence explanation",
+        "health_score": 0-100 (integer),
+        "remedies": [
+            { "title": "Remedy Name", "desc": "Short description", "type": "organic" },
+            { "title": "Remedy Name", "desc": "Short description", "type": "chemical" }
+        ]
+    }
+    """
+    if mode == "grading":
+        prompt = """
+        You are an expert quality grader. Grade this produce.
+        Format your response EXACTLY as a JSON object with the following fields:
+        {
+            "diagnosis": "Grade A/B/C",
+            "confidence": 0-100 (integer),
+            "summary": "Reason for grading",
+            "health_score": 0-100 (visual quality score),
+            "remedies": [] 
+        }
+        """
         
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     response = model.generate_content([prompt, image])
     
-    return {"analysis": response.text}
+    try:
+        import json
+        import re
+        # Clean markdown code blocks if present
+        cleaned = re.sub(r'```json|```', '', response.text).strip()
+        analysis = json.loads(cleaned)
+        return analysis
+    except:
+        # Fallback if JSON parsing fails
+        return {
+            "diagnosis": "Analysis Failed",
+            "confidence": 0,
+            "summary": "Could not parse AI response. Raw: " + response.text[:50] + "...",
+            "healthScore": 0,
+            "remedies": []
+        }

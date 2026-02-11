@@ -17,6 +17,7 @@ class ListingCreate(BaseModel):
     location: str
     description: Optional[str] = None
     is_organic: bool = False
+    image_url: Optional[str] = None
 
 class ListingResponse(BaseModel):
     id: int
@@ -26,6 +27,7 @@ class ListingResponse(BaseModel):
     location: str
     description: Optional[str]
     is_organic: bool
+    image_url: Optional[str]
     grade: str
     seller_name: Optional[str] = None
     seller_phone: Optional[str] = None

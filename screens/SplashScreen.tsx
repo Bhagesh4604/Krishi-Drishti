@@ -22,7 +22,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
             className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-opacity duration-500 ${fadeOut ? 'opacity-0' : 'opacity-100'
                 }`}
             style={{
-                backgroundImage: 'url(https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1080)',
+                backgroundImage: 'linear-gradient(rgba(0,0,0,0.3), rgba(255,255,255,0.8)), url(https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1080)',
+                backgroundColor: '#E9F3E6', // Fallback
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
             }}

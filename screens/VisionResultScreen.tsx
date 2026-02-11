@@ -1,23 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { Screen, Language, VisionMode } from '../types';
-import { GoogleGenAI } from '@google/genai';
-import { 
-  ArrowLeft, 
-  Loader2, 
-  ShieldCheck, 
-  Leaf, 
-  Zap, 
-  ShieldAlert, 
-  Lock, 
-  ChevronDown,
-  Satellite,
+import {
+  ArrowLeft,
+  Leaf,
+  ShieldCheck,
+  Droplets,
   Share2,
-  FileCheck,
-  QrCode
+  ChevronDown,
+  ThermometerSun,
+  Calendar
 } from 'lucide-react';
-import { COLORS } from '../constants';
-import { languages } from '../translations';
+import { GoogleGenAI } from '@google/genai';
+import { aiService } from '../src/services/api';
 
 interface VisionResultScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -28,213 +22,163 @@ interface VisionResultScreenProps {
 }
 
 const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, image, mode, language, t }) => {
-  const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isOrganicMode, setIsOrganicMode] = useState(false);
-  
-  const currentLangLabel = languages.find(l => l.code === language)?.label || 'English';
+  const [result, setResult] = useState<any>(null);
+
+  // Helper to convert DataURI to Blob
+  const dataURItoBlob = (dataURI: string) => {
+    const byteString = atob(dataURI.split(',')[1]);
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+  };
 
   useEffect(() => {
-    if (image) {
-      performAnalysis(image, isOrganicMode);
-    }
-  }, [image, mode, isOrganicMode]);
+    const analyzeImage = async () => {
+      if (!image) return;
 
-  const performAnalysis = async (base64Image: string, organic: boolean) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const base64Data = base64Image.split(',')[1];
-      
-      let prompt = '';
-      if (mode === 'verify-qr') {
-        prompt = `You are a Digital Fraud Auditor. Analyze this QR code/packaging image. Return a JSON response with fields: 'diagnosis' ('Authentic' or 'Duplicate'), 'id' (Fake hash like 0x8f2...a1), 'history' (array of scan events with 'time' and 'loc'), 'isConsumed' (boolean). If diagnosis is Duplicate, provide a warning.`;
-      } else {
-        prompt = mode === 'diagnosis' 
-          ? `Analyze this agricultural crop image. Identify the plant and any visible diseases. Provide the final response EXCLUSIVELY IN ${currentLangLabel}. Return a JSON response with fields: 'diagnosis' (name of disease or 'Healthy'), 'confidence' (percentage), 'summary' (brief description), and 'remedies' (an array of objects with 'title' and 'description').`
-          : `Act as a Professional Agricultural Quality Inspector. Analyze this produce (fruit/vegetable) for Grading. Evaluate size, color uniformity, and surface defects. Assign a Grade (A, B, or C). Provide the final response EXCLUSIVELY IN ${currentLangLabel}. Return a JSON response with fields: 'diagnosis' (Grade A, B, or C), 'confidence' (percentage), 'summary' (Why this grade was assigned), 'metrics' (object with 'color', 'size', 'defects' keys and descriptive values), 'marketValue' (Estimated % of premium price).`;
+      try {
+        setLoading(true);
+        // Convert to file
+        const blob = dataURItoBlob(image);
+        const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
 
-        if (organic && mode === 'diagnosis') {
-          prompt += " IMPORTANT: The user has requested 'Organic Cure' mode. You MUST provide ONLY organic, biological, and natural remedies. STRICTLY FORBIDDEN to suggest any chemical, synthetic, or inorganic pesticides. Instead, suggest natural remedies like 'Spray Neem Oil', 'Sour Buttermilk spray', 'Dashparni Ark', or 'Bio-Fertilizers'.";
-        }
+        // Call API
+        const data = await aiService.diagnose(file, mode);
+        setResult(data);
+      } catch (e) {
+        console.error("Analysis Failed", e);
+        // Fallback or Error state
+        setResult({
+          diagnosis: "Error Analyzing",
+          confidence: 0,
+          summary: "Could not connect to AI server.",
+          healthScore: 0,
+          remedies: []
+        });
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: {
-          parts: [
-            { inlineData: { data: base64Data, mimeType: 'image/jpeg' } },
-            { text: prompt }
-          ]
-        },
-        config: { responseMimeType: "application/json" }
-      });
-
-      const result = JSON.parse(response.text || '{}');
-      setAnalysis(result);
-    } catch (err) {
-      console.error("AI Analysis failed:", err);
-      setError("Unable to analyze. Check lighting and try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleShare = () => {
-    alert("Certificate shared to WhatsApp!");
-  };
+    analyzeImage();
+  }, [image, mode]);
 
   return (
-    <div className="h-full bg-[#f8fafc] overflow-y-auto pb-10">
-      <div className="relative h-96 bg-black">
-        {image && <img src={image} className="w-full h-full object-cover opacity-80" alt="Scanned" />}
-        
-        {/* Anti-Fraud Scanning UI */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-           <div className="w-52 h-52 border-2 border-green-500/50 rounded-[2.5rem] relative">
-              {/* Simulated Detection Box from Priority 2 */}
-              <div className="absolute top-4 right-4 w-12 h-12 border-2 border-red-500 rounded-lg animate-pulse">
-                <div className="absolute -top-3 right-0 bg-red-500 text-white text-[8px] font-black px-1 rounded">DETECTED</div>
-              </div>
-              <div className="absolute top-0 left-0 w-full h-0.5 bg-green-400 animate-scan-line shadow-[0_0_15px_rgba(34,197,94,0.5)]"></div>
-           </div>
+    <div className="h-full bg-white font-sans relative overflow-y-auto">
+
+      {/* 1. Image Header Section */}
+      <div className="relative h-1/2 w-full bg-black rounded-b-[3rem] overflow-hidden shadow-2xl z-0">
+        {image && <img src={image} className="w-full h-full object-cover opacity-90" alt="Scanned" />}
+
+        {/* Header Controls */}
+        <div className="absolute top-0 left-0 w-full p-6 pt-12 flex justify-between items-center z-10">
+          <button
+            onClick={() => navigateTo('vision')}
+            className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white/80 text-[10px] font-bold uppercase tracking-widest">
+            AI Analysis
+          </div>
         </div>
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#f8fafc] via-transparent to-transparent"></div>
-        <button 
-          onClick={() => navigateTo('vision')}
-          className="absolute top-6 left-6 p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white"
-        >
-          <ArrowLeft size={24} />
-        </button>
-
-        {/* Priority 4: Organic Cure Toggle Overlay */}
-        {mode === 'diagnosis' && !loading && (
-          <div className="absolute bottom-16 right-6 z-20">
-             <button 
-              onClick={() => setIsOrganicMode(!isOrganicMode)}
-              className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-2xl ${
-                isOrganicMode ? 'bg-green-600 text-white ring-4 ring-green-100' : 'bg-white text-gray-400'
-              }`}
-             >
-               <Leaf size={16} fill={isOrganicMode ? 'white' : 'none'} />
-               {isOrganicMode ? "Show Organic Cure" : "Show Chemical"}
-             </button>
-          </div>
-        )}
-
-        {!loading && !error && (
-          <div className="absolute top-6 right-6 p-4 bg-white rounded-[1.5rem] shadow-2xl flex flex-col items-center gap-1 border border-green-100">
-             <div className="w-10 h-10 rounded-full flex items-center justify-center text-white mb-1 bg-green-700">
-                <ShieldCheck size={20} />
-             </div>
-             <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">Satya-Patra</p>
-             <p className="text-[7px] font-bold uppercase text-green-600">Verified Report</p>
+        {/* Scanning Overlay (during loading) */}
+        {loading && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-20">
+            <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-green-400 font-bold tracking-widest text-xs uppercase animate-pulse">Analyzing Plant structure...</p>
           </div>
         )}
       </div>
 
-      <div className="px-6 -mt-10 relative z-10">
-        {loading ? (
-          <div className="bg-white rounded-3xl p-12 shadow-xl border border-gray-100 flex flex-col items-center text-center">
-            <Loader2 className="animate-spin text-green-600 mb-4" size={40} />
-            <h3 className="text-xl font-bold text-gray-900">Synchronizing Ledger...</h3>
-            <p className="text-xs text-gray-400 mt-2 font-black uppercase tracking-widest">Generating Blockchain Certificate</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            
-            {/* Priority 2: Blockchain Certificate UI */}
-            <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-gray-100 relative overflow-hidden">
-               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500"></div>
-               
-               <div className="flex justify-between items-start mb-6">
-                 <div>
-                    <h2 className="text-xl font-black text-gray-900 leading-tight">Blockchain Verified Report</h2>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Immutable Digital Record</p>
-                 </div>
-                 <QrCode size={40} className="text-gray-900 opacity-20" />
-               </div>
+      {/* 2. Content Card (Overlapping) */}
+      {!loading && (
+        <div className="relative z-10 -mt-20 px-6 pb-12 w-full animate-in slide-in-from-bottom duration-700">
 
-               <div className="flex items-center gap-4 mb-6">
-                 <div className="p-4 bg-green-50 rounded-2xl text-green-700">
-                    <FileCheck size={32} />
-                 </div>
-                 <div>
-                    <h3 className="text-2xl font-black text-gray-900">{analysis?.diagnosis}</h3>
-                    <p className="text-xs font-bold text-green-600">{analysis?.confidence || 92}% Accuracy Confidence</p>
-                 </div>
-               </div>
-
-               <div className="grid grid-cols-1 gap-3 mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-                     <span className="text-[10px] font-bold text-gray-400 uppercase">Timestamp</span>
-                     <span className="text-xs font-black text-gray-900">05 Feb 2026, 14:30</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                     <span className="text-[10px] font-bold text-gray-400 uppercase">Block Hash</span>
-                     <span className="text-[10px] font-mono text-gray-600 bg-gray-200 px-2 py-0.5 rounded">0x7d...a9f</span>
-                  </div>
-               </div>
-
-               <p className="text-sm text-gray-600 font-medium leading-relaxed mb-8">
-                 {analysis?.summary || 'Disease detected. Immediate action recommended.'}
-               </p>
-
-               <button 
-                 onClick={handleShare}
-                 className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-green-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
-               >
-                 <Share2 size={16} /> Share Certificate
-               </button>
+          {/* Result Summary Card */}
+          <div className="bg-white rounded-[2rem] p-6 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 mb-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Issue Detected</span>
+                </div>
+                <h1 className="text-3xl font-black text-gray-800 leading-tight mb-1">{result?.diagnosis}</h1>
+                <p className="text-sm font-medium text-gray-400 max-w-[200px]">{result?.summary}</p>
+              </div>
+              <div className="relative w-16 h-16">
+                {/* Circular Progress (CSS only for demo) */}
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="32" cy="32" r="28" stroke="#f3f4f6" strokeWidth="4" fill="transparent" />
+                  <circle cx="32" cy="32" r="28" stroke="#ef4444" strokeWidth="4" fill="transparent" strokeDasharray="175.9" strokeDashoffset={175.9 * (1 - (result?.confidence || 0) / 100)} className="transition-all duration-1000 ease-out" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-black text-gray-800">{result?.confidence}%</span>
+                </div>
+              </div>
             </div>
 
-            {/* AI Remedies Section */}
-            {analysis?.remedies && analysis.remedies.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-2">
-                   <h3 className="text-lg font-black text-gray-900">{isOrganicMode ? "Organic Cure Path" : "Standard Chemical Remedies"}</h3>
-                   {isOrganicMode && (
-                     <span className="text-[9px] font-black text-green-700 bg-green-50 px-2 py-1 rounded-lg uppercase border border-green-100">Chemicals Forbidden</span>
-                   )}
-                </div>
-                {analysis.remedies.map((remedy: any, i: number) => (
-                  <div key={i} className={`bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex gap-4 animate-in slide-in-from-bottom-2 duration-300 ${isOrganicMode ? 'ring-2 ring-green-50 border-green-100' : ''}`} style={{ animationDelay: `${i * 100}ms` }}>
-                    <div className={`p-3 rounded-2xl h-fit ${isOrganicMode ? 'bg-green-700 text-white shadow-lg shadow-green-100' : 'bg-blue-50 text-blue-700'}`}>
-                      {isOrganicMode ? <Leaf size={24} /> : <Zap size={24} />}
-                    </div>
-                    <div>
-                      <h4 className="font-black text-gray-900 text-base">{remedy.title}</h4>
-                      <p className="text-sm text-gray-500 mt-1 leading-relaxed font-medium">{remedy.description}</p>
-                    </div>
-                  </div>
-                ))}
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="bg-green-50 rounded-xl p-3 flex flex-col items-center gap-1">
+                <ShieldCheck size={18} className="text-green-600" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Health</span>
+                <span className="text-sm font-black text-green-700">{result?.healthScore}%</span>
               </div>
-            )}
-
-            <button 
-              onClick={() => navigateTo('home')}
-              className="w-full py-5 rounded-[2rem] font-black text-sm text-white shadow-2xl transition-all bg-gray-900 active:scale-95"
-            >
-              Save to Farm Log
-            </button>
+              <div className="bg-blue-50 rounded-xl p-3 flex flex-col items-center gap-1">
+                <Droplets size={18} className="text-blue-500" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Water</span>
+                <span className="text-sm font-black text-blue-700">Normal</span>
+              </div>
+              <div className="bg-orange-50 rounded-xl p-3 flex flex-col items-center gap-1">
+                <ThermometerSun size={18} className="text-orange-500" />
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Temp</span>
+                <span className="text-sm font-black text-orange-700">High</span>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
 
-      <style>{`
-        @keyframes scan-line {
-          0% { top: 0; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { top: 100%; opacity: 0; }
-        }
-        .animate-scan-line {
-          animation: scan-line 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-      `}</style>
+          {/* Instant Solutions Header */}
+          <div className="flex justify-between items-center mb-4 px-2">
+            <h2 className="text-lg font-black text-gray-800">Instant Solutions</h2>
+            <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">2 Steps</span>
+          </div>
+
+          {/* Remedies List */}
+          <div className="space-y-4">
+            {result?.remedies.map((remedy: any, idx: number) => (
+              <div key={idx} className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex gap-4 active:scale-98 transition-transform">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${remedy.type === 'organic' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                  <Leaf size={24} fill="currentColor" className="opacity-80" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-bold text-gray-800 mb-1">{remedy.title}</h3>
+                  <p className="text-xs text-gray-500 font-medium leading-relaxed">{remedy.desc}</p>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center">
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Complete Action Button */}
+          <button
+            onClick={() => navigateTo('home')}
+            className="w-full mt-8 bg-gray-900 text-white rounded-2xl py-5 font-bold text-sm shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2"
+          >
+            <Leaf size={16} /> Save to My Fields
+          </button>
+
+        </div>
+      )}
     </div>
   );
 };

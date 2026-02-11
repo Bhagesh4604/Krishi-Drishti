@@ -68,12 +68,54 @@ export const marketService = {
     if (filters?.location) params.append('location', filters.location);
     if (filters?.lat) params.append('lat', filters.lat.toString());
     if (filters?.lng) params.append('lng', filters.lng.toString());
-    const response = await api.get<Listing[]>('/market/', { params });
-    return response.data;
+
+    // The backend returns ListingResponse which has slightly different fields than Listing interface
+    // So we map it here
+    const response = await api.get<any[]>('/market/', { params });
+
+    return response.data.map((item: any) => ({
+      id: item.id,
+      crop: item.crop_name, // Map crop_name to crop
+      quantity: item.quantity,
+      price: item.price,
+      loc: item.location, // Map location to loc
+      trend: item.trend || 'stable', // Default if missing
+      verified: item.verified !== false, // Default true if missing
+      isSellerVerified: true, // Mock/Default
+      image: item.image_url || 'https://images.unsplash.com/photo-1595855709915-37b42028678d?w=800', // Map image_url to image
+      category: 'Crop', // Default or derive
+      seller: item.seller_name || 'Unknown Farmer', // Map seller_name
+      description: item.description || '',
+      trackingId: `KS-${item.id.toString().padStart(5, '0')}`, // Generate a tracking ID from ID
+      forecast: 'Stable', // Default
+      isOrganic: item.is_organic, // Map is_organic
+      grade: item.grade || 'A',
+      distanceKm: 0 // Default
+    })) as Listing[];
   },
   createListing: async (listing: any) => {
-    const response = await api.post<Listing>('/market/', listing);
-    return response.data;
+    const response = await api.post<any>('/market/', listing);
+    const item = response.data;
+    // Return mapped object
+    return {
+      id: item.id,
+      crop: item.crop_name,
+      quantity: item.quantity,
+      price: item.price,
+      loc: item.location,
+      trend: 'stable',
+      verified: true,
+      isSellerVerified: true,
+      image: item.image_url || 'https://images.unsplash.com/photo-1595855709915-37b42028678d?w=800',
+      category: 'Crop',
+      seller: item.seller_name || 'Me',
+      description: item.description || '',
+      trackingId: `KS-${item.id.toString().padStart(5, '0')}`,
+      forecast: 'Stable',
+      isOrganic: item.is_organic,
+      grade: item.grade || 'A',
+      distanceKm: 0
+    } as Listing;
   },
   checkPrice: async (query: string, lat?: number, lng?: number) => {
     const params: any = { query };
@@ -93,7 +135,7 @@ export const aiService = {
     const formData = new FormData();
     formData.append('file', imageFile);
     formData.append('mode', mode);
-    const response = await api.post<{ analysis: string }>('/ai/diagnose', formData, {
+    const response = await api.post<any>('/ai/diagnose', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data;
