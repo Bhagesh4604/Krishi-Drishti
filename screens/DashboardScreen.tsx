@@ -91,7 +91,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   };
 
   return (
-    <div className="min-h-full pb-32 font-sans text-gray-800 relative bg-gradient-to-br from-[#FFF5E1] via-[#FFF8E7] to-white">
+    <div className="min-h-full pb-32 font-sans text-gray-800 relative bg-gradient-to-b from-[#FFF0D1] to-[#FFF8E1]">
+
+      {/* Detailed Golden Glow for Header Text */}
+      <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-br from-amber-400/30 via-transparent to-transparent z-0 pointer-events-none mix-blend-multiply blur-3xl" />
 
       {/* 1. Header Section */}
       <div className="px-6 pt-12 pb-6 flex justify-between items-start relative z-20">
@@ -124,7 +127,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             </p>
           </div>
           {/* Wheat Stalks Image Requirement */}
-          <div className="absolute top-0 right-0 w-48 h-48 -mr-6 -mt-4 z-0 pointer-events-none mix-blend-multiply opacity-100">
+          {/* Wheat Stalks Image Requirement */}
+          <div className="absolute -top-60 -right-8 w-64 h-[34rem] z-0 pointer-events-none mix-blend-multiply opacity-90">
             <img
               src="/assets/crops/Wheat.jpg"
               className="w-full h-full object-contain"
