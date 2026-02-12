@@ -1,4 +1,4 @@
-I have analyzed the `Krishi-Drishti` project and focused on making the frontend modules visually attractive and consistent with the `DashboardScreen.tsx`'s aesthetic.
+I have analyzed the `Krishi-Drishti` project and focused on making the frontend modules visually attractive and consistent with the `DashboardScreen.tsx`'s aesthetic, particularly focusing on `ProfileScreen.tsx`.
 
 My approach involved identifying key design principles from the dashboard, such as:
 *   Consistent use of rounded corners (e.g., `rounded-[2rem]`, `rounded-full`).
@@ -7,7 +7,7 @@ My approach involved identifying key design principles from the dashboard, such 
 *   Consistent typography for headings, labels, and body text.
 *   Interactive elements with `active:scale-95` and `transition-transform`.
 
-I then applied these principles to the `MarketScreen.tsx`, `SchemeSetuScreen.tsx`, and `ChatScreen.tsx` modules.
+I then applied these principles to the `MarketScreen.tsx`, `SchemeSetuScreen.tsx`, `ChatScreen.tsx`, and `ProfileScreen.tsx` modules.
 
 **1. `screens/MarketScreen.tsx` Modifications:**
 
@@ -30,4 +30,14 @@ I then applied these principles to the `MarketScreen.tsx`, `SchemeSetuScreen.tsx
 *   **Header Padding Adjustment:** The `ChatScreen.tsx` header already included a back button and dynamic styling based on the chat mode. I adjusted its padding from `px-4 py-4` to `px-6 pt-12 pb-6` to strictly align with the `DashboardScreen.tsx`'s header spacing, ensuring consistent top-level layout across the application.
 *   **Other Elements:** The dynamic header, message bubble styling, intervention cards, loading indicators, and input area were all found to be well-implemented and consistent with the desired attractive and modern aesthetic.
 
-By making these changes, the `MarketScreen`, `SchemeSetuScreen`, and `ChatScreen` now better reflect the attractive and consistent design language established by the `DashboardScreen`, leading to a more polished and unified user experience across the application.
+**4. `screens/ProfileScreen.tsx` Modifications:**
+
+*   **Fixed `Unterminated JSX contents` error:** The JSX structure was corrected by ensuring all form content and the save button were properly wrapped within the scrollable `div` (`<div className="flex-1 px-6 pt-6 pb-10 overflow-y-auto">`).
+*   **Header Redesign:**
+    *   Added `ChevronDown` and `Loader2` to the import statement from `lucide-react`.
+    *   Transformed the simple title and paragraph into a structured header with an `ArrowLeft` back button (to `home`), a clear `h2` title (`{t.create_profile}`), and a descriptive `p` subtitle (`{t.farm_details}`). This header is styled with `p-6 pb-8 shadow-sm border-b border-gray-100 sticky top-0 z-20` for consistency with other sub-screens.
+*   **Select Field Polish:** Integrated `ChevronDown` icons into the `category` and `farmingType` `select` elements. This involved wrapping the `select` elements in `div` containers with `relative` positioning, applying `pr-10` to the `select` fields, and `absolute` positioning the `ChevronDown` icon to create a custom dropdown appearance, replacing the browser's default arrow.
+*   **Enhanced Save Button Feedback:** Updated the "Complete Profile" button to display a spinning `Loader2` icon and "Saving..." text when the `loading` state is true.
+*   **Color Consistency:** Changed the save button's background color from an inline style using `COLORS.primary` to the Tailwind class `bg-green-700` for better theme adherence and consistency with other attractive buttons in the application.
+
+By making these changes, the `MarketScreen`, `SchemeSetuScreen`, `ChatScreen`, and `ProfileScreen` now better reflect the attractive and consistent design language established by the `DashboardScreen`, leading to a more polished and unified user experience across the application, achieving an "industry-level" feel.

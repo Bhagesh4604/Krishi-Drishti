@@ -353,7 +353,7 @@ const AppContent: React.FC = () => {
           />
         );
       case 'profile':
-        return <ProfileScreen onComplete={handleProfileComplete} t={t} />;
+        return <ProfileScreen onComplete={handleProfileComplete} t={t} navigateTo={navigateTo} />;
       case 'home':
         return <DashboardScreen
           navigateTo={navigateTo}
