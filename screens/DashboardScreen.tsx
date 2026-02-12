@@ -38,41 +38,13 @@ interface DashboardScreenProps {
   t: any;
   onLangChange: (lang: Language) => void;
   currentLang: Language;
+  weather: any;
+  locationName: string;
 }
 
-const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, currentLang }) => {
-  const [weather, setWeather] = useState<any>(null);
-  const [locationName, setLocationName] = useState<string>("Locating...");
+const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, currentLang, weather, locationName }) => {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [showWeatherModal, setShowWeatherModal] = useState(false);
-
-  // --- Logic from Old Code (Simple Location Fetch) ---
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const lat = user?.location?.lat || 21.1458;
-        const lng = user?.location?.lng || 79.0882;
-
-        // Parallel fetch
-        const [weatherData, locData] = await Promise.all([
-          weatherService.getWeather(lat, lng),
-          weatherService.reverseGeocode(lat, lng)
-        ]);
-
-        setWeather(weatherData);
-        if (locData && (locData.city || locData.district)) {
-          setLocationName(`${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`);
-        } else {
-          setLocationName("Nagpur, MH"); // Fallback
-        }
-      } catch (e) {
-        console.error("Dashboard load", e);
-        setLocationName("Nagpur, MH");
-      }
-    };
-    loadData();
-  }, [user]);
-  // ---------------------------------------------------
 
   const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : 32;
 

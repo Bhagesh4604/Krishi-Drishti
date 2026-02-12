@@ -20,7 +20,7 @@ import CropStressScreen from './screens/CropStressScreen';
 // import GlobeView from './screens/GlobeView';
 import SplashScreen from './screens/SplashScreen';
 import BottomNav from './components/BottomNav';
-import { userService } from './src/services/api';
+import { userService, weatherService } from './src/services/api';
 
 import { translations } from './translations';
 import LandingScreen from './screens/LandingScreen';
@@ -76,6 +76,9 @@ const AppContent: React.FC = () => {
 
 
   const [connectionError, setConnectionError] = useState(false);
+  const [weather, setWeather] = useState<any>(null);
+  const [locationName, setLocationName] = useState<string>("Locating...");
+
 
   // Helper to append logs
   const log = (msg: string) => {
@@ -160,18 +163,41 @@ const AppContent: React.FC = () => {
           }
 
           setUser(profile);
-          setCurrentScreen('landing'); // Always start at landing screen
+          setCurrentScreen(profile.name ? 'home' : 'profile'); // Restore correct screen logic
+          if (profile.language) setLanguage(profile.language);
+          log("[App] Profile loaded");
         } else {
-          // even if no token, we might want to store location for guest mode later
-          log("[App] No token, going to landing");
-          // Initialize a temporary guest user with location if needed
-          if (location) {
-            // We can't set full profile, but we could pass it to dashboard if we had a guest context
-            // For now, if we have a user state even for guests:
-            // setUser({ ...guestDefaults, location }); 
-          }
-          setCurrentScreen('landing');
+          // If no profile (timeout or null), go to auth
+          log("[App] No profile, go to Auth");
+          // Only redirect if no token, otherwise we might just be offline but have token
+          if (!token) setCurrentScreen('auth');
+          else setCurrentScreen(user?.name ? 'home' : 'profile');
         }
+
+        // --- Fetch Weather & Location Once ---
+        console.log("[App] Fetching weather/location...");
+        try {
+          const lat = location?.lat || 21.1458;
+          const lng = location?.lng || 79.0882;
+
+          const [weatherData, locData] = await Promise.all([
+            weatherService.getWeather(lat, lng),
+            weatherService.reverseGeocode(lat, lng)
+          ]);
+
+          setWeather(weatherData);
+
+          if (locData && (locData.city || locData.district)) {
+            setLocationName(`${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`);
+          } else {
+            setLocationName("Nagpur, MH");
+          }
+          log("[App] Weather data loaded");
+        } catch (e) {
+          console.error("[App] Weather fetch failed", e);
+          setLocationName("Nagpur, MH");
+        }
+        // -------------------------------------
       } catch (e) {
         log(`[App] Error: ${e.message}`);
         console.error("[App] Init error:", e);
@@ -329,7 +355,15 @@ const AppContent: React.FC = () => {
       case 'profile':
         return <ProfileScreen onComplete={handleProfileComplete} t={t} />;
       case 'home':
-        return <DashboardScreen navigateTo={navigateTo} user={user} t={t} onLangChange={changeLanguage} currentLang={language} />;
+        return <DashboardScreen
+          navigateTo={navigateTo}
+          user={user}
+          t={t}
+          onLangChange={changeLanguage}
+          currentLang={language}
+          weather={weather}
+          locationName={locationName}
+        />;
       case 'chat':
         return <ChatScreen navigateTo={navigateTo} language={language} t={t} />;
       case 'vision':
