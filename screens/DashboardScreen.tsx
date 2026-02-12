@@ -91,10 +91,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   };
 
   return (
-    <div className="min-h-full pb-32 font-sans text-gray-800 relative bg-gradient-to-b from-[#FFF0D1] to-[#FFF8E1]">
+    <div className="min-h-full pb-32 font-sans text-gray-800 relative bg-white">
 
-      {/* Detailed Golden Glow for Header Text */}
-      <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-br from-amber-400/30 via-transparent to-transparent z-0 pointer-events-none mix-blend-multiply blur-3xl" />
+      {/* Mixed Golden/White Background - Concentrated Top Left */}
+      <div className="absolute top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-200 via-amber-50/50 to-transparent z-0 pointer-events-none" />
 
       {/* 1. Header Section */}
       <div className="px-6 pt-12 pb-6 flex justify-between items-start relative z-20">
