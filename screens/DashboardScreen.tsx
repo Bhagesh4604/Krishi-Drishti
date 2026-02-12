@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, UserProfile, Language } from '../types';
+import { languages } from '../translations';
 import {
   MapPin,
   Bell,
@@ -31,6 +32,7 @@ import {
 import { weatherService } from '../src/services/api';
 import VoiceAssistantModal from '../components/VoiceAssistantModal';
 import WeatherModal from '../components/WeatherModal';
+import CarbonWalletCard from '../components/CarbonWalletCard';
 
 interface DashboardScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -42,9 +44,10 @@ interface DashboardScreenProps {
   locationName: string;
 }
 
-const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, currentLang, weather, locationName }) => {
+const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, onLangChange, currentLang, weather, locationName }) => {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [showWeatherModal, setShowWeatherModal] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : 32;
 
@@ -77,13 +80,66 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             <span className="text-sm font-medium tracking-wide">{locationName.split(',')[0]}</span>
           </div>
         </div>
-        <button
-          className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors active:scale-95"
-          onClick={() => { }}
-        >
-          <div className="w-2 h-2 bg-black rounded-full absolute top-3 right-3 border border-white pointer-events-none" />
-          <Bell size={20} className="text-gray-900" fill="black" />
-        </button>
+
+        <div className="flex items-center gap-3 relative">
+          <button
+            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors active:scale-95"
+            onClick={() => setShowLangMenu(!showLangMenu)}
+          >
+            <span className="sr-only">Change Language</span>
+            <div className={`w-5 h-5 flex items-center justify-center font-bold text-xs border-2 rounded-full transition-colors ${showLangMenu ? 'bg-gray-900 text-white border-gray-900' : 'text-gray-900 border-gray-900'}`}>
+              {currentLang.toUpperCase()}
+            </div>
+          </button>
+
+          {showLangMenu && (
+            <>
+              {/* Backdrop to close */}
+              <div
+                className="fixed inset-0 z-[60]"
+                onClick={() => {
+                  console.log("Backdrop clicked -> Closing");
+                  setShowLangMenu(false);
+                }}
+              />
+              {/* Dropdown Menu */}
+              <div
+                className="absolute top-full mt-2 right-12 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-[70] w-48 max-h-80 overflow-y-auto"
+                style={{ minWidth: '200px' }}
+              >
+                <div className="px-3 py-2 border-b border-gray-100 mb-1">
+                  <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Language ({languages.length})</span>
+                </div>
+                {languages.map((lang: any) => (
+                  <button
+                    key={lang.code}
+                    className={`w-full text-left px-3 py-3 rounded-xl text-sm font-bold flex justify-between items-center transition-all mb-1 ${currentLang === lang.code
+                      ? 'bg-green-50 text-green-700 shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => {
+                      console.log("Selected language:", lang.code);
+                      onLangChange(lang.code as Language);
+                      setShowLangMenu(false);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span>{lang.label}</span>
+                      <span className="text-[10px] font-medium text-gray-400">{lang.native}</span>
+                    </div>
+                    {currentLang === lang.code && <div className="w-2 h-2 rounded-full bg-green-500 shadow-green-200 shadow-lg" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <button
+            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors active:scale-95"
+            onClick={() => { }}
+          >
+            <div className="w-2 h-2 bg-black rounded-full absolute top-3 right-3 border border-white pointer-events-none" />
+            <Bell size={20} className="text-gray-900" fill="black" />
+          </button>
+        </div>
       </div>
 
       {/* 2. Weather Section (Design from Image) */}
@@ -163,6 +219,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Carbon Wallet Integration */}
+      <div className="mx-6 mb-6">
+        <CarbonWalletCard />
+
+        {/* Quick Action to Mark Land */}
+        <button
+          onClick={() => navigateTo('landmark')}
+          className="w-full mt-4 bg-white border-2 border-green-600 border-dashed rounded-2xl p-4 flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-sm"
+        >
+          <MapPin size={20} className="text-green-700" />
+          <span className="font-bold text-green-800">Locate My Farm Boundary</span>
+        </button>
       </div>
 
       {/* 4. Services Grid (Re-added for Navigation) */}
@@ -274,7 +344,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         language={currentLang}
       />
 
-    </div>
+    </div >
   );
 };
 

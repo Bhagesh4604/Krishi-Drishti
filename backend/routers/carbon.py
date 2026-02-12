@@ -1,16 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
 import json
 import random
+import ee
 
 from ..database import get_db
 from ..models import CarbonProject, CarbonEvidence, Plot, User
 from ..dependencies import get_current_user
 
 router = APIRouter(prefix="/api/carbon", tags=["carbon"])
+
+# --- Earth Engine Setup ---
+EE_INITIALIZED = False
+try:
+    ee.Initialize()
+    EE_INITIALIZED = True
+except Exception as e:
+    print(f"Earth Engine Authentication Failed: {e}")
+    # In production, handle authentication (service account) here.
+
+def calculate_ndvi(image):
+    """Calculates NDVI for a given image."""
+    ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI')
+    return image.addBands(ndvi)
 
 # --- Pydantic Models ---
 class ProjectCreate(BaseModel):
@@ -21,6 +36,9 @@ class EvidenceCreate(BaseModel):
     description: str
     geo_lat: float
     geo_lng: float
+
+class AnalysisRequest(BaseModel):
+    geometry: Dict[str, Any] # GeoJSON Polygon
 
 class ProjectResponse(BaseModel):
     id: int
@@ -44,6 +62,101 @@ class ProjectResponse(BaseModel):
         from_attributes = True
 
 # --- Endpoints ---
+
+@router.post("/analyze")
+async def analyze_farm(request: AnalysisRequest):
+    """
+    Real-time Satellite Analysis for Carbon Potential.
+    Expects GeoJSON Polygon.
+    Returns: Eligibility, Credits, NDVI Growth Data.
+    """
+    try:
+        geojson_polygon = request.geometry
+        
+        # If EE not initialized, fallback to mock (for dev environment without credentials)
+        if not EE_INITIALIZED:
+            # Simulate processing time
+            import time
+            time.sleep(2)
+            growth = random.uniform(0.12, 0.18) # 12-18% growth
+            credits = 1250 # Mock value
+            return {
+                "eligible": True,
+                "credits": credits,
+                "details": {
+                    "ndvi_2024": 0.42,
+                    "ndvi_2025": 0.42 + growth,
+                    "growth": growth
+                },
+                "status": "simulated"
+            }
+
+        # Real Earth Engine Analysis
+        roi = ee.Geometry.Polygon(geojson_polygon['coordinates'][0]) # Assuming simple polygon
+
+        start_date_2024 = '2024-01-01'
+        end_date_2024 = '2024-01-30'
+        
+        start_date_2025 = '2025-01-01'
+        end_date_2025 = '2025-01-30'
+
+        # Fetch Sentinel-2 Collections
+        s2_2024 = ee.ImageCollection('COPERNICUS/S2_SR') \
+            .filterBounds(roi) \
+            .filterDate(start_date_2024, end_date_2024) \
+            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) \
+            .map(calculate_ndvi) \
+            .select('NDVI') \
+            .median() \
+            .clip(roi)
+
+        s2_2025 = ee.ImageCollection('COPERNICUS/S2_SR') \
+            .filterBounds(roi) \
+            .filterDate(start_date_2025, end_date_2025) \
+            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) \
+            .map(calculate_ndvi) \
+            .select('NDVI') \
+            .median() \
+            .clip(roi)
+
+        # Reduce region
+        stats_2024 = s2_2024.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=roi,
+            scale=10,
+            maxPixels=1e9
+        ).getInfo()
+
+        stats_2025 = s2_2025.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=roi,
+            scale=10,
+            maxPixels=1e9
+        ).getInfo()
+
+        mean_ndvi_2024 = stats_2024.get('NDVI', 0) or 0
+        mean_ndvi_2025 = stats_2025.get('NDVI', 0) or 0
+        
+        growth = mean_ndvi_2025 - mean_ndvi_2024
+        
+        eligible = growth > 0.05 # Threshold
+        credits_earned = 0.5 if eligible else 0 # Simplified logic
+
+        return {
+            "eligible": eligible,
+            "credits": credits_earned * 1000, # Convert to meaningful currency/tokens
+            "details": {
+                "ndvi_2024": mean_ndvi_2024,
+                "ndvi_2025": mean_ndvi_2025,
+                "growth": growth
+            },
+            "status": "real"
+        }
+
+    except Exception as e:
+        print(f"Analysis Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/projects", response_model=List[ProjectResponse])
 async def get_my_projects(

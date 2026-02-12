@@ -113,11 +113,14 @@ async def ai_chat(
         chat_history = "\n".join([f"{msg.role}: {msg.text}" for msg in history])
         full_prompt = f"{context}\n\nHistory:\n{chat_history}\n\nUser: {request.message}\nAssistant:"
         
-        # 3. Call Gemini
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(full_prompt)
-        answer = response.text
+        # 3. Call Gemini (Async Wrapper)
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
         
+        # Use run_in_executor to prevent blocking the main event loop
+        loop = asyncio.get_event_loop()
+        answer = await loop.run_in_executor(None, lambda: _generate_chat_response(full_prompt))
+
         # 4. Save User Message
         user_msg = ChatMessage(user_id=current_user.id, role="user", text=request.message)
         db.add(user_msg)
@@ -129,11 +132,19 @@ async def ai_chat(
         db.commit()
         
         return {"response": answer}
+
     except Exception as e:
         import traceback
         traceback.print_exc()
         # Fallback response so user isn't invalid
         return {"response": "I am having trouble connecting to the brain. Please try again or check API keys."}
+
+def _generate_chat_response(prompt):
+    """Helper to run blocking Gemini call in thread"""
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    response = model.generate_content(prompt)
+    return response.text
+
 
 @router.post("/diagnose")
 async def diagnose_crop(

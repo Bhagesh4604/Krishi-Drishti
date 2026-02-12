@@ -15,6 +15,7 @@ import LiveAudioScreen from './screens/LiveAudioScreen';
 import CarbonVaultScreen from './screens/CarbonVaultScreen';
 import SchemeSetuScreen from './screens/SchemeSetuScreen';
 import CropStressScreen from './screens/CropStressScreen';
+import LandMarkingScreen from './screens/LandMarkingScreen';
 
 // import ContractsScreen from './screens/ContractsScreen';
 // import GlobeView from './screens/GlobeView';
@@ -126,7 +127,7 @@ const AppContent: React.FC = () => {
               console.log("Location error", error);
               resolve(null);
             },
-            { timeout: 10000, enableHighAccuracy: true }
+            { timeout: 4000, enableHighAccuracy: false }
           );
         });
       };
@@ -134,11 +135,8 @@ const AppContent: React.FC = () => {
       const savedLang = localStorage.getItem('ks_lang') as Language;
       if (savedLang) setLanguage(savedLang);
 
-      // Timeout race
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 5000)
-      );
-      timeoutPromise.catch(() => { }); // Prevent unhandled rejection
+      // Timeout race MOVED down
+
 
       const token = localStorage.getItem('ks_token');
       log(`[App] Token found: ${!!token}`);
@@ -146,6 +144,12 @@ const AppContent: React.FC = () => {
       try {
         // Fetch location in parallel or before profile
         const location = await getLocation();
+
+        // Start backend timeout timer strictly AFTER location is done/skipped
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout")), 15000)
+        );
+        timeoutPromise.catch(() => { });
 
         if (token) {
           log("[App] Fetching profile...");
@@ -220,14 +224,13 @@ const AppContent: React.FC = () => {
   // Global Error Handler for Async/Event Errors
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      console.error("Global Error:", event.error);
-      setConnectionError(true); // Reuse existing error UI or add specific state
-      // Optionally store error message in state to display
+      console.error("Global Error (Logged):", event.error);
+      // setConnectionError(true); // DISABLE AGGRESSIVE CRASH
     };
 
     const handleRejection = (event: PromiseRejectionEvent) => {
-      console.error("Unhandled Rejection:", event.reason);
-      setConnectionError(true);
+      console.error("Unhandled Rejection (Logged):", event.reason);
+      // setConnectionError(true); // DISABLE AGGRESSIVE CRASH
     };
 
     window.addEventListener('error', handleError);
@@ -240,6 +243,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   const changeLanguage = (lang: Language) => {
+    console.log("[App] Changing language to:", lang);
     setLanguage(lang);
     localStorage.setItem('ks_lang', lang);
   };
@@ -394,6 +398,9 @@ const AppContent: React.FC = () => {
       // case 'contracts':
       //   return <ContractsScreen navigateTo={navigateTo} t={t} />;
 
+      case 'landmark':
+        return <LandMarkingScreen navigation={{ goBack: () => navigateTo('home') }} />;
+
       default:
         return (
           <AuthScreen
@@ -409,7 +416,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu'].includes(currentScreen);
+  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark'].includes(currentScreen);
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto shadow-xl relative overflow-hidden text-gray-900" style={{ transform: 'translate(0)' }}>
