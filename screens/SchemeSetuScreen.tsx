@@ -147,7 +147,7 @@ const SchemeSetuScreen: React.FC<SchemeSetuScreenProps> = ({ navigateTo, user, t
           </button>
           <div>
             <h2 className="text-2xl font-black text-gray-900 leading-none">{t.scheme_setu}</h2>
-            <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1">{t.matcher_tag}</p>
+            <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1">{t.matcher_tag}</p>
           </div>
         </div>
 

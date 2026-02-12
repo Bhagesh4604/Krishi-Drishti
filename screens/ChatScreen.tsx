@@ -181,7 +181,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t }) => {
     <div className={`flex flex-col h-full transition-colors duration-1000 ${isDistressed ? 'bg-blue-50/50' : (isThinkingMode ? 'bg-[#f0f4f0]' : 'bg-[#f8fafc]')
       }`}>
       {/* Dynamic Header */}
-      <div className={`px-4 py-4 border-b flex items-center justify-between sticky top-0 z-10 shadow-sm transition-all ${isDistressed
+      <div className={`px-6 pt-12 pb-6 border-b flex items-center justify-between sticky top-0 z-10 shadow-sm transition-all ${isDistressed
         ? 'bg-blue-50 border-blue-100'
         : 'bg-white border-gray-100'
         }`}>

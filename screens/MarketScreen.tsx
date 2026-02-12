@@ -35,7 +35,8 @@ import {
   ArrowUpDown,
   BarChart3,
   ShoppingCart,
-  Bell
+  Bell,
+  ArrowLeft
 } from 'lucide-react';
 import { COLORS } from '../constants';
 
@@ -218,23 +219,24 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
     <div className="bg-[#f8fafc] min-h-full pb-24 relative font-sans">
 
       {/* 1. Minimalist Header */}
-      <div className="pt-12 px-6 pb-4 bg-white sticky top-0 z-30 flex justify-between items-center shadow-sm">
-        <h2 className="text-2xl font-black text-gray-900 tracking-tight">Marketplace</h2>
-        <div className="flex gap-3 items-center">
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="bg-black text-white px-4 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform flex items-center gap-2"
-          >
-            <Plus size={14} strokeWidth={3} /> Sell
-          </button>
-          <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 active:scale-95 transition-transform">
-            <Search size={20} />
-          </button>
-          <button className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 active:scale-95 transition-transform relative">
-            <ShoppingCart size={20} />
-            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></div>
-          </button>
+      <div className="px-6 pt-12 pb-6 bg-white sticky top-0 z-30 flex justify-between items-start shadow-sm">
+        <button onClick={() => navigateTo('home')} className="p-2 -ml-2 text-gray-400">
+          <ArrowLeft size={24} />
+        </button>
+        <div>
+          <h2 className="text-2xl font-black text-gray-900 leading-tight">Your <span className="font-bold text-gray-900">Mandi</span></h2>
+          <div className="flex items-center gap-1 mt-1 text-gray-600 self-start px-2 py-1 rounded-lg">
+            <MapPin size={16} className="text-gray-500" fill="currentColor" />
+            <span className="text-sm font-medium tracking-wide">Nagpur, India</span>
+          </div>
         </div>
+        <button
+          className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors active:scale-95"
+          onClick={() => {}} // Placeholder for notification action
+        >
+          <div className="w-2 h-2 bg-black rounded-full absolute top-3 right-3 border border-white pointer-events-none" />
+          <Bell size={20} className="text-gray-900" fill="black" />
+        </button>
       </div>
 
       {/* 2. Hero Card (3D Style) */}
@@ -298,7 +300,7 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
               <div
                 key={item.id}
                 onClick={() => navigateTo('market-detail', { listing: item })}
-                className="bg-white p-3 rounded-[2rem] shadow-sm border border-gray-50 active:scale-[0.98] transition-transform group"
+                className="bg-white p-3 rounded-[2rem] shadow-sm border border-gray-100 active:scale-[0.98] transition-transform group"
               >
                 <div className="relative h-32 rounded-[1.5rem] overflow-hidden mb-3">
                   <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
