@@ -1,5 +1,5 @@
 
-export type Screen = 'landing' | 'auth' | 'profile' | 'home' | 'chat' | 'vision' | 'vision-result' | 'map' | 'market' | 'market-detail' | 'finance' | 'forecast' | 'live-audio' | 'carbon-vault' | 'scheme-setu' | 'crop-stress' | 'social' | 'globe' | 'contracts';
+export type Screen = 'landing' | 'auth' | 'home' | 'chat' | 'vision' | 'vision-result' | 'map' | 'market' | 'market-detail' | 'insurance' | 'forecast' | 'live-audio' | 'carbon-vault' | 'scheme-setu' | 'contracts' | 'crop-stress' | 'profile' | 'globe' | 'contracts';
 
 export type Language = 'en' | 'hi' | 'mr' | 'bn' | 'te' | 'ta' | 'pa' | 'kn';
 

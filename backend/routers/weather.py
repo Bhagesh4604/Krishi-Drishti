@@ -10,7 +10,7 @@ async def get_weather(lat: float = 21.1458, lng: float = 79.0882):
     Defaults to Nagpur (21.1458, 79.0882) if no coordinates provided.
     """
     try:
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=temperature_2m,relative_humidity_2m,rain,weather_code,is_day&hourly=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto"
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=temperature_2m,relative_humidity_2m,rain,precipitation,weather_code,is_day,wind_speed_10m,soil_temperature_0cm&hourly=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,wind_speed_10m_max&timezone=auto"
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
             data = response.json()

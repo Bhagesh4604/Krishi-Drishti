@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Store, Camera, Map as MapIcon, MessageCircle, User } from 'lucide-react';
+import { Home, Store, Camera, MessageCircle, User } from 'lucide-react';
 import { Screen } from '../types';
 
 interface BottomNavProps {
@@ -9,31 +9,40 @@ interface BottomNavProps {
 
 const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate }) => {
   const navItems = [
-    { id: 'home', icon: Home, label: 'Home' },
     { id: 'market', icon: Store, label: 'Mandi' },
-    { id: 'vision', icon: Camera, label: 'Scan' },
-    { id: 'chat', icon: MessageCircle, label: 'Ask AI' },
+    { id: 'home', icon: Home, label: 'Home' },
     { id: 'profile', icon: User, label: 'Profile' },
   ];
 
   return (
-    <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 px-6 py-4 flex justify-between items-center z-50 max-w-sm mx-auto">
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = currentScreen === item.id || (item.id === 'vision' && currentScreen === 'vision-result');
+    <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] flex justify-around items-center py-3 z-50 border-t border-orange-50/50">
 
-        return (
-          <button
-            key={item.id}
-            onClick={() => onNavigate(item.id as Screen)}
-            className="flex flex-col items-center justify-center space-y-1 transition-all duration-300 active:scale-95"
-          >
-            <div className={`p-2 rounded-full transition-all ${isActive ? 'bg-green-600 text-white shadow-lg shadow-green-200' : 'text-gray-400 hover:text-green-600'}`}>
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-            </div>
-          </button>
-        );
-      })}
+      {/* Left Side: Mandi */}
+      <button
+        onClick={() => onNavigate('market')}
+        className={`flex flex-col items-center gap-1 p-2 transition-all ${currentScreen === 'market' ? 'text-[var(--accent-orange)]' : 'text-gray-400 hover:text-gray-600'}`}
+      >
+        <Store size={24} />
+        <span className="text-[10px] font-medium">Mandi</span>
+      </button>
+
+      {/* Center: Home (Highlighted) */}
+      <button
+        onClick={() => onNavigate('home')}
+        className={`p-4 rounded-full shadow-lg transition-all transform -translate-y-6 border-4 border-[#FFF8E7] ${currentScreen === 'home' ? 'bg-black text-white' : 'bg-gray-800 text-gray-300'}`}
+      >
+        <Home size={28} />
+      </button>
+
+      {/* Right Side: Profile */}
+      <button
+        onClick={() => onNavigate('profile')}
+        className={`flex flex-col items-center gap-1 p-2 transition-all ${currentScreen === 'profile' ? 'text-[var(--accent-orange)]' : 'text-gray-400 hover:text-gray-600'}`}
+      >
+        <User size={24} />
+        <span className="text-[10px] font-medium">Profile</span>
+      </button>
+
     </div>
   );
 };

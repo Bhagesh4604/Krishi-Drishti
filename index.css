@@ -4,10 +4,48 @@
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* deeply mixed golden and white background */
+  --bg-gradient:
+    radial-gradient(circle at 0% 10%, rgba(224, 159, 62, 0.4) 0%, rgba(255, 255, 255, 0) 30%),
+    /* Reduced size from 50% to 30% to clear temp area */
+    radial-gradient(circle at 10% 20%, rgba(253, 235, 208, 0.7) 0%, rgba(255, 255, 255, 0) 30%),
+    /* Reduced opacity from 0.9 to 0.7 */
+    radial-gradient(circle at 90% 10%, rgba(253, 235, 208, 0.3) 0%, rgba(255, 255, 255, 0) 25%),
+    /* Reduced opacity from 0.6 to 0.3, size from 30% to 25% */
+    radial-gradient(circle at 50% 50%, rgba(255, 248, 231, 0.5) 0%, rgba(255, 255, 255, 0) 60%),
+    radial-gradient(circle at 80% 80%, rgba(224, 159, 62, 0.15) 0%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(180deg, #FFF8E7 0%, #FFFFFF 100%);
+  --accent-orange: #E09F3E;
+  /* Deep Mustard Orange */
+  --text-charcoal: #333333;
+  /* Muted Charcoal */
+  --text-gold: #D4AF37;
+  /* Gold */
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: #f3f4f6;
+  /* Neutral gray for outside area */
+  color: var(--text-charcoal);
+}
+
+.mobile-container {
+  /* Use local attachment so background scrolls with content */
+  background-attachment: local;
+  /* deeply mixed golden and white background with fixed positions for top elements */
+  background-image:
+    radial-gradient(circle at 0% 50px, rgba(224, 159, 62, 0.4) 0%, rgba(255, 255, 255, 0) 150px),
+    /* Header Glow (Top Left) */
+    radial-gradient(circle at 10% 120px, rgba(253, 235, 208, 0.7) 0%, rgba(255, 255, 255, 0) 150px),
+    /* Secondary Header Glow */
+    radial-gradient(circle at 90% 60px, rgba(253, 235, 208, 0.3) 0%, rgba(255, 255, 255, 0) 120px),
+    /* Wheat Glow (Top Right) */
+    radial-gradient(circle at 50% 400px, rgba(255, 248, 231, 0.5) 0%, rgba(255, 255, 255, 0) 60%),
+    /* Center Glow */
+    radial-gradient(circle at 80% 100%, rgba(224, 159, 62, 0.15) 0%, rgba(255, 255, 255, 0) 40%),
+    /* Bottom Right */
+    linear-gradient(180deg, #FFF8E7 0%, #FFFFFF 100%);
 }

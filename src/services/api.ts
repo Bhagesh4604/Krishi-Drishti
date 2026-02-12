@@ -155,11 +155,44 @@ export const financeService = {
   }
 };
 
+// Simple in-memory cache
+let weatherCache = {
+  data: null as any,
+  timestamp: 0,
+  lat: 0,
+  lng: 0
+};
+
 export const weatherService = {
-  getWeather: async (lat?: number, lng?: number) => {
-    const params = { lat, lng };
-    const response = await api.get('/weather/', { params });
-    return response.data;
+  getWeather: async (lat: number, lng: number) => {
+    // Return cached data if valid (< 10 mins) and same location (approx)
+    const now = Date.now();
+    if (
+      weatherCache.data &&
+      (now - weatherCache.timestamp < 10 * 60 * 1000) &&
+      Math.abs(weatherCache.lat - lat) < 0.01 &&
+      Math.abs(weatherCache.lng - lng) < 0.01
+    ) {
+      console.log("Serving cached weather data");
+      return weatherCache.data;
+    }
+
+    try {
+      const response = await api.get(`/weather/current?lat=${lat}&lng=${lng}`);
+      // Update cache
+      weatherCache = {
+        data: response.data,
+        timestamp: now,
+        lat,
+        lng
+      };
+      return response.data;
+    } catch (error) {
+      console.error("Weather fetch failed", error);
+      // Return cached data even if expired if fetch fails
+      if (weatherCache.data) return weatherCache.data;
+      throw error;
+    }
   },
   searchCity: async (query: string) => {
     const response = await api.get<{ id: number, name: string, country: string, latitude: number, longitude: number }[]>('/weather/search', { params: { query } });
@@ -253,6 +286,17 @@ export const contractService = {
   },
   signContract: async (contractId: number, signatureHash: string) => {
     const response = await api.post('/contracts/sign', { contract_id: contractId, signature_hash: signatureHash });
+    return response.data;
+  }
+};
+
+export const insuranceService = {
+  search: async (query: string = '') => {
+    const response = await api.get('/insurance/search', { params: { query } });
+    return response.data;
+  },
+  enroll: async (data: any) => {
+    const response = await api.post('/insurance/enroll', data);
     return response.data;
   }
 };

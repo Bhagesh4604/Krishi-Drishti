@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from .database import engine, Base
-from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts
+from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance
 
 load_dotenv()
 
@@ -33,6 +33,7 @@ app.include_router(community.router)
 app.include_router(plots.router)
 app.include_router(carbon.router)
 app.include_router(contracts.router)
+app.include_router(insurance.router)
 
 @app.get("/")
 def read_root():

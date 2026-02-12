@@ -9,13 +9,13 @@ import VisionResultScreen from './screens/VisionResultScreen';
 import FarmMapScreen from './screens/FarmMapScreen';
 import MarketScreen from './screens/MarketScreen';
 import MarketDetailScreen from './screens/MarketDetailScreen';
-import FinanceScreen from './screens/FinanceScreen';
+import InsuranceScreen from './screens/InsuranceScreen';
 import ForecastScreen from './screens/ForecastScreen';
 import LiveAudioScreen from './screens/LiveAudioScreen';
 import CarbonVaultScreen from './screens/CarbonVaultScreen';
 import SchemeSetuScreen from './screens/SchemeSetuScreen';
 import CropStressScreen from './screens/CropStressScreen';
-import SocialScreen from './screens/SocialScreen';
+
 // import ContractsScreen from './screens/ContractsScreen';
 // import GlobeView from './screens/GlobeView';
 import SplashScreen from './screens/SplashScreen';
@@ -135,6 +135,7 @@ const AppContent: React.FC = () => {
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Timeout")), 5000)
       );
+      timeoutPromise.catch(() => { }); // Prevent unhandled rejection
 
       const token = localStorage.getItem('ks_token');
       log(`[App] Token found: ${!!token}`);
@@ -343,8 +344,8 @@ const AppContent: React.FC = () => {
         return <MarketScreen navigateTo={navigateTo} t={t} />;
       case 'market-detail':
         return <MarketDetailScreen navigateTo={navigateTo} listing={selectedListing} t={t} />;
-      case 'finance':
-        return <FinanceScreen navigateTo={navigateTo} t={t} />;
+      case 'insurance':
+        return <InsuranceScreen navigateTo={navigateTo} t={t} />;
       case 'forecast':
         return <ForecastScreen navigateTo={navigateTo} t={t} />;
       case 'live-audio':
@@ -355,8 +356,7 @@ const AppContent: React.FC = () => {
         return <SchemeSetuScreen navigateTo={navigateTo} user={user} t={t} />;
       case 'crop-stress':
         return <CropStressScreen />;
-      case 'social':
-        return <SocialScreen navigateTo={navigateTo} />;
+
       // case 'contracts':
       //   return <ContractsScreen navigateTo={navigateTo} t={t} />;
 
@@ -378,8 +378,8 @@ const AppContent: React.FC = () => {
   const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu'].includes(currentScreen);
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto bg-[#F8FAF8] shadow-xl relative overflow-hidden text-gray-900" style={{ transform: 'translate(0)' }}>
-      <main className="flex-1 overflow-y-auto pb-20">
+    <div className="flex flex-col h-screen max-w-md mx-auto shadow-xl relative overflow-hidden text-gray-900" style={{ transform: 'translate(0)' }}>
+      <main className="flex-1 overflow-y-auto pb-20 mobile-container">
         {renderScreen()}
       </main>
       {showNav && (
