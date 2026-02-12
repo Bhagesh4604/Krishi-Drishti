@@ -30,7 +30,6 @@ import {
   Plus
 } from 'lucide-react';
 import { weatherService } from '../src/services/api';
-import VoiceAssistantModal from '../components/VoiceAssistantModal';
 import WeatherModal from '../components/WeatherModal';
 import CarbonWalletCard from '../components/CarbonWalletCard';
 
@@ -45,7 +44,6 @@ interface DashboardScreenProps {
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, onLangChange, currentLang, weather, locationName }) => {
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
 
@@ -330,21 +328,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         </div>
       </div>
 
-      {/* Floating Action Button for AI (Corner) */}
-      <button
-        onClick={() => setIsVoiceActive(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-50 border-4 border-white/20"
-      >
-        <MessageCircle size={24} />
-      </button>
+    </div>
 
-      <VoiceAssistantModal
-        isOpen={isVoiceActive}
-        onClose={() => setIsVoiceActive(false)}
-        language={currentLang}
-      />
 
-    </div >
   );
 };
 

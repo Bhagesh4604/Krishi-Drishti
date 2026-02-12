@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { X, Mic, MicOff, Loader2, Globe, Sparkles } from 'lucide-react';
+import { X, Mic, MicOff, Loader2, Globe, Sparkles, Keyboard } from 'lucide-react';
 import { languages } from '../translations';
 import { Language } from '../types';
 
@@ -8,9 +8,10 @@ interface VoiceAssistantModalProps {
     isOpen: boolean;
     onClose: () => void;
     language: Language;
+    onSwitchToText?: () => void;
 }
 
-const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClose, language }) => {
+const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClose, language, onSwitchToText }) => {
     const [isActive, setIsActive] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [transcriptions, setTranscriptions] = useState<{ role: 'user' | 'model', text: string }[]>([]);
@@ -19,12 +20,17 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
     const [selectedLang, setSelectedLang] = useState<Language>(language);
     const [showLangMenu, setShowLangMenu] = useState(false);
 
+    // Visualization State
+    const [volume, setVolume] = useState(0);
+
     const sessionRef = useRef<any>(null);
     const isActiveRef = useRef(false);
     const audioContextInRef = useRef<AudioContext | null>(null);
     const audioContextOutRef = useRef<AudioContext | null>(null);
     const nextStartTimeRef = useRef(0);
     const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+    const animationRef = useRef<number>();
+    const analyserRef = useRef<AnalyserNode | null>(null);
 
     // Audio helper functions (Same as LiveAudioScreen)
     const decode = (base64: string) => {
@@ -71,13 +77,36 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
     const startSession = async () => {
         setIsConnecting(true);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY }); // Ensure API KEY is available
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
             audioContextInRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
             audioContextOutRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
             const currentLangLabel = languages.find(l => l.code === selectedLang)?.label || 'English';
+
+            // Connect Analyser for Visualization
+            const analyser = audioContextInRef.current.createAnalyser();
+            analyser.fftSize = 256;
+            analyserRef.current = analyser;
+
+            const source = audioContextInRef.current.createMediaStreamSource(stream);
+            source.connect(analyser); // Connect source to analyser
+
+            // Visualization Loop
+            const updateVolume = () => {
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+                const avg = dataArray.reduce((p, c) => p + c, 0) / dataArray.length;
+
+                // Normalize and smooth volume (0 to 1 range, biased towards speech frequencies)
+                // Use a lower threshold to make it sensitive
+                const normalizedParams = Math.min(1, avg / 60);
+
+                setVolume(prev => prev * 0.8 + normalizedParams * 0.2); // Smooth transition
+                animationRef.current = requestAnimationFrame(updateVolume);
+            };
+            updateVolume();
 
             const sessionPromise = ai.live.connect({
                 model: 'gemini-2.5-flash-native-audio-preview-12-2025',
@@ -86,7 +115,9 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
                         setIsActive(true);
                         isActiveRef.current = true;
                         setIsConnecting(false);
-                        const source = audioContextInRef.current!.createMediaStreamSource(stream);
+
+                        // Re-use source for script processor logic
+                        // We need to re-create the graph part for the processor since it's a specific requirement for the SDK input
                         const scriptProcessor = audioContextInRef.current!.createScriptProcessor(4096, 1, 1);
                         scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
                             if (!isActiveRef.current) return;
@@ -96,6 +127,10 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
                                 session.sendRealtimeInput({ media: pcmBlob });
                             });
                         };
+
+                        // Connect the source to the processor
+                        // Note: source is already created above and connected to analyser.
+                        // We can connect it to multiple destinations.
                         source.connect(scriptProcessor);
                         scriptProcessor.connect(audioContextInRef.current!.destination);
                     },
@@ -140,12 +175,14 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
                     onclose: () => {
                         setIsActive(false);
                         isActiveRef.current = false;
+                        if (animationRef.current) cancelAnimationFrame(animationRef.current);
                     },
                     onerror: (e) => {
                         console.error(e);
                         setIsActive(false);
                         isActiveRef.current = false;
                         setIsConnecting(false);
+                        if (animationRef.current) cancelAnimationFrame(animationRef.current);
                     }
                 },
                 config: {
@@ -163,6 +200,7 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
         } catch (err) {
             console.error(err);
             setIsConnecting(false);
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
         }
     };
 
@@ -176,6 +214,7 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
         isActiveRef.current = false;
         setIsConnecting(false);
         setTranscriptions([]);
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
 
     useEffect(() => {
@@ -194,6 +233,9 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
             setTimeout(() => startSession(), 500);
         }
     }, [selectedLang]);
+
+    // Dynamic Style for Orb
+    const orbScale = 1 + (volume * 1.5);
 
     if (!isOpen) return null;
 
@@ -247,26 +289,28 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
 
                 {/* Perplexity-style Orb Animation */}
                 <div className="relative w-64 h-64 flex items-center justify-center">
-                    {/* Core Orb */}
-                    <div className={`w-32 h-32 rounded-full bg-teal-500 blur-2xl opacity-40 transition-all duration-500 ${isActive ? 'scale-110' : 'scale-90'}`}></div>
-                    <div className={`absolute w-24 h-24 rounded-full bg-teal-400 blur-xl opacity-60 transition-all duration-300 ${isActive ? 'scale-110' : 'scale-100'}`}></div>
-                    <div className="absolute w-20 h-20 rounded-full bg-white blur-lg opacity-30"></div>
 
-                    {/* Rotating Rings (Simulated) */}
+                    {/* Animated Container for Circular Motion */}
+                    <div
+                        className="relative flex items-center justify-center transition-transform duration-100 ease-linear"
+                        style={{
+                            transform: `scale(${orbScale}) rotate(${Date.now() / 1000 * 20}deg)`,
+                        }}
+                    >
+                        {/* Core Orb */}
+                        <div className={`w-32 h-32 rounded-full bg-teal-500 blur-2xl opacity-40 transition-all duration-75`} />
+                        <div className={`absolute w-24 h-24 rounded-full bg-teal-400 blur-xl opacity-60 transition-all duration-75`} />
+                        <div className="absolute w-20 h-20 rounded-full bg-white blur-lg opacity-30" />
+                    </div>
+
+                    {/* Orbiting Particles (Simulated) */}
                     {isActive && (
-                        <>
-                            <div className="absolute inset-0 border border-teal-500/30 rounded-full w-full h-full animate-[spin_4s_linear_infinite]"></div>
-                            <div className="absolute inset-4 border border-teal-300/20 rounded-full w-56 h-56 animate-[spin_6s_linear_infinite_reverse]"></div>
-                        </>
+                        <div className="absolute inset-0 animate-[spin_10s_linear_infinite]" style={{ animationDuration: `${Math.max(0.5, 5 - volume * 4)}s` }}>
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-teal-200 rounded-full blur-[1px]"></div>
+                            <div className="absolute bottom-10 right-10 w-1.5 h-1.5 bg-teal-300 rounded-full blur-[1px]"></div>
+                        </div>
                     )}
 
-                    {/* Ripple Waves */}
-                    {isActive && (
-                        <>
-                            <div className="absolute w-full h-full rounded-full border-2 border-teal-500/20 animate-ping" style={{ animationDuration: '2s' }}></div>
-                            <div className="absolute w-full h-full rounded-full border-2 border-teal-500/10 animate-ping" style={{ animationDuration: '3s', animationDelay: '0.5s' }}></div>
-                        </>
-                    )}
 
                     {/* Icon Center */}
                     <div className="absolute z-10">
@@ -300,13 +344,29 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
             </div>
 
             {/* Footer / Controls */}
-            <div className="p-8 pb-12 flex justify-center">
+            <div className="p-8 pb-12 flex justify-center items-center gap-6">
+
+                {/* Switch to Text Chat */}
+                <button
+                    onClick={onSwitchToText}
+                    className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-95 flex flex-col items-center gap-1"
+                    title="Type to Chat"
+                >
+                    <div className="bg-teal-500/20 p-3 rounded-full border border-teal-500/50">
+                        <Keyboard size={20} className="text-teal-400" />
+                    </div>
+                    <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">Type</span>
+                </button>
+
                 <button
                     onClick={isActive ? stopSession : startSession}
-                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${isActive ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30' : 'bg-teal-500/20 text-teal-400 border border-teal-500/50 hover:bg-teal-500/30'}`}
+                    className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${isActive ? 'bg-red-500/20 text-red-400 border-2 border-red-500/50 hover:bg-red-500/30' : 'bg-teal-500/20 text-teal-400 border-2 border-teal-500/50 hover:bg-teal-500/30'}`}
                 >
-                    {isActive ? <X size={24} /> : <Mic size={24} />}
+                    {isActive ? <X size={32} /> : <Mic size={32} />}
                 </button>
+
+                {/* Placeholder for symmetry */}
+                <div className="w-16"></div>
             </div>
         </div>
     );

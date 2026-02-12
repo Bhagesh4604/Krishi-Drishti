@@ -36,6 +36,36 @@ const RecenterMap = ({ lat, lng }: { lat: number, lng: number }) => {
     return null;
 };
 
+// --- Area Calculation Logic (Shoelace Formula) ---
+// --- Area Calculation Logic (Geodesic - WGS84) ---
+const calculateArea = (coords: [number, number][]) => {
+    if (coords.length < 3) return 0;
+
+    const d2r = Math.PI / 180;
+    let area = 0.0;
+
+    if (coords.length > 2) {
+        for (let i = 0; i < coords.length; i++) {
+            const j = (i + 1) % coords.length;
+            const p1 = coords[i];
+            const p2 = coords[j];
+
+            area += (p2[1] * d2r - p1[1] * d2r) * (2 + Math.sin(p1[0] * d2r) + Math.sin(p2[0] * d2r));
+        }
+        area = area * 6378137.0 * 6378137.0 / 2.0;
+    }
+
+    return Math.abs(area); // Square meters
+};
+
+const formatArea = (sqMeters: number) => {
+    const hectares = sqMeters / 10000;
+    const acres = sqMeters * 0.000247105;
+
+    // Show both Hectares and Acres for better verification
+    return `${hectares.toFixed(2)} ha (${acres.toFixed(2)} Acre)`;
+};
+
 const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => {
     const [mode, setMode] = useState<Mode>('tap');
     const [markers, setMarkers] = useState<[number, number][]>([]);
@@ -50,6 +80,7 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
     const [ownerName, setOwnerName] = useState('');
     const [gutNumber, setGutNumber] = useState('');
     const [proofFile, setProofFile] = useState<File | null>(null);
+    const [manualArea, setManualArea] = useState(''); // User override for area (Acres)
 
     // Watch ID for geolocation
     const watchId = useRef<number | null>(null);
@@ -128,6 +159,11 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
             alert("Please mark at least 3 points to define a field.");
             return;
         }
+        // Pre-fill manual area with calculated area in Acres
+        const calculatedSqM = calculateArea(markers);
+        const calculatedAcres = calculatedSqM * 0.000247105;
+        setManualArea(calculatedAcres.toFixed(2));
+
         setShowSaveModal(true);
     };
 
@@ -144,11 +180,25 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
         setLoading(true);
         try {
             const token = localStorage.getItem('ks_token');
+
+            // Determine Final Area
+            let finalAreaHa = 0;
+            const calculatedSqM = calculateArea(markers);
+
+            if (manualArea && !isNaN(parseFloat(manualArea))) {
+                // User entered Acres -> Convert to Hectares
+                // 1 Acre = 0.404686 Hectares
+                finalAreaHa = parseFloat(manualArea) * 0.404686;
+            } else {
+                // Fallback to calculated
+                finalAreaHa = calculatedSqM / 10000;
+            }
+
             // Prepare Payload
             const payload = {
                 name: `${ownerName}'s Farm`,
                 coordinates: markers.map(m => ({ lat: m[0], lng: m[1] })),
-                area: 2.5, // Mock area calculation for now, or use Leaflet GeometryUtil
+                area: parseFloat(finalAreaHa.toFixed(2)), // Save as hectares
                 crop_type: "Mixed"
             };
 
@@ -156,7 +206,7 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            alert(`Farm Saved! Ownership Verification Request Sent for Gut No. ${gutNumber}.`);
+            alert(`Farm Saved! \nArea: ${finalAreaHa.toFixed(2)} ha (${(finalAreaHa * 2.471).toFixed(2)} Acre)\nOwnership Verification Request Sent for Gut No. ${gutNumber}.`);
             setShowSaveModal(false);
             navigation.goBack();
         } catch (error) {
@@ -301,16 +351,30 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Gut No. / Survey No.</label>
-                                <input
-                                    type="text"
-                                    value={gutNumber}
-                                    onChange={e => setGutNumber(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-500"
-                                    placeholder="e.g. 42/2A"
-                                />
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Gut No.</label>
+                                    <input
+                                        type="text"
+                                        value={gutNumber}
+                                        onChange={e => setGutNumber(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-500"
+                                        placeholder="e.g. 123/A"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Area (Acres)</label>
+                                    <input
+                                        type="number"
+                                        value={manualArea}
+                                        onChange={e => setManualArea(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-500 font-bold text-green-700"
+                                        placeholder="2.12"
+                                    />
+                                </div>
                             </div>
+
+
 
                             <div>
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Upload 7/12 Extract (PDF/Image)</label>

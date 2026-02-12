@@ -1,11 +1,31 @@
-
 import React, { useState, useEffect } from 'react';
 import { Screen } from '../types';
-import { ArrowLeft, Info, Layers, Maximize, Navigation, Zap, MapPin, Loader2, RefreshCw, Plus, Trash2, Globe, Search, ChevronRight } from 'lucide-react';
-import { COLORS } from '../constants';
-import { plotService, weatherService } from '../src/services/api';
-// @ts-ignore
-import GlobeView from './GlobeView';
+import {
+  ArrowLeft,
+  Search,
+  Layers,
+  MoreVertical,
+  MapPin,
+  Droplets,
+  Thermometer,
+  Wind,
+  Activity,
+  ScanLine,
+  ChevronRight,
+  Plus
+} from 'lucide-react';
+import { MapContainer, TileLayer, Polygon, Marker, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import { plotService } from '../src/services/api';
+
+// Fix Leaflet Icons
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 interface FarmMapScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -19,43 +39,29 @@ interface Plot {
   crop_type?: string;
   health_score: number;
   moisture: number;
-  image_url?: string;
-  last_scan_date?: string;
 }
 
+const RecenterMap = ({ lat, lng, trigger }: { lat: number, lng: number, trigger: number }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo([lat, lng], 18, { duration: 1.5 });
+  }, [lat, lng, trigger]); // Trigger causes re-fly
+  return null;
+};
+
 const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [viewMode, setViewMode] = useState<'satellite' | 'ndvi'>('ndvi');
   const [plots, setPlots] = useState<Plot[]>([]);
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
-  const [isAddingPlot, setIsAddingPlot] = useState(false);
-  const [newPlotName, setNewPlotName] = useState('');
-  const [loadingPlots, setLoadingPlots] = useState(false);
-  const [showGlobe, setShowGlobe] = useState(false);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [recenterTrigger, setRecenterTrigger] = useState(0); // Add trigger state
+  const [loading, setLoading] = useState(true);
 
-  // Search State
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searchingCity, setSearchingCity] = useState(false);
-
-  // Initialize
   useEffect(() => {
-    // 1. Try GPS
-    if ("geolocation" in navigator) {
+    // 1. Get Location
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.warn("GPS failed, defaulting to Nagpur", error);
-          setLocation({ lat: 21.1458, lng: 79.0882 }); // Default
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => setLocation({ lat: 21.1458, lng: 79.0882 }) // Nagpur default
       );
     } else {
       setLocation({ lat: 21.1458, lng: 79.0882 });
@@ -66,415 +72,195 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
   }, []);
 
   const fetchPlots = async () => {
-    setLoadingPlots(true);
     try {
       const data = await plotService.getPlots();
       setPlots(data);
-      if (data.length > 0 && !selectedPlot) {
-        setSelectedPlot(data[0]);
-      }
+      if (data.length > 0) setSelectedPlot(data[0]);
     } catch (e) {
-      console.error("Failed to load plots", e);
+      console.error("Failed to fetch plots", e);
     } finally {
-      setLoadingPlots(false);
+      setLoading(false);
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    setSearchingCity(true);
-    try {
-      const results = await weatherService.searchCity(searchQuery);
-      setSearchResults(results);
-    } catch (e) {
-      console.error(e);
-      setSearchResults([]);
-    } finally {
-      setSearchingCity(false);
-    }
-  };
+  // Mock Data for UI (to match image)
+  const stats = [
+    { label: 'Plant Health', value: '98%', color: 'text-green-500' },
+    { label: 'Water Depth', value: '72%', color: 'text-blue-500' },
+    { label: 'Soil', value: '80%', color: 'text-amber-500' },
+    { label: 'Pest', value: '2%', color: 'text-red-500' },
+  ];
 
-  const selectLocation = (city: any) => {
-    const newLoc = { lat: city.latitude, lng: city.longitude };
-    setLocation(newLoc);
-    setIsSearching(false);
-    setSearchQuery('');
-    setSearchResults([]);
-
-    // If adding plot, we might want to confirm this is the location
-    // But for now, just moving the map center is enough visual feedback
-  };
-
-  const handleAddPlot = async () => {
-    if (!newPlotName.trim()) {
-      alert("Please enter a name for your plot.");
-      return;
-    }
-    if (!location) {
-      alert("No location detected. Please search for your city/village first.");
-      return;
-    }
-
-    // Create a 1-acre box around center
-    const offset = 0.001;
-    const newCoords = [
-      { lat: location.lat + offset, lng: location.lng - offset },
-      { lat: location.lat + offset, lng: location.lng + offset },
-      { lat: location.lat - offset, lng: location.lng + offset },
-      { lat: location.lat - offset, lng: location.lng - offset },
-    ];
-
-    try {
-      await plotService.createPlot({
-        name: newPlotName,
-        coordinates: newCoords,
-        area: 1.0,
-        crop_type: "Mixed"
-      });
-      setIsAddingPlot(false);
-      setNewPlotName('');
-      fetchPlots();
-    } catch (e) {
-      console.error("Failed to create plot", e);
-      alert("Failed to save plot. Please try again.");
-    }
-  };
-
-  const handleRescan = async () => {
-    if (!selectedPlot) return;
-    setIsScanning(true);
-    try {
-      // Calls updated backend that uses Google Earth Engine
-      await plotService.analyzePlot(selectedPlot.id);
-      setTimeout(() => {
-        setIsScanning(false);
-        fetchPlots();
-      }, 3000);
-    } catch (e) {
-      setIsScanning(false);
-      alert("Analysis failed. Check your connection.");
-    }
-  };
+  const chartData = [40, 60, 45, 70, 30, 50, 65, 80, 55, 60, 75, 40]; // Mock bar values
 
   return (
-    <div className="h-full flex flex-col bg-gray-900 overflow-hidden relative">
-      {/* 3D Globe Overlay */}
-      {showGlobe && (
-        <GlobeView
-          userLocation={location}
-          plots={plots}
-          onClose={() => setShowGlobe(false)}
-        />
-      )}
+    <div className="h-full flex flex-col bg-gray-50 relative overflow-hidden font-sans">
 
-      {/* Header & Search */}
-      <div className="p-4 bg-white flex justify-between items-center shadow-md z-30 relative">
-        <div className="flex items-center gap-3 flex-1">
-          <button onClick={() => navigateTo('home')} className="text-gray-600 p-1 hover:bg-gray-100 rounded-full">
-            <ArrowLeft size={24} />
-          </button>
-
-          {isSearching ? (
-            <div className="flex-1 flex items-center gap-2 animate-in fade-in slide-in-from-left-4 mr-2">
-              <div className="relative flex-1">
-                <input
-                  autoFocus
-                  className="w-full bg-gray-100 rounded-xl pl-3 pr-10 py-2 text-sm font-bold outline-none border border-transparent focus:border-green-500 focus:bg-white transition-all"
-                  placeholder="Search Village/City..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                />
-                <button
-                  onClick={handleSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 p-1 hover:text-green-600"
-                >
-                  {searchingCity ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                </button>
-              </div>
-              <button onClick={() => { setIsSearching(false); setSearchResults([]); }} className="p-2 bg-gray-100 rounded-xl text-gray-500 hover:bg-gray-200">
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ) : (
-            <div>
-              <h2 className="text-base font-bold text-gray-900 leading-tight">Plot Monitoring</h2>
-              <button
-                onClick={() => setIsSearching(true)}
-                className="flex items-center gap-1 cursor-pointer hover:bg-gray-50 px-2 py-0.5 -ml-2 rounded-lg transition-colors mt-0.5"
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                  {location ? `${location.lat.toFixed(2)}, ${location.lng.toFixed(2)}` : "Locating..."} <Search size={10} />
-                </p>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons (Right) */}
-        {!isSearching && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsSearching(true)}
-              className="p-2 bg-gray-50 text-gray-600 rounded-xl border border-gray-100 hover:bg-gray-100"
-            >
-              <Search size={20} />
-            </button>
-            <button
-              onClick={() => setShowGlobe(true)}
-              className="p-2 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 shadow-sm hover:bg-blue-100"
-            >
-              <Globe size={20} />
-            </button>
-            <button
-              onClick={() => setIsAddingPlot(true)}
-              className="p-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 border border-green-100"
-            >
-              <Plus size={20} />
-            </button>
-            <button
-              onClick={() => setViewMode(viewMode === 'satellite' ? 'ndvi' : 'satellite')}
-              className={`px-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-sm ${viewMode === 'ndvi' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-            >
-              {viewMode === 'ndvi' ? <Zap size={12} fill="white" /> : <Layers size={12} />}
-              {viewMode === 'ndvi' ? 'NDVI' : 'Sat'}
-            </button>
-          </div>
-        )}
+      {/* 1. Header */}
+      <div className="px-6 pt-12 pb-4 flex justify-between items-center bg-white shadow-sm z-20">
+        <button className="p-2 bg-gray-100 rounded-full text-gray-600">
+          <Search size={20} />
+        </button>
+        <h1 className="text-lg font-bold text-gray-900">Your Field</h1>
+        <button
+          className="p-2 bg-black text-white rounded-full"
+          onClick={() => navigateTo('landmark')} // Navigate to add plot
+        >
+          <Layers size={20} />
+        </button>
       </div>
 
-      {/* Search Dropdown Results */}
-      {isSearching && searchResults.length > 0 && (
-        <div className="absolute top-[70px] left-4 right-4 bg-white rounded-xl shadow-2xl z-50 border border-gray-100 max-h-60 overflow-y-auto">
-          {searchResults.map((city) => (
-            <button
-              key={city.id}
-              onClick={() => selectLocation(city)}
-              className="w-full text-left p-4 hover:bg-green-50 text-sm font-bold border-b border-gray-50 last:border-0 flex justify-between items-center group"
+      {/* 2. Scrollable Content */}
+      <div className="flex-1 overflow-y-auto relative no-scrollbar">
+
+        {/* Top Field Cards Carousel */}
+        <div className="mt-4 flex overflow-x-auto gap-4 px-6 pb-4 snap-x snap-mandatory no-scrollbar" style={{ scrollBehavior: 'smooth' }}>
+          {plots.map((plot) => (
+            <div
+              key={plot.id}
+              onClick={() => setSelectedPlot(plot)}
+              className={`min-w-[85%] snap-center p-5 rounded-3xl shadow-sm border relative overflow-hidden transition-all duration-300 ${selectedPlot?.id === plot.id
+                  ? 'bg-white border-green-500 ring-2 ring-green-100 transform scale-[1.02]'
+                  : 'bg-white/80 border-gray-100 opacity-70 hover:opacity-100'
+                }`}
             >
-              <div>
-                <span className="text-gray-900">{city.name}</span>
-                <span className="text-gray-400 ml-2 text-xs font-normal">{city.country}</span>
-              </div>
-              <ChevronRight size={16} className="text-gray-300 group-hover:text-green-600" />
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Main Map Area */}
-      <div className="flex-1 relative bg-[#1a1a1a]">
-
-        {/* Background Layer */}
-        <div className="absolute inset-0 transition-opacity duration-1000">
-          {/* If we have a selected plot with an image, show it. Else fallback to map/placeholder */}
-          <img
-            // @ts-ignore
-            src={selectedPlot?.image_url || `https://picsum.photos/seed/${selectedPlot?.id || 'farm'}/1200/1200`}
-            className="w-full h-full object-cover opacity-60 grayscale contrast-125"
-            alt="Satellite Feed"
-          />
-
-          {/* NDVI Layer Overlay */}
-          <div className={`absolute inset-0 transition-opacity duration-700 ${viewMode === 'ndvi' ? 'opacity-70' : 'opacity-0'}`}>
-            <svg className="w-full h-full">
-              <defs>
-                <filter id="ndviBlur">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="25" />
-                </filter>
-              </defs>
-              <g filter="url(#ndviBlur)">
-                <circle cx="40%" cy="35%" r="120" fill={selectedPlot?.health_score && selectedPlot.health_score > 0.8 ? "#22c55e" : "#eab308"} />
-                <circle cx="60%" cy="65%" r="100" fill={selectedPlot?.health_score && selectedPlot.health_score > 0.8 ? "#15803d" : "#ef4444"} />
-              </g>
-            </svg>
-          </div>
-
-          {/* Current Location Marker (Center of Screen when no plot selected) */}
-          {!selectedPlot && location && (
-            <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-              <MapPin size={48} className="text-red-500 drop-shadow-lg -mb-1" fill="white" />
-              <div className="bg-white px-2 py-1 rounded-lg text-[10px] font-bold shadow-md">Center</div>
-            </div>
-          )}
-
-          {/* Plot Marker */}
-          {selectedPlot && (
-            <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 group">
-              <div className="w-8 h-8 bg-green-500/20 rounded-full animate-ping absolute inset-0"></div>
-              <div className="w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center relative shadow-lg">
-                <MapPin size={16} className="text-white" />
-              </div>
-              <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-black/80 px-2 py-1 rounded text-white text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
-                {selectedPlot.name}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Scan Animation */}
-        {isScanning && (
-          <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-            <div className="relative mb-6">
-              <Loader2 className="animate-spin text-green-500" size={64} />
-              <Navigation className="absolute inset-0 m-auto text-white animate-pulse" size={24} />
-            </div>
-            <h3 className="text-xl font-bold tracking-tight">Analyzing Satellite Data</h3>
-            <p className="text-sm text-gray-400 mt-2 font-medium">Fetching Sentinel-2 NDVI & Soil Moisture...</p>
-          </div>
-        )}
-
-        {/* Side Plot List */}
-        {!isAddingPlot && plots.length > 0 && (
-          <div className="absolute top-4 left-4 z-10 w-48 max-h-64 overflow-y-auto no-scrollbar space-y-2 pb-20">
-            {plots.map(p => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPlot(p)}
-                className={`w-full p-3 rounded-xl text-left border shadow-lg backdrop-blur-md transition-all ${selectedPlot?.id === p.id
-                  ? 'bg-green-600 border-green-500 text-white'
-                  : 'bg-white/90 border-white/20 text-gray-900'
-                  }`}
-              >
-                <p className="text-xs font-black truncate">{p.name}</p>
-                <p className={`text-[9px] font-bold uppercase ${selectedPlot?.id === p.id ? 'text-green-200' : 'text-gray-500'}`}>
-                  Health: {Math.round(p.health_score * 100)}%
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Add Plot Overlay Modal */}
-        {isAddingPlot && (
-          <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6">
-            <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-black text-gray-900">Add New Plot</h3>
-                <button onClick={() => setIsAddingPlot(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200">
-                  <Trash2 size={18} className="text-gray-500" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
+              <div className="flex justify-between items-start mb-4">
                 <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">Plot Name</label>
-                  <input
-                    autoFocus
-                    value={newPlotName}
-                    onChange={(e) => setNewPlotName(e.target.value)}
-                    placeholder="e.g. Rice Field North"
-                    className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm font-bold outline-none border-2 border-transparent focus:border-green-500 focus:bg-white transition-all mt-1"
+                  <h2 className="text-xl font-bold text-gray-900">{plot.name}</h2>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 font-bold uppercase">
+                    <span className="flex items-center gap-1"><Activity size={12} /> 12 Task</span>
+                    <span className="flex items-center gap-1"><MapPin size={12} /> {plot.area || 12} ha</span>
+                  </div>
+                </div>
+                {plot.health_score > 0.8 && (
+                  <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                    Good Condition
+                  </div>
+                )}
+              </div>
+
+              {/* Bar Chart Visualization */}
+              <div className="h-16 flex items-end justify-between gap-1 mb-4">
+                {chartData.map((h, i) => (
+                  <div
+                    key={i}
+                    className={`w-full rounded-t-md ${i === chartData.length - 1 ? 'bg-gradient-to-t from-green-400 to-green-200' : 'bg-gray-100'}`}
+                    style={{ height: `${h}%` }}
                   />
-                </div>
-
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="text-blue-600 shrink-0 mt-0.5" size={18} />
-                    <div>
-                      <p className="text-xs font-bold text-blue-900">Location Set</p>
-                      <p className="text-[10px] text-blue-700 mt-0.5 leading-relaxed">
-                        We will create the plot at your currently selected location: <br />
-                        <span className="font-mono bg-blue-100 px-1 rounded">
-                          {location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "Unknown"}
-                        </span>
-                      </p>
-                      {!location && (
-                        <button onClick={() => { setIsAddingPlot(false); setIsSearching(true); }} className="mt-2 text-[10px] font-bold text-white bg-blue-600 px-2 py-1 rounded-lg">
-                          Search Location First
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleAddPlot}
-                  disabled={!location}
-                  className="w-full bg-green-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-green-200 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Confirm & Save Plot
-                </button>
+                ))}
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* Bottom Details Panel */}
-        {selectedPlot && !isAddingPlot && (
-          <div className="absolute bottom-6 left-6 right-6 bg-white rounded-3xl p-5 shadow-2xl border border-gray-100 animate-in slide-in-from-bottom-4 z-10">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h4 className="text-sm font-bold text-gray-900">{selectedPlot.name}</h4>
-                <div className="flex flex-col">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                    Moisture: {Math.round(selectedPlot.moisture)}% • {selectedPlot.crop_type || 'Mixed'}
-                  </p>
-                  {/* @ts-ignore */}
-                  {selectedPlot.last_scan_date && (
-                    <p className="text-[9px] text-green-600 font-bold mt-0.5">
-                      {/* @ts-ignore */}
-                      Verified: {new Date(selectedPlot.last_scan_date).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
+              <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
+                <div className={`w-2 h-2 rounded-full animate-pulse ${plot.health_score > 0.8 ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-gray-500">12 days until harvest</span>
               </div>
-              <div className="text-right">
-                <p className={`text-2xl font-black ${selectedPlot.health_score > 0.8 ? 'text-green-600' : selectedPlot.health_score > 0.5 ? 'text-yellow-500' : 'text-red-500'}`}>
-                  {selectedPlot.health_score.toFixed(2)}
-                </p>
-                <p className="text-[10px] font-bold text-gray-400">NDVI Score</p>
-              </div>
-            </div>
 
-            <div className="space-y-3">
-              {selectedPlot.health_score < 0.8 && (
-                <div className="flex items-center gap-3 p-3 bg-red-50 rounded-2xl border border-red-100">
-                  <AlertIcon />
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-red-900">Stress Detected</p>
-                    <p className="text-[10px] text-red-700">Low chlorophyll levels in sector A</p>
-                  </div>
+              {/* Side Action Button */}
+              {selectedPlot?.id === plot.id && (
+                <div className="absolute top-1/2 -translate-y-1/2 right-0 bg-black text-white py-6 px-1 rounded-l-2xl flex flex-col items-center justify-center gap-1 shadow-lg animate-in slide-in-from-right-4">
+                  <ChevronRight size={16} color="white" />
                 </div>
               )}
             </div>
+          ))}
 
-            <div className="mt-5 flex gap-3">
-              <button className="flex-1 py-3 bg-gray-900 text-white rounded-2xl text-xs font-bold transition-all active:scale-95">
-                Download Report
-              </button>
-              <button
-                className="flex-1 py-3 bg-green-50 text-green-700 border border-green-200 rounded-2xl text-xs font-bold active:scale-95 flex items-center justify-center gap-2"
-                onClick={handleRescan}
-              >
-                <RefreshCw size={14} /> Refresh Analysis
-              </button>
+          {/* Add New Card Placeholder */}
+          <button
+            onClick={() => navigateTo('landmark')}
+            className="min-w-[20%] flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-gray-300 text-gray-400 hover:text-green-600 hover:border-green-300 hover:bg-green-50 transition-colors"
+          >
+            <Plus size={24} />
+            <span className="text-xs font-bold">Add Field</span>
+          </button>
+        </div>
+
+        {/* 3. Map Section */}
+        <div className="m-6 h-[400px] rounded-[40px] overflow-hidden shadow-xl border-4 border-white relative z-0">
+          {location && (
+            <MapContainer
+              center={[location.lat, location.lng]}
+              zoom={16}
+              style={{ width: '100%', height: '100%' }}
+              zoomControl={false}
+              attributionControl={false}
+            >
+              <TileLayer url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}" subdomains={['mt0', 'mt1', 'mt2', 'mt3']} />
+              <RecenterMap
+                lat={selectedPlot?.coordinates[0]?.lat || location.lat}
+                lng={selectedPlot?.coordinates[0]?.lng || location.lng}
+                trigger={recenterTrigger}
+              />
+
+              {/* Render Plots */}
+              {plots.map((plot, idx) => (
+                <Polygon
+                  key={plot.id}
+                  positions={plot.coordinates}
+                  pathOptions={{
+                    color: idx === 0 ? '#60a5fa' : '#4ade80',  // Blue for first, Green for second (simulated)
+                    fillColor: idx === 0 ? '#3b82f6' : '#22c55e',
+                    fillOpacity: 0.2, // Transparent fill for pattern effect
+                    weight: 2
+                  }}
+                  eventHandlers={{
+                    click: () => setSelectedPlot(plot)
+                  }}
+                />
+              ))}
+
+              {/* Pattern Overlay (Simulated via CSS on top of map container? No, hard to align. 
+                        Let's stick to simple polygons for now, pattern is complex in Leaflet without SVG ref)
+                    */}
+            </MapContainer>
+          )}
+
+          {/* Overlay Controls */}
+          <div className="absolute top-4 left-4 z-[400]">
+            <button
+              className="w-10 h-10 bg-[#ccff00] rounded-full flex items-center justify-center shadow-lg text-black hover:scale-110 transition-transform active:scale-95"
+              onClick={() => setRecenterTrigger(prev => prev + 1)}
+            >
+              <MapPin size={20} />
+            </button>
+          </div>
+
+          {/* Bottom Field Stats Card (Overlay) */}
+          <div className="absolute bottom-4 left-4 right-4 bg-white/20 backdrop-blur-md border border-white/30 p-4 rounded-3xl text-white z-[400]">
+            <div className="flex justify-between items-end mb-4">
+              <div>
+                <h3 className="text-2xl font-bold">18 kg/h</h3>
+              </div>
+              <span className="text-xs font-medium opacity-80">{selectedPlot?.area || 12} ha</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-y-1 gap-x-8 text-xs font-medium">
+              {stats.map((s, i) => (
+                <div key={i} className="flex justify-between items-center py-0.5 border-b border-white/10 last:border-0">
+                  <span className="opacity-80">{s.label}</span>
+                  <span className="font-bold">{s.value}</span>
+                </div>
+              ))}
             </div>
           </div>
-        )}
+        </div>
 
-        {!selectedPlot && !isAddingPlot && (
-          <div className="absolute bottom-6 left-6 right-6 bg-white rounded-3xl p-5 shadow-2xl flex flex-col items-center justify-center text-center">
-            <p className="text-sm text-gray-900 font-bold">No plot selected</p>
-            <p className="text-xs text-gray-400 mt-1">Select a plot from the list or add a new one.</p>
-            {plots.length === 0 && (
-              <button onClick={() => setIsAddingPlot(true)} className="mt-3 text-xs bg-green-600 text-white px-4 py-2 rounded-xl font-bold">
-                Create First Plot
-              </button>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* Floating Scan Button */}
+      <button
+        className="absolute bottom-24 right-8 w-14 h-14 bg-[#ccff00] rounded-full flex items-center justify-center shadow-2xl z-50 text-black animate-bounce-slow"
+        onClick={() => {
+          // Trigger Scan/Analysis
+          if (selectedPlot) {
+            // ... trigger analysis ...
+          }
+        }}
+      >
+        <ScanLine size={24} />
+      </button>
+
     </div>
   );
 };
-
-const AlertIcon = () => (
-  <div className="w-8 h-8 rounded-xl bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-200">
-    <MapPin size={16} />
-  </div>
-);
 
 export default FarmMapScreen;

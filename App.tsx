@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, UserProfile, Language, VisionMode } from './types';
+import { MessageCircle } from 'lucide-react'; // Add icon import
 import AuthScreen from './screens/AuthScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -16,6 +17,7 @@ import CarbonVaultScreen from './screens/CarbonVaultScreen';
 import SchemeSetuScreen from './screens/SchemeSetuScreen';
 import CropStressScreen from './screens/CropStressScreen';
 import LandMarkingScreen from './screens/LandMarkingScreen';
+import VoiceAssistantModal from './components/VoiceAssistantModal'; // Add component import
 
 // import ContractsScreen from './screens/ContractsScreen';
 // import GlobeView from './screens/GlobeView';
@@ -66,6 +68,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 const AppContent: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const [isVoiceActive, setIsVoiceActive] = useState(false); // Add voice state
   const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
   const [user, setUser] = useState<UserProfile | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -369,7 +372,7 @@ const AppContent: React.FC = () => {
           locationName={locationName}
         />;
       case 'chat':
-        return <ChatScreen navigateTo={navigateTo} language={language} t={t} />;
+        return <ChatScreen navigateTo={navigateTo} language={language} t={t} onOpenVoiceAssistant={() => setIsVoiceActive(true)} />;
       case 'vision':
         return <VisionScreen navigateTo={navigateTo} t={t} />;
       case 'vision-result':
@@ -395,9 +398,6 @@ const AppContent: React.FC = () => {
       case 'crop-stress':
         return <CropStressScreen />;
 
-      // case 'contracts':
-      //   return <ContractsScreen navigateTo={navigateTo} t={t} />;
-
       case 'landmark':
         return <LandMarkingScreen navigation={{ goBack: () => navigateTo('home') }} />;
 
@@ -416,18 +416,41 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark'].includes(currentScreen);
+  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result'].includes(currentScreen);
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto shadow-xl relative overflow-hidden text-gray-900" style={{ transform: 'translate(0)' }}>
       <main className="flex-1 overflow-y-auto pb-20 mobile-container">
         {renderScreen()}
       </main>
+
+      {/* Global AI Chat Button - Only show on main screens where nav is visible */}
+      {showNav && (
+        <button
+          onClick={() => setCurrentScreen('chat')}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-[100] border-4 border-white/20"
+        >
+          <MessageCircle size={24} />
+        </button>
+      )}
+
+      {/* Global Voice Assistant Modal */}
+      <VoiceAssistantModal
+        isOpen={isVoiceActive}
+        onClose={() => setIsVoiceActive(false)}
+        language={language}
+        onSwitchToText={() => {
+          setIsVoiceActive(false);
+          setCurrentScreen('chat');
+        }}
+      />
+
       {showNav && (
         <BottomNav currentScreen={currentScreen} onNavigate={navigateTo} />
       )}
     </div>
   );
 };
+
 
 export default App;

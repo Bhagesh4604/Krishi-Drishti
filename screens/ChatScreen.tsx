@@ -44,7 +44,7 @@ const LANG_MAP: Record<string, string> = {
 // Distress Keywords (Regex for broad matching)
 const DISTRESS_REGEX = /(suicide|kill myself|die|hopeless|ruined|debt|loan|repay|failed|end my life|mar jaunga|khatam|barbad|karz|udhaar|phas gaya|atmahatya|pareshan|tension|depression)/i;
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t, onOpenVoiceAssistant }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'model', text: `${t.namaste} I am your Agri-Tutor AI. I can help with crop lifecycle techniques, latest market prices, and Govt. Schemes. How can I assist you?` }
   ]);
@@ -343,6 +343,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t }) => {
             />
           </div>
           <div className="flex gap-2">
+            {/* New Voice Assistant Trigger */}
+            <button
+              onClick={onOpenVoiceAssistant}
+              className="w-12 h-12 rounded-2xl flex items-center justify-center bg-teal-50 text-teal-600 hover:bg-teal-100 border border-teal-200 shadow-sm transition-all active:scale-90"
+              title="Open Voice Assistant"
+            >
+              <Sparkles size={20} />
+            </button>
+
             <button
               onClick={toggleListening}
               className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-90 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-gray-400 hover:bg-gray-50 border border-gray-100'
