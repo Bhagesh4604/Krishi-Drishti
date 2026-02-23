@@ -49,7 +49,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [userPlots, setUserPlots] = useState<any[]>([]);
   const [isLoadingPlots, setIsLoadingPlots] = useState(true);
-  const [plotLocationName, setPlotLocationName] = useState<string>("Unknown Location");
+  const [plotLocationNames, setPlotLocationNames] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
     const fetchPlots = async () => {
@@ -57,18 +57,28 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         const data = await plotService.getPlots();
         setUserPlots(data);
 
-        // Fetch location name for the first plot if it has coordinates
-        if (data.length > 0 && data[0].coordinates && data[0].coordinates.length > 0) {
-          const firstCoord = data[0].coordinates[0];
-          try {
-            const locData = await weatherService.reverseGeocode(firstCoord.lat, firstCoord.lng);
-            if (locData && (locData.city || locData.district)) {
-              setPlotLocationName(`${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`);
+        // Fetch location names for ALL plots that have coordinates
+        const locationPromises = data.map(async (plot: any) => {
+          if (plot.coordinates && plot.coordinates.length > 0) {
+            const firstCoord = plot.coordinates[0];
+            try {
+              const locData = await weatherService.reverseGeocode(firstCoord.lat, firstCoord.lng);
+              if (locData && (locData.city || locData.district)) {
+                return { id: plot.id, name: `${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}` };
+              }
+            } catch (locErr) {
+              console.error(`Failed to reverse geocode plot ${plot.id}:`, locErr);
             }
-          } catch (locErr) {
-            console.error("Failed to reverse geocode plot location:", locErr);
           }
-        }
+          return { id: plot.id, name: locationName.split(',')[0] || 'Unknown Location' };
+        });
+
+        const resolvedLocations = await Promise.all(locationPromises);
+        const locationMap: { [key: number]: string } = {};
+        resolvedLocations.forEach(loc => {
+          if (loc) locationMap[loc.id] = loc.name;
+        });
+        setPlotLocationNames(locationMap);
 
       } catch (error) {
         console.error('Failed to fetch user plots:', error);
@@ -77,7 +87,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       }
     };
     fetchPlots();
-  }, []);
+  }, [locationName]);
 
   const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : 32;
 
@@ -316,72 +326,92 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         </div>
       </div>
 
-      {/* 4. My Fields Card (Design from Image) */}
-      <div className="px-6 mt-4 relative z-10 pb-8">
-        <div className="bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden">
+      {/* 4. My Fields Cards Carousel */}
+      <div className="mt-4 relative z-10 pb-8 overflow-hidden w-full">
+        <h2 className="text-lg font-bold text-gray-900 mb-4 px-6">My Fields</h2>
+        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-6 snap-x snap-mandatory">
 
-          {/* Header inside card */}
-          <div className="px-4 pt-4 pb-2 flex justify-between items-start mb-2">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
-                {isLoadingPlots ? (
-                  <div className="w-5 h-5 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
-                ) : (
-                  <img src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400" className="w-full h-full object-cover" alt="Field" />
-                )}
+          {isLoadingPlots && (
+            <div className="min-w-[85%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden flex items-center justify-center h-64">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+                <span className="text-orange-600 font-bold text-sm">Loading Fields...</span>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  {isLoadingPlots ? 'Loading...' : (userPlots.length > 0 ? userPlots[0].name : 'No Fields Added')}
-                </h3>
-                <div className="flex items-center gap-1 text-gray-500 text-xs font-medium">
-                  <MapPin size={12} /> {userPlots.length > 0 ? plotLocationName.split(',')[0] : (locationName.split(',')[0] || 'Unknown Location')}
+            </div>
+          )}
+
+          {!isLoadingPlots && userPlots.length === 0 && (
+            <div className="min-w-[85%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden">
+              <div className="px-4 pt-4 pb-2 flex justify-between items-start mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
+                    <img src="https://images.unsplash.com/photo-1592982537447-6f23349c258d?w=400" className="w-full h-full object-cover grayscale opacity-50" alt="Empty Field" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">No Fields Added</h3>
+                  </div>
+                </div>
+                <button onClick={() => navigateTo('landmark')} className="bg-green-100 px-4 py-2 rounded-full flex items-center gap-2 active:scale-95">
+                  <Plus size={16} className="text-green-700" />
+                  <span className="text-xs font-bold text-green-800">Add</span>
+                </button>
+              </div>
+              <div className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform" onClick={() => navigateTo('map')}>
+                <img src="https://images.unsplash.com/photo-1592982537447-6f23349c258d?w=800" className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale" alt="Main Field" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
+                  <p className="bg-white/90 text-gray-800 font-bold px-4 py-2 rounded-xl shadow-lg border border-white">Tap to locate your farm</p>
                 </div>
               </div>
             </div>
-            {userPlots.length > 0 && (
-              <div className="bg-[#FFE8D1] px-4 py-2 rounded-full flex items-center gap-2">
-                <Sprout size={16} className="text-orange-600" fill="currentColor" />
-                <span className="text-sm font-bold text-gray-900">{userPlots[0].area} ha</span>
-              </div>
-            )}
-            {userPlots.length === 0 && !isLoadingPlots && (
-              <button
-                onClick={() => navigateTo('landmark')}
-                className="bg-green-100 px-4 py-2 rounded-full flex items-center gap-2 active:scale-95"
-              >
-                <Plus size={16} className="text-green-700" />
-                <span className="text-xs font-bold text-green-800">Add</span>
-              </button>
-            )}
-          </div>
+          )}
 
-          {/* Big Image Section */}
-          <div className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform" onClick={() => navigateTo('map')}>
-            <img
-              src={userPlots.length > 0 ? "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800" : "https://images.unsplash.com/photo-1592982537447-6f23349c258d?w=800"}
-              className={`absolute inset-0 w-full h-full object-cover ${userPlots.length === 0 ? 'opacity-50 grayscale' : ''}`}
-              alt="Main Field"
-            />
-            {userPlots.length === 0 && !isLoadingPlots && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
-                <p className="bg-white/90 text-gray-800 font-bold px-4 py-2 rounded-xl shadow-lg border border-white">Tap to locate your farm</p>
-              </div>
-            )}
+          {!isLoadingPlots && userPlots.map((plot) => (
+            <div key={plot.id} className="min-w-[85%] sm:min-w-[70%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden flex-shrink-0">
 
-            {/* Floating Bottom Dock (Internal Navigation) */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md rounded-full px-2 py-2 flex items-center gap-2 shadow-2xl border border-white/10">
-              <button className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white border border-white/20" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
-                <Home size={18} fill="white" />
-              </button>
-              <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
-                <Leaf size={20} fill="black" />
-              </button>
-              <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
-                <UserIcon /> {/* Re-purposed as a secondary tool link */}
-              </button>
+              {/* Header inside card */}
+              <div className="px-4 pt-4 pb-2 flex justify-between items-start mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
+                    <img src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400" className="w-full h-full object-cover" alt="Field" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 truncate max-w-[120px]">{plot.name}</h3>
+                    <div className="flex items-center gap-1 text-gray-500 text-xs font-medium">
+                      <MapPin size={12} /> {plotLocationNames[plot.id] || "Locating..."}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-[#FFE8D1] px-3 py-2 rounded-full flex items-center gap-1 shrink-0">
+                  <Sprout size={16} className="text-orange-600" fill="currentColor" />
+                  <span className="text-sm font-bold text-gray-900">{plot.area} ha</span>
+                </div>
+              </div>
+
+              {/* Big Image Section */}
+              <div className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform" onClick={() => navigateTo('map')}>
+                <img
+                  src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  alt={plot.name}
+                />
+
+                {/* Floating Bottom Dock (Internal Navigation) */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md rounded-full px-2 py-2 flex items-center gap-2 shadow-2xl border border-white/10">
+                  <button className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white border border-white/20" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
+                    <Home size={18} fill="white" />
+                  </button>
+                  <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
+                    <Leaf size={20} fill="black" />
+                  </button>
+                  <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
+                    <UserIcon /> {/* Re-purposed as a secondary tool link */}
+                  </button>
+                </div>
+              </div>
+
             </div>
-          </div>
+          ))}
+
         </div>
       </div>
 
