@@ -106,7 +106,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   };
 
   return (
-    <div className="min-h-full pb-32 font-sans text-gray-800 relative bg-white">
+    <div className="min-h-full pb-24 font-sans text-gray-800 relative bg-white">
 
       {/* Mixed Golden/White Background - Concentrated Top Left */}
       <div className="absolute top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-200 via-amber-50/50 to-transparent z-0 pointer-events-none" />
@@ -327,7 +327,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       </div>
 
       {/* 4. My Fields Cards Carousel */}
-      <div className="mt-4 relative z-10 pb-8 overflow-hidden w-full">
+      <div className="mt-4 relative z-10 pb-2 overflow-hidden w-full">
         <h2 className="text-lg font-bold text-gray-900 mb-4 px-6">My Fields</h2>
         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-6 snap-x snap-mandatory">
 

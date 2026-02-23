@@ -49,3 +49,16 @@ body {
     /* Bottom Right */
     linear-gradient(180deg, #FFF8E7 0%, #FFFFFF 100%);
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+}
