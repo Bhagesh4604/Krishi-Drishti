@@ -238,24 +238,25 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         <h2 className="text-lg font-bold text-gray-900 mb-4">Services</h2>
         <div className="grid grid-cols-4 gap-4">
           {[
-            { icon: <TrendingUp size={22} />, label: 'Market', color: 'bg-blue-50 text-blue-600', screen: 'market' },
-            { icon: <ScanLine size={22} />, label: 'Scanner', color: 'bg-green-50 text-green-600', screen: 'vision' },
-            { icon: <BookOpen size={22} />, label: 'Schemes', color: 'bg-orange-50 text-orange-600', screen: 'scheme-setu' },
-            { icon: <Umbrella size={22} />, label: 'Insurance', color: 'bg-purple-50 text-purple-600', screen: 'insurance' },
-            { icon: <Sprout size={22} />, label: 'Carbon', color: 'bg-emerald-50 text-emerald-600', screen: 'carbon-vault' },
-            { icon: <Zap size={22} />, label: 'Forecast', color: 'bg-yellow-50 text-yellow-600', screen: 'forecast' },
-            { icon: <Radio size={22} />, label: 'Acoustic', color: 'bg-red-50 text-red-600', screen: 'acoustic-scanner' },
-            { icon: <MoreHorizontal size={22} />, label: 'More', color: 'bg-gray-100 text-gray-600', screen: 'profile' },
+            { icon: <TrendingUp size={28} strokeWidth={1.5} />, label: 'Market', bg: 'bg-gradient-to-br from-blue-400 to-blue-600', shadow: 'shadow-blue-500/40', text: 'text-white', screen: 'market' },
+            { icon: <ScanLine size={28} strokeWidth={1.5} />, label: 'Scanner', bg: 'bg-gradient-to-br from-green-400 to-green-600', shadow: 'shadow-green-500/40', text: 'text-white', screen: 'vision' },
+            { icon: <BookOpen size={28} strokeWidth={1.5} />, label: 'Schemes', bg: 'bg-gradient-to-br from-orange-400 to-orange-600', shadow: 'shadow-orange-500/40', text: 'text-white', screen: 'scheme-setu' },
+            { icon: <Umbrella size={28} strokeWidth={1.5} />, label: 'Insurance', bg: 'bg-gradient-to-br from-indigo-400 to-indigo-600', shadow: 'shadow-indigo-500/40', text: 'text-white', screen: 'insurance' },
+            { icon: <Sprout size={28} strokeWidth={1.5} />, label: 'Carbon', bg: 'bg-gradient-to-br from-emerald-400 to-emerald-600', shadow: 'shadow-emerald-500/40', text: 'text-white', screen: 'carbon-vault' },
+            { icon: <Zap size={28} strokeWidth={1.5} />, label: 'Forecast', bg: 'bg-gradient-to-br from-yellow-300 to-amber-500', shadow: 'shadow-amber-500/40', text: 'text-white', screen: 'forecast' },
+            { icon: <Radio size={28} strokeWidth={1.5} />, label: 'Acoustic', bg: 'bg-gradient-to-br from-rose-400 to-rose-600', shadow: 'shadow-rose-500/40', text: 'text-white', screen: 'acoustic-scanner' },
+            { icon: <MoreHorizontal size={28} strokeWidth={1.5} />, label: 'More', bg: 'bg-gradient-to-br from-gray-100 to-gray-300', shadow: 'shadow-gray-400/40', text: 'text-gray-700', screen: 'profile' },
           ].map((item, idx) => (
             <button
               key={idx}
               onClick={() => navigateTo(item.screen as Screen)}
               className="flex flex-col items-center gap-2 group"
             >
-              <div className={`w-16 h-16 rounded-[1.2rem] flex items-center justify-center shadow-sm border border-white/50 ${item.color} group-active:scale-95 transition-all duration-300`}>
+              <div className={`w-[60px] h-[60px] rounded-[1.2rem] flex items-center justify-center shadow-lg border-t border-white/50 ${item.bg} ${item.shadow} ${item.text} group-active:scale-90 group-active:opacity-80 transition-all duration-300 relative overflow-hidden`}>
+                <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent"></div>
                 {item.icon}
               </div>
-              <span className="text-[10px] font-bold text-gray-500 group-hover:text-gray-900 transition-colors uppercase tracking-wide">{item.label}</span>
+              <span className="text-[10px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors uppercase tracking-wider">{item.label}</span>
             </button>
           ))}
         </div>
