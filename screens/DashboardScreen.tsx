@@ -32,6 +32,7 @@ import {
 import { weatherService } from '../src/services/api';
 import WeatherModal from '../components/WeatherModal';
 import CarbonWalletCard from '../components/CarbonWalletCard';
+import { plotService } from '../src/services/api';
 
 interface DashboardScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -46,6 +47,22 @@ interface DashboardScreenProps {
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, onLangChange, currentLang, weather, locationName }) => {
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [userPlots, setUserPlots] = useState<any[]>([]);
+  const [isLoadingPlots, setIsLoadingPlots] = useState(true);
+
+  useEffect(() => {
+    const fetchPlots = async () => {
+      try {
+        const data = await plotService.getPlots();
+        setUserPlots(data);
+      } catch (error) {
+        console.error('Failed to fetch user plots:', error);
+      } finally {
+        setIsLoadingPlots(false);
+      }
+    };
+    fetchPlots();
+  }, []);
 
   const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : 32;
 
@@ -53,12 +70,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
   const getCropImage = (crop: string) => {
     const map: any = {
-      'Wheat': 'https://plus.unsplash.com/premium_photo-1675715924047-a870d17290ca?w=800',
-      'Corn': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800',
-      'Grapes': 'https://images.unsplash.com/photo-1537640538965-1756fb179c26?w=800',
-      'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=800',
-      'Olive': 'https://images.unsplash.com/photo-1471180625745-944903837c22?w=800',
-      'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800',
+      'Wheat': 'https://images.unsplash.com/photo-1501430654243-c934cec2e1c0?w=1000&q=80',
+      'Corn': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=1000&q=80',
+      'Grapes': 'https://images.unsplash.com/photo-1537640538965-1756fb179c26?w=1000&q=80',
+      'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=1000&q=80',
+      'Olive': 'https://images.unsplash.com/photo-1471180625745-944903837c22?w=1000&q=80',
+      'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=1000&q=80',
     };
     return map[crop] || map['Wheat'];
   };
@@ -252,7 +269,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
               onClick={() => navigateTo(item.screen as Screen)}
               className="flex flex-col items-center gap-2 group"
             >
-              <div className={`w-[60px] h-[60px] rounded-[1.2rem] flex items-center justify-center shadow-lg border-t border-white/50 ${item.bg} ${item.shadow} ${item.text} group-active:scale-90 group-active:opacity-80 transition-all duration-300 relative overflow-hidden`}>
+              <div className={`w-[60px] h-[60px] rounded-[1.2rem] flex items-center justify-center shadow-lg border border-white/80 ${item.bg} ${item.shadow} ${item.text} group-active:scale-90 group-active:opacity-80 transition-all duration-300 relative overflow-hidden`}>
                 <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent"></div>
                 {item.icon}
               </div>
@@ -266,64 +283,87 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       <div className="px-6 mt-8 relative z-10 w-full overflow-hidden">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Commodities & Food</h2>
 
-        <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4 pr-6">
+        <div className="flex gap-5 overflow-x-auto no-scrollbar pb-4 pr-6">
           {['Rice', 'Corn', 'Grapes', 'Potato', 'Olive', 'Wheat'].map((crop, idx) => (
-            <div key={idx} className="flex flex-col items-center gap-2 flex-shrink-0">
-              <div className="w-16 h-16 rounded-full overflow-hidden shadow-md border-2 border-white relative group">
-                <div className="absolute inset-0 bg-yellow-100/50 group-hover:bg-transparent transition-all"></div>
+            <div key={idx} className="flex flex-col items-center gap-3 flex-shrink-0 cursor-pointer active:scale-95 transition-transform group">
+              <div className="w-[72px] h-[72px] rounded-full overflow-hidden shadow-lg border-2 border-white relative">
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all z-10"></div>
                 <img
                   src={getCropImage(crop)}
                   alt={crop}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                  loading="lazy"
                 />
               </div>
-              <span className="text-sm font-medium text-gray-800">{crop}</span>
+              <span className="text-sm font-semibold text-gray-700 tracking-wide">{crop}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* 4. My Fields Card (Design from Image) */}
-      <div className="px-6 mt-4 relative z-10">
+      <div className="px-6 mt-4 relative z-10 pb-8">
         <div className="bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden">
 
           {/* Header inside card */}
           <div className="px-4 pt-4 pb-2 flex justify-between items-start mb-2">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                <img src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400" className="w-full h-full object-cover" alt="Field" />
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
+                {isLoadingPlots ? (
+                  <div className="w-5 h-5 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+                ) : (
+                  <img src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400" className="w-full h-full object-cover" alt="Field" />
+                )}
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">My Fields</h3>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {isLoadingPlots ? 'Loading...' : (userPlots.length > 0 ? userPlots[0].name : 'No Fields Added')}
+                </h3>
                 <div className="flex items-center gap-1 text-gray-500 text-xs font-medium">
-                  <MapPin size={12} /> Sonoma County
+                  <MapPin size={12} /> {locationName.split(',')[0] || 'Unknown Location'}
                 </div>
               </div>
             </div>
-            <div className="bg-[#FFE8D1] px-4 py-2 rounded-full flex items-center gap-2">
-              <Sprout size={16} className="text-orange-600" fill="currentColor" />
-              <span className="text-sm font-bold text-gray-900">7200 k.g/ha</span>
-            </div>
+            {userPlots.length > 0 && (
+              <div className="bg-[#FFE8D1] px-4 py-2 rounded-full flex items-center gap-2">
+                <Sprout size={16} className="text-orange-600" fill="currentColor" />
+                <span className="text-sm font-bold text-gray-900">{userPlots[0].area} ha</span>
+              </div>
+            )}
+            {userPlots.length === 0 && !isLoadingPlots && (
+              <button
+                onClick={() => navigateTo('landmark')}
+                className="bg-green-100 px-4 py-2 rounded-full flex items-center gap-2 active:scale-95"
+              >
+                <Plus size={16} className="text-green-700" />
+                <span className="text-xs font-bold text-green-800">Add</span>
+              </button>
+            )}
           </div>
 
           {/* Big Image Section */}
-          <div className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform" onClick={() => navigateTo('vision')}>
+          <div className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform" onClick={() => navigateTo('map')}>
             <img
-              src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800"
-              className="absolute inset-0 w-full h-full object-cover"
+              src={userPlots.length > 0 ? "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800" : "https://images.unsplash.com/photo-1592982537447-6f23349c258d?w=800"}
+              className={`absolute inset-0 w-full h-full object-cover ${userPlots.length === 0 ? 'opacity-50 grayscale' : ''}`}
               alt="Main Field"
             />
+            {userPlots.length === 0 && !isLoadingPlots && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
+                <p className="bg-white/90 text-gray-800 font-bold px-4 py-2 rounded-xl shadow-lg border border-white">Tap to locate your farm</p>
+              </div>
+            )}
 
             {/* Floating Bottom Dock (Internal Navigation) */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md rounded-full px-2 py-2 flex items-center gap-2 shadow-2xl border border-white/10">
-              <button className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white border border-white/20">
+              <button className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white border border-white/20" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
                 <Home size={18} fill="white" />
               </button>
-              <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black">
+              <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
                 <Leaf size={20} fill="black" />
               </button>
-              <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black">
-                <UserIcon /> {/* Using custom or simple icon */}
+              <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
+                <UserIcon /> {/* Re-purposed as a secondary tool link */}
               </button>
             </div>
           </div>
