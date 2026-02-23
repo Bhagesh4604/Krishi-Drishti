@@ -366,10 +366,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           )}
 
           {!isLoadingPlots && userPlots.map((plot) => (
-            <div key={plot.id} className="min-w-[85%] sm:min-w-[70%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden flex-shrink-0">
+            <div key={plot.id} className="min-w-[85%] sm:min-w-[70%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-3 border border-orange-50 shadow-sm relative overflow-hidden flex-shrink-0 flex flex-col gap-3">
 
               {/* Header inside card */}
-              <div className="px-4 pt-4 pb-2 flex justify-between items-start mb-2">
+              <div className="px-3 pt-2 flex justify-between items-start">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
                     <img src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400" className="w-full h-full object-cover" alt="Field" />
@@ -388,25 +388,36 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
               </div>
 
               {/* Big Image Section */}
-              <div className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform" onClick={() => navigateTo('map')}>
+              <div className="relative h-40 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform w-full" onClick={() => navigateTo('map')}>
                 <img
                   src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800"
                   className="absolute inset-0 w-full h-full object-cover"
                   alt={plot.name}
                 />
+              </div>
 
-                {/* Floating Bottom Dock (Internal Navigation) */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md rounded-full px-2 py-2 flex items-center gap-2 shadow-2xl border border-white/10">
-                  <button className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white border border-white/20" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
-                    <Home size={18} fill="white" />
-                  </button>
-                  <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
-                    <Leaf size={20} fill="black" />
-                  </button>
-                  <button className="w-12 h-12 rounded-full bg-[#FFE8D1] flex items-center justify-center text-black" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
-                    <UserIcon /> {/* Re-purposed as a secondary tool link */}
-                  </button>
-                </div>
+              {/* Action Buttons Bar */}
+              <div className="flex justify-between items-center bg-white rounded-[1.5rem] p-2 shadow-sm border border-orange-100 w-full mt-1">
+                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active:scale-95" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                    <MapPin size={18} className="text-blue-600" />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-600">Map</span>
+                </button>
+                <div className="w-px h-8 bg-gray-100" />
+                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active:scale-95" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
+                  <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                    <Activity size={18} className="text-green-600" />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-600">Health</span>
+                </button>
+                <div className="w-px h-8 bg-gray-100" />
+                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active:scale-95" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
+                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                    <TrendingUp size={18} className="text-amber-600" />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-600">Yield</span>
+                </button>
               </div>
 
             </div>
@@ -421,12 +432,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   );
 };
 
-// Simple User Icon Component
-const UserIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="black" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-    <circle cx="12" cy="7" r="4"></circle>
-  </svg>
-);
+
 
 export default DashboardScreen;
