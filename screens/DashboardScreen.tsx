@@ -49,12 +49,27 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [userPlots, setUserPlots] = useState<any[]>([]);
   const [isLoadingPlots, setIsLoadingPlots] = useState(true);
+  const [plotLocationName, setPlotLocationName] = useState<string>("Unknown Location");
 
   useEffect(() => {
     const fetchPlots = async () => {
       try {
         const data = await plotService.getPlots();
         setUserPlots(data);
+
+        // Fetch location name for the first plot if it has coordinates
+        if (data.length > 0 && data[0].coordinates && data[0].coordinates.length > 0) {
+          const firstCoord = data[0].coordinates[0];
+          try {
+            const locData = await weatherService.reverseGeocode(firstCoord.lat, firstCoord.lng);
+            if (locData && (locData.city || locData.district)) {
+              setPlotLocationName(`${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`);
+            }
+          } catch (locErr) {
+            console.error("Failed to reverse geocode plot location:", locErr);
+          }
+        }
+
       } catch (error) {
         console.error('Failed to fetch user plots:', error);
       } finally {
@@ -320,7 +335,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                   {isLoadingPlots ? 'Loading...' : (userPlots.length > 0 ? userPlots[0].name : 'No Fields Added')}
                 </h3>
                 <div className="flex items-center gap-1 text-gray-500 text-xs font-medium">
-                  <MapPin size={12} /> {locationName.split(',')[0] || 'Unknown Location'}
+                  <MapPin size={12} /> {userPlots.length > 0 ? plotLocationName.split(',')[0] : (locationName.split(',')[0] || 'Unknown Location')}
                 </div>
               </div>
             </div>
