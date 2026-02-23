@@ -10,6 +10,7 @@ import ee
 from ..database import get_db
 from ..models import CarbonProject, CarbonEvidence, Plot, User
 from ..dependencies import get_current_user
+from ..ml_models.soc_estimator import estimate_soc
 
 router = APIRouter(prefix="/api/carbon", tags=["carbon"])
 
@@ -203,17 +204,27 @@ async def enroll_plot(
     if existing:
         raise HTTPException(status_code=400, detail="Plot already enrolled in a carbon project")
         
-    # 3. Calculate Potential (Simulated Digital MRV Baseline)
-    # in real life, this calls Earth Engine for 3-year history
-    base_potential_per_acre = 0.0
+    # 3. Calculate Potential (ML-based SOC Estimator)
+    # Estimate baseline sequestration potential based on plot health and moisture
+    estimated_soc_per_ha = estimate_soc(
+        ndvi_avg=plot.health_score,
+        evi_avg=plot.health_score * 0.9,
+        moisture_avg=plot.moisture,
+        days_enrolled=365.0  # Projecting for 1 year of enrollment
+    )
+    
+    methodology_multiplier = 1.0
     if project.methodology == "Cover-Crop":
-        base_potential_per_acre = 0.8 # tons/acre
+        methodology_multiplier = 1.2
     elif project.methodology == "No-Till":
-        base_potential_per_acre = 1.2
+        methodology_multiplier = 1.5
     elif project.methodology == "Agroforestry":
-        base_potential_per_acre = 2.5
+        methodology_multiplier = 2.5
         
-    total_potential = plot.area * base_potential_per_acre
+    # Convert plot area (acres) to hectares roughly
+    hectares = plot.area / 2.471
+    # Total potential credits
+    total_potential = estimated_soc_per_ha * methodology_multiplier * hectares
 
     # Set vesting period (5 years from enrollment)
     from datetime import timedelta

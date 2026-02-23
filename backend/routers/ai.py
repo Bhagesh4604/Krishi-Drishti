@@ -8,9 +8,48 @@ import io
 from ..database import get_db
 from ..models import ChatMessage, User, StressReport
 from ..dependencies import get_current_user
+from ..database import get_db
+from ..models import ChatMessage, User, StressReport
+from ..dependencies import get_current_user
 from ..services.satellite import get_simulated_satellite_data
+from ..services.hybrid_search import HybridSearchEngine
+from ..services.document_parser import parse_agronomy_pdf
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
+
+# Global RAG Engine
+rag_engine = None
+
+def get_embeddings(texts):
+    """Uses Gemini to get embeddings for the FAISS index."""
+    import google.generativeai as genai
+    embeddings = []
+    for text in texts:
+        result = genai.embed_content(
+            model="models/text-embedding-004",
+            content=text,
+            task_type="retrieval_document",
+        )
+        embeddings.append(result['embedding'])
+    return embeddings
+
+def init_rag_engine():
+    global rag_engine
+    if rag_engine is None:
+        print("Initializing Advanced RAG Hybrid Search Engine...")
+        try:
+            rag_engine = HybridSearchEngine(embedding_function=get_embeddings, dimension=768)
+            # Add some mock document chunks representing parsed structured tables and text
+            mock_docs = [
+                "Late Blight is treated with chlorothalonil. Apply at first sign of disease.",
+                "AGRONOMIC TABLE DATA:\n Crop | N (kg/ha) | P (kg/ha) | K (kg/ha) \n Wheat | 120 | 60 | 40 \n Potato | 150 | 80 | 100",
+                "Optimal soil pH for cotton is between 5.8 and 8.0.",
+                "For stem borer in rice, apply Cartap hydrochloride 4G at 18 kg/ha."
+            ]
+            rag_engine.add_documents(mock_docs)
+        except Exception as e:
+            print(f"Failed to init RAG: {e}")
+
 
 class StressAnalysisRequest(BaseModel):
     lat: float
@@ -108,10 +147,21 @@ async def ai_chat(
         history = db.query(ChatMessage).filter(ChatMessage.user_id == current_user.id).order_by(ChatMessage.timestamp.desc()).limit(5).all()
         history.reverse()
         
-        # 2. Construct Prompt
+        # 2. RAG Retrieval via Hybrid Search
+        init_rag_engine()
+        rag_context = ""
+        if rag_engine:
+            rag_results = rag_engine.search(request.message, top_k=2, alpha=0.5)
+            if rag_results:
+                rag_context = "\nVerified Agricultural Database References:\n"
+                for res in rag_results:
+                     rag_context += f"- {res['content']}\n"
+        
+        # 3. Construct Prompt
         context = f"User Profile: Name={current_user.name}, Location={current_user.district}, Crops={current_user.farming_type}. "
         chat_history = "\n".join([f"{msg.role}: {msg.text}" for msg in history])
-        full_prompt = f"{context}\n\nHistory:\n{chat_history}\n\nUser: {request.message}\nAssistant:"
+        full_prompt = f"{context}\n{rag_context}\nHistory:\n{chat_history}\n\nUser: {request.message}\nAssistant:"
+
         
         # 3. Call Gemini (Async Wrapper)
         import asyncio

@@ -168,6 +168,22 @@ class Plot(Base):
 
     user = relationship("User", back_populates="plots")
     carbon_projects = relationship("CarbonProject", back_populates="plot")
+    history = relationship("PlotHistory", back_populates="plot", cascade="all, delete-orphan")
+
+class PlotHistory(Base):
+    __tablename__ = "plot_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plot_id = Column(Integer, ForeignKey("plots.id"))
+    date = Column(DateTime, default=datetime.utcnow)
+    ndvi = Column(Float, nullable=True)
+    evi = Column(Float, nullable=True)
+    msavi = Column(Float, nullable=True)
+    is_anomaly = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    plot = relationship("Plot", back_populates="history")
+
 
 class CarbonProject(Base):
     __tablename__ = "carbon_projects"
@@ -232,3 +248,29 @@ class Contract(Base):
 
 User.contracts = relationship("Contract", back_populates="farmer")
 
+
+class WeatherHistory(Base):
+    __tablename__ = "weather_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plot_id = Column(Integer, ForeignKey("plots.id"), nullable=True) # Granular per plot
+    region = Column(String, nullable=True) # Or general region
+    date = Column(DateTime, default=datetime.utcnow)
+    temperature_avg = Column(Float)
+    humidity_avg = Column(Float)
+    precipitation = Column(Float)
+    
+class DiseaseRiskAlert(Base):
+    __tablename__ = "disease_risk_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plot_id = Column(Integer, ForeignKey("plots.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    disease_name = Column(String)
+    risk_level = Column(String) # High, Medium, Low
+    trigger_date = Column(DateTime, default=datetime.utcnow)
+    recommendation = Column(String)
+    is_active = Column(Boolean, default=True)
+
+    plot = relationship("Plot")
+    user = relationship("User")

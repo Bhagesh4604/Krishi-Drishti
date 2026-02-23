@@ -244,6 +244,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             { icon: <Umbrella size={22} />, label: 'Insurance', color: 'bg-purple-50 text-purple-600', screen: 'insurance' },
             { icon: <Sprout size={22} />, label: 'Carbon', color: 'bg-emerald-50 text-emerald-600', screen: 'carbon-vault' },
             { icon: <Zap size={22} />, label: 'Forecast', color: 'bg-yellow-50 text-yellow-600', screen: 'forecast' },
+            { icon: <Radio size={22} />, label: 'Acoustic', color: 'bg-red-50 text-red-600', screen: 'acoustic-scanner' },
             { icon: <MoreHorizontal size={22} />, label: 'More', color: 'bg-gray-100 text-gray-600', screen: 'profile' },
           ].map((item, idx) => (
             <button

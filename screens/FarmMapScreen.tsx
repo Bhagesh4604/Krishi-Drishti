@@ -12,7 +12,9 @@ import {
   Activity,
   ScanLine,
   ChevronRight,
-  Plus
+  Plus,
+  Loader2,
+  X
 } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -56,6 +58,11 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
   const [recenterTrigger, setRecenterTrigger] = useState(0); // Add trigger state
   const [loading, setLoading] = useState(true);
 
+  // Analysis State
+  const [isScanning, setIsScanning] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+
   useEffect(() => {
     // 1. Get Location
     if (navigator.geolocation) {
@@ -83,12 +90,30 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
     }
   };
 
+  const handleScan = async () => {
+    if (!selectedPlot) return;
+    setIsScanning(true);
+    try {
+      const [analysis, yieldRes] = await Promise.all([
+        plotService.analyzePlot(selectedPlot.id),
+        plotService.forecastYield(selectedPlot.id)
+      ]);
+      setAnalysisResult({ ...analysis, ...yieldRes });
+      setShowAnalysisModal(true);
+    } catch (e) {
+      console.error("Scan failed", e);
+      alert("Analysis failed. Please try again.");
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   // Mock Data for UI (to match image)
   const stats = [
-    { label: 'Plant Health', value: '98%', color: 'text-green-500' },
-    { label: 'Water Depth', value: '72%', color: 'text-blue-500' },
+    { label: 'Plant Health', value: selectedPlot ? `${(selectedPlot.health_score * 100).toFixed(0)}%` : 'N/A', color: 'text-green-500' },
+    { label: 'Moisture', value: selectedPlot ? `${selectedPlot.moisture.toFixed(0)}%` : 'N/A', color: 'text-blue-500' },
     { label: 'Soil', value: '80%', color: 'text-amber-500' },
-    { label: 'Pest', value: '2%', color: 'text-red-500' },
+    { label: 'Pest Risk', value: 'Low', color: 'text-green-500' },
   ];
 
   const chartData = [40, 60, 45, 70, 30, 50, 65, 80, 55, 60, 75, 40]; // Mock bar values
@@ -120,8 +145,8 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
               key={plot.id}
               onClick={() => setSelectedPlot(plot)}
               className={`min-w-[85%] snap-center p-5 rounded-3xl shadow-sm border relative overflow-hidden transition-all duration-300 ${selectedPlot?.id === plot.id
-                  ? 'bg-white border-green-500 ring-2 ring-green-100 transform scale-[1.02]'
-                  : 'bg-white/80 border-gray-100 opacity-70 hover:opacity-100'
+                ? 'bg-white border-green-500 ring-2 ring-green-100 transform scale-[1.02]'
+                : 'bg-white/80 border-gray-100 opacity-70 hover:opacity-100'
                 }`}
             >
               <div className="flex justify-between items-start mb-4">
@@ -228,9 +253,9 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
           <div className="absolute bottom-4 left-4 right-4 bg-white/20 backdrop-blur-md border border-white/30 p-4 rounded-3xl text-white z-[400]">
             <div className="flex justify-between items-end mb-4">
               <div>
-                <h3 className="text-2xl font-bold">18 kg/h</h3>
+                <h3 className="text-2xl font-bold">{selectedPlot?.name || 'Your Field'}</h3>
               </div>
-              <span className="text-xs font-medium opacity-80">{selectedPlot?.area || 12} ha</span>
+              <span className="text-xs font-medium opacity-80">{selectedPlot?.area ? `${selectedPlot.area} Acres` : 'N/A'}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-y-1 gap-x-8 text-xs font-medium">
@@ -248,16 +273,72 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
 
       {/* Floating Scan Button */}
       <button
-        className="absolute bottom-24 right-8 w-14 h-14 bg-[#ccff00] rounded-full flex items-center justify-center shadow-2xl z-50 text-black animate-bounce-slow"
-        onClick={() => {
-          // Trigger Scan/Analysis
-          if (selectedPlot) {
-            // ... trigger analysis ...
-          }
-        }}
+        className={`absolute bottom-24 right-8 w-14 h-14 bg-[#ccff00] rounded-full flex items-center justify-center shadow-2xl z-50 text-black transition-transform ${isScanning ? 'scale-90 opacity-80' : 'animate-bounce-slow'}`}
+        onClick={handleScan}
+        disabled={isScanning || !selectedPlot}
       >
-        <ScanLine size={24} />
+        {isScanning ? <Loader2 size={24} className="animate-spin" /> : <ScanLine size={24} />}
       </button>
+
+      {/* Analysis Modal */}
+      {showAnalysisModal && analysisResult && (
+        <div className="absolute inset-0 z-[500] bg-black/50 flex items-center justify-center p-6 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-in zoom-in-95 relative overflow-hidden">
+            <button
+              onClick={() => setShowAnalysisModal(false)}
+              className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <Activity size={24} className="text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900">Analysis Report</h3>
+                <p className="text-xs text-gray-500 font-bold">{selectedPlot?.name}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Yield Forecast */}
+              <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                <p className="text-[10px] uppercase font-black text-blue-500 mb-1">Predicted Yield</p>
+                <h4 className="text-2xl font-black text-blue-700">{analysisResult.predicted_yield_tons_per_ha} <span className="text-sm">Tons/ha</span></h4>
+                <p className="text-xs text-blue-600 font-medium mt-1">Total: {analysisResult.total_estimated_yield_tons} Tons | Rev: ₹{analysisResult.estimated_revenue_inr?.toLocaleString()}</p>
+              </div>
+
+              {/* Alerts / ML Models */}
+              <div>
+                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">System Alerts</h4>
+                <div className="space-y-2">
+                  {analysisResult.alerts?.map((alert: string, idx: number) => (
+                    <div key={idx} className={`p-3 rounded-xl border text-sm font-bold flex items-start gap-2 ${alert.includes('ANOMALY') || alert.includes('🔴') ? 'bg-red-50 text-red-700 border-red-100' :
+                      alert.includes('🟠') ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                        'bg-gray-50 text-gray-700 border-gray-100'
+                      }`}>
+                      <span>{alert}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-2xl flex justify-between">
+                <div className="text-center">
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Health Score</p>
+                  <p className="text-lg font-black text-gray-700">{(analysisResult.ndvi_avg * 100).toFixed(0)}%</p>
+                </div>
+                <div className="border-r border-gray-200" />
+                <div className="text-center">
+                  <p className="text-[10px] text-gray-400 uppercase font-black">Moisture</p>
+                  <p className="text-lg font-black text-gray-700">{(analysisResult.soil_moisture).toFixed(0)}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

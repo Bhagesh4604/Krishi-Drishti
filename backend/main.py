@@ -2,8 +2,14 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from .database import engine, Base
+from .database import engine, Base, SessionLocal
 from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance
+from apscheduler.schedulers.background import BackgroundScheduler
+from .models import Plot, PlotHistory, DiseaseRiskAlert
+from .ml_models.anomaly_detector import detect_anomalies
+from .ml_models.disease_forecaster import evaluate_disease_risk
+import json
+import random
 
 load_dotenv()
 
@@ -39,6 +45,86 @@ app.include_router(insurance.router)
 def read_root():
     return {"message": "Welcome to Krishi-Drishti Backend API"}
 
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+# --- Periodic Tasks ---
+def run_weekly_anomaly_detection():
+    print("Running Weekly Anomaly Detection...")
+    db = SessionLocal()
+    try:
+        all_plots = db.query(Plot).all()
+        for plot in all_plots:
+            history_records = db.query(PlotHistory).filter(PlotHistory.plot_id == plot.id).order_by(PlotHistory.date.asc()).all()
+            if len(history_records) >= 4:
+                ndvi_values = [r.ndvi for r in history_records if r.ndvi is not None]
+                if len(ndvi_values) == len(history_records):
+                    anomalies = detect_anomalies(ndvi_values)
+                    for i, record in enumerate(history_records):
+                        record.is_anomaly = anomalies[i]
+        
+        db.commit()
+        print("Weekly Anomaly Detection Completed.")
+    except Exception as e:
+        print(f"Periodic Anomaly Detection Error: {e}")
+    finally:
+        db.close()
+
+def run_daily_disease_forecasting():
+    print("Running Daily Disease Spread Forecasting...")
+    db = SessionLocal()
+    try:
+        plots = db.query(Plot).all()
+        for plot in plots:
+             if not plot.crop_type: continue
+             
+             try:
+                 coords = json.loads(plot.coordinates)
+                 lat, lng = coords[0]['lat'], coords[0]['lng']
+             except:
+                 continue
+             
+             # Simulated weather fetching (In production, query WeatherHistory table or OpenMeteo API)
+             # Mocking 5 days of recent weather
+             recent_weather = []
+             for i in range(5):
+                 recent_weather.append({
+                     'temp': random.uniform(18, 30),
+                     'humidity': random.uniform(60, 95),
+                     'precip': random.uniform(0, 15)
+                 })
+             
+             # Run Epidemiology ML model
+             alerts = evaluate_disease_risk(recent_weather, plot.crop_type)
+             
+             # Deactivate old alerts for this plot
+             db.query(DiseaseRiskAlert).filter(DiseaseRiskAlert.plot_id == plot.id).update({"is_active": False})
+             
+             # Save new alerts
+             for alert_data in alerts:
+                 new_alert = DiseaseRiskAlert(
+                     plot_id=plot.id,
+                     user_id=plot.user_id,
+                     disease_name=alert_data["disease_name"],
+                     risk_level=alert_data["risk_level"],
+                     recommendation=alert_data["recommendation"]
+                 )
+                 db.add(new_alert)
+                 
+        db.commit()
+        print("Daily Disease Forecasting Completed.")
+    except Exception as e:
+        print(f"Periodic Disease Forecasting Error: {e}")
+    finally:
+        db.close()
+
+# Start scheduler on startup
+@app.on_event("startup")
+def startup_event():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(run_weekly_anomaly_detection, 'interval', days=7)
+    scheduler.add_job(run_daily_disease_forecasting, 'interval', days=1)
+    scheduler.start()
+

@@ -28,6 +28,7 @@ interface ChatScreenProps {
   navigateTo: (screen: Screen) => void;
   language: Language;
   t: any;
+  onOpenVoiceAssistant: () => void;
 }
 
 const LANG_MAP: Record<string, string> = {

@@ -18,6 +18,7 @@ import SchemeSetuScreen from './screens/SchemeSetuScreen';
 import CropStressScreen from './screens/CropStressScreen';
 import LandMarkingScreen from './screens/LandMarkingScreen';
 import VoiceAssistantModal from './components/VoiceAssistantModal'; // Add component import
+import AcousticScannerScreen from './screens/AcousticScannerScreen';
 
 // import ContractsScreen from './screens/ContractsScreen';
 // import GlobeView from './screens/GlobeView';
@@ -400,6 +401,8 @@ const AppContent: React.FC = () => {
 
       case 'landmark':
         return <LandMarkingScreen navigation={{ goBack: () => navigateTo('home') }} />;
+      case 'acoustic-scanner':
+        return <AcousticScannerScreen navigation={{ goBack: () => navigateTo('home') }} />;
 
       default:
         return (
@@ -416,7 +419,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result'].includes(currentScreen);
+  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result', 'acoustic-scanner'].includes(currentScreen);
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto shadow-xl relative overflow-hidden text-gray-900" style={{ transform: 'translate(0)' }}>

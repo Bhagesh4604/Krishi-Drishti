@@ -257,6 +257,10 @@ export const plotService = {
   getCarbonAnalysis: async (plotId: number) => {
     const response = await api.get(`/plots/${plotId}/carbon`);
     return response.data;
+  },
+  forecastYield: async (plotId: number) => {
+    const response = await api.get(`/plots/${plotId}/yield-forecast`);
+    return response.data;
   }
 };
 

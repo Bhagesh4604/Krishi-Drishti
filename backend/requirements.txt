@@ -10,3 +10,12 @@ google-generativeai
 python-dotenv
 httpx
 pytest
+Pillow
+earthengine-api
+requests
+scikit-learn
+numpy
+apscheduler
+faiss-cpu
+rank-bm25
+pdfplumber
