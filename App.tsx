@@ -397,7 +397,7 @@ const AppContent: React.FC = () => {
       case 'scheme-setu':
         return <SchemeSetuScreen navigateTo={navigateTo} user={user} t={t} />;
       case 'crop-stress':
-        return <CropStressScreen />;
+        return <CropStressScreen navigateTo={navigateTo} />;
 
       case 'landmark':
         return <LandMarkingScreen navigation={{ goBack: () => navigateTo('home') }} />;
