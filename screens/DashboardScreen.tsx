@@ -105,6 +105,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
     return map[crop] || map['Wheat'];
   };
 
+  const fieldImages = [
+    'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800',
+    'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800',
+    'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800',
+    'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800',
+    'https://images.unsplash.com/photo-1444858291040-58f756a3bdd6?w=800',
+    'https://images.unsplash.com/photo-1589710321151-2495dbfc1fa2?w=800'
+  ];
+
+  const getFieldImage = (id: number) => {
+    return fieldImages[id % fieldImages.length];
+  };
+
   return (
     <div className="min-h-full pb-24 font-sans text-gray-800 relative bg-white">
 
@@ -372,7 +385,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
               <div className="px-3 pt-2 flex justify-between items-start">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
-                    <img src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400" className="w-full h-full object-cover" alt="Field" />
+                    <img src={getFieldImage(plot.id)} className="w-full h-full object-cover" alt="Field" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 truncate max-w-[120px]">{plot.name}</h3>
@@ -390,7 +403,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
               {/* Big Image Section */}
               <div className="relative h-40 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform w-full" onClick={() => navigateTo('map')}>
                 <img
-                  src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800"
+                  src={getFieldImage(plot.id)}
                   className="absolute inset-0 w-full h-full object-cover"
                   alt={plot.name}
                 />
