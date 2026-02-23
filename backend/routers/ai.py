@@ -11,7 +11,7 @@ from ..dependencies import get_current_user
 from ..database import get_db
 from ..models import ChatMessage, User, StressReport
 from ..dependencies import get_current_user
-from ..services.satellite import get_simulated_satellite_data
+from ..services.satellite import get_real_satellite_data
 from ..services.hybrid_search import HybridSearchEngine
 from ..services.document_parser import parse_agronomy_pdf
 
@@ -63,44 +63,67 @@ async def analyze_stress(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # 1. Get Satellite Data (Simulated)
-    sat_data = get_simulated_satellite_data(request.lat, request.lng)
+    # 1. Get Satellite Data (from Google Earth Engine or local fallback)
+    sat_data = get_real_satellite_data(request.lat, request.lng)
     
-    # 2. AI Analysis using Gemini
+    # 2. Prepare Default/Fallback response
     final_stress = sat_data['stress_level']
     recommendation = sat_data['satellite_analysis']
+    vra_nitrogen = "Standard application"
+    vra_water = "Standard application"
+    vra_pesticide = "Standard application"
     
+    # 3. AI Analysis using Gemini (Precision Agronomist)
     try:
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
             genai.configure(api_key=api_key)
             
             prompt = f"""
-            You are an expert agronomist. Analyze the following crop status:
+            You are an expert Precision Agronomist. Analyze the following crop status:
             Crop: {request.crop_type}
-            Location: {request.lat}, {request.lng}
-            Satellite Data: {sat_data}
+            Location: Lat {request.lat}, Lng {request.lng}
+            Spectral Indices from Satellite:
+            - NDVI (Overall Health): {sat_data.get('ndvi', 0)}
+            - NDRE (Nitrogen/Early Stress): {sat_data.get('ndre', 0)}
+            - GNDVI (Water/Nutrient): {sat_data.get('gndvi', 0)}
             On-Ground Sensor Data: {request.sensor_data}
             
-            Provide a concise assessment of the stress level (Low/Medium/High) and specific recommendations for the farmer.
-            Format response as JSON: {{ "stress_level": "...", "recommendation": "..." }}
+            Your job is to provide highly localized Variable Rate Application (VRA) recommendations.
+            Consider the specific needs of {request.crop_type} when evaluating these spectral numbers.
+            For example, low NDRE in Wheat might mean a Nitrogen deficiency.
+            
+            Format response EXACTLY as a JSON object:
+            {{
+                "stress_level": "Low" or "Medium" or "High",
+                "recommendation": "Overall 2-sentence summary of the health and immediate action required.",
+                "precision_ag_vra": {{
+                    "nitrogen": "Specific VRA recommendation for Fertilizer (e.g., 'Increase by 15% due to low NDRE').",
+                    "water": "Specific VRA recommendation for Irrigation.",
+                    "pesticide": "Specific VRA recommendation for Pesticides/Fungicides."
+                }}
+            }}
             """
             
             model = genai.GenerativeModel('gemini-2.5-flash')
             response = model.generate_content(prompt)
             
             ai_text = response.text
-            
-            if "stress_level" in ai_text.lower() and "recommendation" in ai_text.lower():
-                import json
-                import re
-                try:
-                    cleaned = re.sub(r'```json|```', '', ai_text).strip()
-                    parsed = json.loads(cleaned)
-                    final_stress = parsed.get("stress_level", final_stress)
-                    recommendation = parsed.get("recommendation", recommendation)
-                except:
-                    recommendation = ai_text # Fallback to raw text if parsing fails
+            import json
+            import re
+            try:
+                cleaned = re.sub(r'```json|```', '', ai_text).strip()
+                parsed = json.loads(cleaned)
+                final_stress = parsed.get("stress_level", final_stress)
+                recommendation = parsed.get("recommendation", recommendation)
+                
+                vra = parsed.get("precision_ag_vra", {})
+                vra_nitrogen = vra.get("nitrogen", vra_nitrogen)
+                vra_water = vra.get("water", vra_water)
+                vra_pesticide = vra.get("pesticide", vra_pesticide)
+            except Exception as e:
+                print(f"[AI AI-Agronomist] JSON Parsing failed: {e}")
+                # Fallbacks already set
         else:
              print("Warning: GEMINI_API_KEY not found. Using simulation fallback.")
              
@@ -108,21 +131,40 @@ async def analyze_stress(
         print(f"AI Analysis Failed: {e}")
         # Continue with satellite fallback
     
-    # 3. Save Report
+    # 4. Save Report
     report = StressReport(
         user_id=current_user.id,
         location_lat=request.lat,
         location_lng=request.lng,
         crop_type=request.crop_type,
-        ndvi_score=sat_data['ndvi'],
+        ndvi_score=sat_data.get('ndvi', 0),
         stress_level=final_stress,
         recommendation=recommendation
     )
     db.add(report)
     db.commit()
     
+    # 5. Format and Return to UI
     return {
-        "satellite_data": sat_data,
+        "satellite_data": {
+            "source": sat_data.get("source", "Unknown"),
+            "ndvi": sat_data.get("ndvi", 0),
+            "ndre": sat_data.get("ndre", 0),
+            "gndvi": sat_data.get("gndvi", 0),
+            "soil_moisture": sat_data.get("soil_moisture", 0)
+        },
+        "thermal_data": {
+            "water_stress_index": final_stress, # Mapping overall stress to water stress loosely for MVP
+            "canopy_temperature": f"{sat_data.get('temperature', 25)}°C"
+        },
+        "hyperspectral_data": {
+            "fungal_risk": "High" if final_stress == "High" else "Low" # Simplification for MVP
+        },
+        "precision_ag_vra": {
+            "nitrogen": vra_nitrogen,
+            "water": vra_water,
+            "pesticide": vra_pesticide
+        },
         "ai_analysis": {
             "stress_level": final_stress,
             "recommendation": recommendation

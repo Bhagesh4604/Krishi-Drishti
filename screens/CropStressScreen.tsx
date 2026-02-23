@@ -58,27 +58,7 @@ const CropStressScreen = ({ navigateTo }: { navigateTo: (screen: Screen) => void
 
         setLoading(true);
         try {
-            // Simulated API call for demo responsiveness to show off the new UI immediately
-            // In reality, this would uncomment the axios call below.
-            setTimeout(() => {
-                setResult({
-                    satellite_data: { ndvi: 0.65, ndre: 0.45, gndvi: 0.55, soil_moisture: 32 },
-                    thermal_data: { water_stress_index: "Moderate", canopy_temperature: "28°C" },
-                    hyperspectral_data: { fungal_risk: "High (Early Blight Signature)" },
-                    precision_ag_vra: {
-                        nitrogen: "Reduce application by 15% in Northeast quadrant due to high NDRE saturation.",
-                        water: "Increase localized irrigation by 5mm in Southwest quadrant based on thermal stress.",
-                        pesticide: "Spot spray targeted fungicide in central zones indicating hyperspectral anomaly."
-                    },
-                    ai_analysis: {
-                        stress_level: "Medium",
-                        recommendation: "Early signs of fungal infection detected alongside moderate water stress. Variable rate application recommended immediately."
-                    }
-                });
-                setLoading(false);
-            }, 1800);
-
-            /*
+            // Real API Call
             const token = localStorage.getItem('ks_token');
             const response = await axios.post('http://127.0.0.1:8000/api/ai/analyze/stress', {
                 lat: position.lat,
@@ -88,8 +68,9 @@ const CropStressScreen = ({ navigateTo }: { navigateTo: (screen: Screen) => void
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            console.log("Real Precision Ag Data:", response.data);
             setResult(response.data);
-            */
+            setLoading(false);
         } catch (error) {
             console.error("Error analyzing stress:", error);
             alert("Failed to analyze crop stress. Please try again.");
