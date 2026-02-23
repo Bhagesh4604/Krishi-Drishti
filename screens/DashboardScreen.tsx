@@ -119,7 +119,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   };
 
   return (
-    <div className="min-h-full pb-24 font-sans text-gray-800 relative bg-white">
+    <div className="min-h-full pb-20 font-sans text-gray-800 relative bg-white">
 
       {/* Mixed Golden/White Background - Concentrated Top Left */}
       <div className="absolute top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-200 via-amber-50/50 to-transparent z-0 pointer-events-none" />
