@@ -247,10 +247,18 @@ const AppContent: React.FC = () => {
     };
   }, []);
 
-  const changeLanguage = (lang: Language) => {
+  const changeLanguage = async (lang: Language) => {
     console.log("[App] Changing language to:", lang);
     setLanguage(lang);
     localStorage.setItem('ks_lang', lang);
+    if (userProfile || localStorage.getItem('ks_token')) {
+      try {
+        await userService.updateProfile({ language: lang });
+        console.log("[App] Synced language to backend profile.");
+      } catch (e) {
+        console.error("[App] Failed to sync language to backend.", e);
+      }
+    }
   };
 
   const navigateTo = (screen: Screen, data?: any) => {
