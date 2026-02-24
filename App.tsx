@@ -19,6 +19,7 @@ import CropStressScreen from './screens/CropStressScreen';
 import LandMarkingScreen from './screens/LandMarkingScreen';
 import VoiceAssistantModal from './components/VoiceAssistantModal'; // Add component import
 import AcousticScannerScreen from './screens/AcousticScannerScreen';
+import SoilCarbonModelScreen from './screens/SoilCarbonModelScreen';
 
 // import ContractsScreen from './screens/ContractsScreen';
 // import GlobeView from './screens/GlobeView';
@@ -403,6 +404,8 @@ const AppContent: React.FC = () => {
         return <LandMarkingScreen navigation={{ goBack: () => navigateTo('home') }} />;
       case 'acoustic-scanner':
         return <AcousticScannerScreen navigation={{ goBack: () => navigateTo('home') }} />;
+      case 'soil-carbon':
+        return <SoilCarbonModelScreen navigateTo={navigateTo} />;
 
       default:
         return (

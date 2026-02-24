@@ -14,6 +14,7 @@ from ..dependencies import get_current_user
 from ..services.satellite import get_real_satellite_data
 from ..services.hybrid_search import HybridSearchEngine
 from ..services.document_parser import parse_agronomy_pdf
+from ..ml_models.soc_model import train_soc_model
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
@@ -170,6 +171,57 @@ async def analyze_stress(
             "recommendation": recommendation
         }
     }
+
+
+class SocTrainingPoint(BaseModel):
+    lat: float
+    lng: float
+    soc_value: float # Laboratory confirmed Soil Organic Carbon (g/kg)
+
+class SocTrainingRequest(BaseModel):
+    points: list[SocTrainingPoint]
+
+@router.post("/train-soc")
+async def train_soc_calibration(
+    request: SocTrainingRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Accepts physical ground-truthed Soil Organic Carbon (SOC) data points.
+    It fetches the historical satellite NDVI for each point,
+    then trains a custom Linear Regression model for this specific farm.
+    Builds the equation: SOC = (Slope * NDVI) + Intercept
+    """
+    if len(request.points) < 2:
+        return {"error": "At least 2 unique physical data points are required to train a linear model."}
+        
+    ndvi_array = []
+    soc_array = []
+    
+    # 1. Match Physical Data to Satellite Data
+    for point in request.points:
+        # Get historical NDVI for that specific pixel from Earth Engine
+        satellite_data = get_real_satellite_data(point.lat, point.lng)
+        ndvi = satellite_data.get("ndvi", 0.5) 
+        
+        ndvi_array.append(ndvi)
+        soc_array.append(point.soc_value)
+        
+    print(f"Training SOC Model. X (NDVI): {ndvi_array}, y (SOC): {soc_array}")
+    
+    # 2. Train Linear Regression Model (Scikit-Learn)
+    try:
+        model_result = train_soc_model(ndvi_array, soc_array)
+        return {
+            "success": True,
+            "model": model_result,
+            "data_points": {
+                "ndvi_values": ndvi_array,
+                "soc_values": soc_array
+            }
+        }
+    except Exception as e:
+        return {"error": f"Failed to train SOC Linear Regression: {e}"}
 
 class ChatRequest(BaseModel):
     message: str

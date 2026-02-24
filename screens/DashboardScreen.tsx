@@ -297,10 +297,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             { icon: <ScanLine size={28} strokeWidth={1.5} />, label: 'Scanner', bg: 'bg-gradient-to-br from-green-400 to-green-600', shadow: 'shadow-green-500/40', text: 'text-white', screen: 'vision' },
             { icon: <BookOpen size={28} strokeWidth={1.5} />, label: 'Schemes', bg: 'bg-gradient-to-br from-orange-400 to-orange-600', shadow: 'shadow-orange-500/40', text: 'text-white', screen: 'scheme-setu' },
             { icon: <Umbrella size={28} strokeWidth={1.5} />, label: 'Insurance', bg: 'bg-gradient-to-br from-indigo-400 to-indigo-600', shadow: 'shadow-indigo-500/40', text: 'text-white', screen: 'insurance' },
+            { icon: <Activity size={28} strokeWidth={1.5} />, label: 'Soil SOC', bg: 'bg-gradient-to-br from-violet-400 to-violet-600', shadow: 'shadow-violet-500/40', text: 'text-white', screen: 'soil-carbon' },
             { icon: <Sprout size={28} strokeWidth={1.5} />, label: 'Carbon', bg: 'bg-gradient-to-br from-emerald-400 to-emerald-600', shadow: 'shadow-emerald-500/40', text: 'text-white', screen: 'carbon-vault' },
             { icon: <Zap size={28} strokeWidth={1.5} />, label: 'Forecast', bg: 'bg-gradient-to-br from-yellow-300 to-amber-500', shadow: 'shadow-amber-500/40', text: 'text-white', screen: 'forecast' },
             { icon: <Radio size={28} strokeWidth={1.5} />, label: 'Acoustic', bg: 'bg-gradient-to-br from-rose-400 to-rose-600', shadow: 'shadow-rose-500/40', text: 'text-white', screen: 'acoustic-scanner' },
-            { icon: <MoreHorizontal size={28} strokeWidth={1.5} />, label: 'More', bg: 'bg-gradient-to-br from-gray-100 to-gray-300', shadow: 'shadow-gray-400/40', text: 'text-gray-700', screen: 'profile' },
           ].map((item, idx) => (
             <button
               key={idx}
