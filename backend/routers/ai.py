@@ -211,14 +211,57 @@ async def train_soc_calibration(
     
     # 2. Train Linear Regression Model (Scikit-Learn)
     try:
-        model_result = train_soc_model(ndvi_array, soc_array)
+        # Calculate Average SOC for AI prompting
+        avg_soc = sum(soc_array) / len(soc_array)
+        
+        # Give Actionable AI Insights via Gemini
+        ai_insights = "Model trained successfully."
+        carbon_credits = "Pending Analysis"
+        try:
+            api_key = os.getenv("GEMINI_API_KEY")
+            if api_key:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                
+                prompt = f"""
+                You are an expert soil scientist and carbon market analyst.
+                A farmer just trained a Machine Learning model for their field. Their average Soil Organic Carbon (SOC) from physical lab samples is {avg_soc:.1f} g/kg.
+                
+                Please provide:
+                1. A brief (2 sentence) explanation of what this SOC level means for their soil health and crop yield potential.
+                2. Two very specific, highly actionable farming practices they can implement THIS season to increase their SOC.
+                3. A brief (1 sentence) estimation of their potential to earn Carbon Credits in the voluntary market based on this baseline.
+                
+                Format EXACTLY as JSON:
+                {{
+                    "soil_health_summary": "...",
+                    "actionable_practices": ["Practice 1: ...", "Practice 2: ..."],
+                    "carbon_credit_potential": "..."
+                }}
+                """
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                response = model.generate_content(prompt)
+                
+                import json
+                import re
+                cleaned = re.sub(r'```json|```', '', response.text).strip()
+                ai_insights = json.loads(cleaned)
+        except Exception as ai_e:
+            print(f"[SOC AI] Failed to generate insights: {ai_e}")
+            ai_insights = {
+                "soil_health_summary": f"Your average SOC is {avg_soc:.1f} g/kg.",
+                "actionable_practices": ["Consider cover cropping to increase organic matter.", "Minimize tillage where possible."],
+                "carbon_credit_potential": "Build a baseline history of 3 years to enter carbon markets."
+            }
+
         return {
             "success": True,
             "model": model_result,
             "data_points": {
                 "ndvi_values": ndvi_array,
                 "soc_values": soc_array
-            }
+            },
+            "ai_insights": ai_insights
         }
     except Exception as e:
         return {"error": f"Failed to train SOC Linear Regression: {e}"}

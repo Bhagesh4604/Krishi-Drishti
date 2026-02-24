@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, Popup, Rectangle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
@@ -9,7 +9,8 @@ import {
     Target,
     Activity,
     BrainCircuit,
-    ChevronRight
+    ChevronRight,
+    Leaf
 } from 'lucide-react';
 import { Screen } from '../types';
 import * as L from 'leaflet';
@@ -37,6 +38,8 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
     const [loading, setLoading] = useState(false);
     const [modelResult, setModelResult] = useState<any>(null);
     const [showProjection, setShowProjection] = useState(false);
+    const [aiInsights, setAiInsights] = useState<any>(null);
+    const mapContainerRef = useRef<HTMLDivElement>(null);
 
     const LocationMarker = () => {
         useMapEvents({
@@ -79,6 +82,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
 
             if (response.data.success) {
                 setModelResult(response.data.model);
+                setAiInsights(response.data.ai_insights);
             } else {
                 alert(response.data.error || "Failed to train model");
             }
@@ -161,7 +165,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
             <div className="p-6 flex flex-col gap-6">
 
                 {/* 1. Map for adding points */}
-                <div className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100" ref={mapContainerRef}>
                     <div className="h-[220px] w-full rounded-[1.5rem] overflow-hidden relative z-0 border border-slate-100">
                         <MapContainer center={[20.5937, 78.9629]} zoom={5} scrollWheelZoom={false} style={{ height: "100%", width: "100%", zIndex: 0 }}>
                             <TileLayer
@@ -289,6 +293,44 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                             </div>
                         </div>
 
+                        {/* AI Actionable Insights Card */}
+                        {aiInsights && (
+                            <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-200 animate-in slide-in-from-bottom-6 duration-700">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <BrainCircuit className="text-violet-600" size={20} />
+                                    <h3 className="font-bold text-slate-800 text-sm">Actionable Intelligence</h3>
+                                </div>
+
+                                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                                    {aiInsights.soil_health_summary}
+                                </p>
+
+                                <div className="mb-4">
+                                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Recommended Practices</h4>
+                                    <ul className="flex flex-col gap-2">
+                                        {aiInsights.actionable_practices?.map((practice: string, idx: number) => (
+                                            <li key={idx} className="flex gap-2 items-start text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 leading-relaxed">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-1.5 shrink-0" />
+                                                <span>{practice}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl flex items-start gap-3">
+                                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg shrink-0 mt-0.5">
+                                        <Leaf size={16} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Carbon Market Potential</h4>
+                                        <p className="text-xs text-emerald-800 font-medium leading-relaxed">
+                                            {aiInsights.carbon_credit_potential}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <button
                             onClick={() => {
                                 if (!currentPos && points.length > 0) {
@@ -296,10 +338,17 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                                     setCurrentPos({ lat: points[0].lat, lng: points[0].lng });
                                 }
                                 setShowProjection(!showProjection);
+
+                                // Scroll to map to ensure it's visible when "View Projection" is clicked
+                                if (!showProjection && mapContainerRef.current) {
+                                    setTimeout(() => {
+                                        mapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }, 100);
+                                }
                             }}
                             className={`flex items-center justify-between w-full border p-4 rounded-2xl shadow-sm transition-colors active:scale-[0.98] ${showProjection
-                                    ? 'bg-blue-50 border-blue-200 shadow-inner'
-                                    : 'bg-white border-slate-200 hover:border-blue-300'
+                                ? 'bg-blue-50 border-blue-200 shadow-inner'
+                                : 'bg-white border-slate-200 hover:border-blue-300'
                                 }`}
                         >
                             <div className="flex items-center gap-3">
