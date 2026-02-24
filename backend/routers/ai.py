@@ -234,6 +234,8 @@ async def train_soc_calibration(
                 2. Two very specific, highly actionable farming practices they can implement THIS season to increase their SOC.
                 3. A brief (1 sentence) estimation of their potential to earn Carbon Credits in the voluntary market based on this baseline.
                 
+                IMPORTANT: Write your response entirely in the language corresponding to language code '{current_user.language}' (e.g., if 'hi', respond in Hindi; if 'mr', respond in Marathi; if 'en', respond in English).
+                
                 Format EXACTLY as JSON:
                 {{
                     "soil_health_summary": "...",
