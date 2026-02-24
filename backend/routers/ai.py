@@ -211,6 +211,8 @@ async def train_soc_calibration(
     
     # 2. Train Linear Regression Model (Scikit-Learn)
     try:
+        model_result = train_soc_model(ndvi_array, soc_array)
+        
         # Calculate Average SOC for AI prompting
         avg_soc = sum(soc_array) / len(soc_array)
         
