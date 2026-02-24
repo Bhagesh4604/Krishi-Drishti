@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, Popup, Rectangle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import {
@@ -36,6 +36,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
     const [inputValue, setInputValue] = useState("");
     const [loading, setLoading] = useState(false);
     const [modelResult, setModelResult] = useState<any>(null);
+    const [showProjection, setShowProjection] = useState(false);
 
     const LocationMarker = () => {
         useMapEvents({
@@ -89,6 +90,58 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
         }
     };
 
+    // MVP: Generate a visual heatmap grid based on the formula
+    const ProjectionHeatmap = () => {
+        if (!showProjection || !modelResult || !currentPos) return null;
+
+        const grid = [];
+        const gridSize = 0.005; // approx 500m squares
+        const startLat = currentPos.lat - 0.02;
+        const startLng = currentPos.lng - 0.02;
+
+        // Ensure deterministic pseudo-random NDVI for visual variation
+        const pseudoRandom = (seed: number) => {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        };
+
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const lat = startLat + (i * gridSize);
+                const lng = startLng + (j * gridSize);
+
+                // Simulate spatial NDVI variation (0.2 to 0.8)
+                const simNdvi = 0.2 + (pseudoRandom(lat * lng) * 0.6);
+
+                // CRITICAL: Apply the custom trained mathematical formula
+                let calcSoc = (modelResult.slope * simNdvi) + modelResult.intercept;
+                calcSoc = Math.max(0, calcSoc); // Floor at 0
+
+                // Color scale (Low=Red, Mid=Yellow, High=Green)
+                let color = "#ef4444"; // Red
+                if (calcSoc > 60) color = "#22c55e"; // Green
+                else if (calcSoc > 30) color = "#eab308"; // Yellow
+
+                grid.push(
+                    <Rectangle
+                        key={`${i}-${j}`}
+                        bounds={[[lat, lng], [lat + gridSize, lng + gridSize]]}
+                        pathOptions={{ color: color, weight: 0, fillOpacity: 0.4 }}
+                    >
+                        <Popup>
+                            <div className="text-center">
+                                <div className="text-[10px] font-bold text-gray-500">Projected SOC</div>
+                                <div className="text-lg font-black text-gray-800">{calcSoc.toFixed(1)} <span className="text-xs">g/kg</span></div>
+                                <div className="text-[9px] text-gray-400 mt-1 mt-1">Simulated NDVI: {simNdvi.toFixed(2)}</div>
+                            </div>
+                        </Popup>
+                    </Rectangle>
+                );
+            }
+        }
+        return <>{grid}</>;
+    };
+
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 relative pb-24 font-sans max-w-md mx-auto shadow-2xl">
             {/* Header */}
@@ -122,11 +175,24 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                                     <Popup>SOC: {p.soc_value} g/kg</Popup>
                                 </Marker>
                             ))}
+
+                            <ProjectionHeatmap />
                         </MapContainer>
 
-                        {!currentPos && points.length === 0 && (
+                        {!currentPos && points.length === 0 && !showProjection && (
                             <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full shadow-lg text-[10px] font-bold z-[1000] backdrop-blur-sm pointer-events-none whitespace-nowrap">
                                 Tap map to add soil samples
+                            </div>
+                        )}
+
+                        {showProjection && (
+                            <div className="absolute top-4 left-4 bg-white/95 p-3 rounded-xl shadow-lg z-[1000] backdrop-blur-md border border-slate-200">
+                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">SOC Levels</div>
+                                <div className="flex flex-col gap-1.5 text-xs font-bold text-slate-700">
+                                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#22c55e] opacity-80"></div> High (&gt;60)</div>
+                                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#eab308] opacity-80"></div> Medium (30-60)</div>
+                                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#ef4444] opacity-80"></div> Low (&lt;30)</div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -223,17 +289,29 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                             </div>
                         </div>
 
-                        <button className="flex items-center justify-between w-full bg-white border border-slate-200 p-4 rounded-2xl shadow-sm hover:border-blue-300 transition-colors active:scale-[0.98]">
+                        <button
+                            onClick={() => {
+                                if (!currentPos && points.length > 0) {
+                                    // Center on the first point if no current pos selected
+                                    setCurrentPos({ lat: points[0].lat, lng: points[0].lng });
+                                }
+                                setShowProjection(!showProjection);
+                            }}
+                            className={`flex items-center justify-between w-full border p-4 rounded-2xl shadow-sm transition-colors active:scale-[0.98] ${showProjection
+                                    ? 'bg-blue-50 border-blue-200 shadow-inner'
+                                    : 'bg-white border-slate-200 hover:border-blue-300'
+                                }`}
+                        >
                             <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                                <div className={`p-2.5 rounded-xl ${showProjection ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600'}`}>
                                     <MapPin size={20} />
                                 </div>
                                 <div className="text-left">
-                                    <h4 className="font-bold text-slate-800 text-sm">View Projected SOC Map</h4>
+                                    <h4 className="font-bold text-slate-800 text-sm">{showProjection ? 'Hide Projection' : 'View Projected SOC Map'}</h4>
                                     <p className="text-[10px] text-slate-500 font-medium mt-0.5">Apply formula across entire field</p>
                                 </div>
                             </div>
-                            <ChevronRight className="text-slate-400" size={20} />
+                            <ChevronRight className={`text-slate-400 transition-transform ${showProjection ? 'rotate-90' : ''}`} size={20} />
                         </button>
                     </div>
                 )}
