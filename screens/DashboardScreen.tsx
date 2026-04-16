@@ -89,9 +89,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
     fetchPlots();
   }, [locationName]);
 
-  const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : 32;
+  const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : '--';
 
-  const crops = user?.crops && Array.isArray(user.crops) ? user.crops : ['Wheat', 'Corn', 'Grapes', 'Potato', 'Olive'];
+  const crops = (user?.crops && Array.isArray(user.crops) && user.crops.length > 0) ? user.crops : [];
 
   const getCropImage = (crop: string) => {
     const map: any = {
@@ -121,8 +121,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   return (
     <div className="min-h-full pb-0 font-sans text-gray-800 relative bg-white">
 
-      {/* Mixed Golden/White Background - Concentrated Top Left */}
-      <div className="absolute top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-200 via-amber-50/50 to-transparent z-0 pointer-events-none" />
+      {/* Dynamic Animated Background Mesh */}
+      <div className="absolute top-0 left-0 w-full h-[600px] z-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float"></div>
+        <div className="absolute top-0 -right-4 w-72 h-72 bg-amber-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-teal-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/10 via-white/50 to-transparent"></div>
+      </div>
 
       {/* 1. Header Section */}
       <div className="px-6 pt-12 pb-6 flex justify-between items-start relative z-20">
@@ -204,7 +209,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
               <Sun size={32} className="text-yellow-400 fill-yellow-400 mt-2" />
             </div>
             <p className="text-md font-medium text-gray-500 mt-1">
-              Sonoma County
+              {locationName.split(',').slice(-1)[0]?.trim() || locationName}
             </p>
           </div>
           {/* Wheat Stalks Image Requirement */}
@@ -221,53 +226,53 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         {/* 2x2 Grid Pills */}
         <div className="grid grid-cols-2 gap-4 relative z-10">
           {/* Soil Temp */}
-          <div className="bg-[#FFF8F0] border border-orange-100 rounded-[2rem] p-4 flex items-center gap-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-[#FFE8D1] flex items-center justify-center text-gray-700">
+          <div className="glass rounded-[2rem] p-4 flex items-center gap-3 hover-lift cursor-default">
+            <div className="w-10 h-10 rounded-full bg-emerald-50/80 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
               <Thermometer size={18} />
             </div>
             <div>
               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Soil temp</p>
               <p className="text-lg font-bold text-gray-900">
-                {weather?.current?.soil_temperature_0cm ? `+${Math.round(weather.current.soil_temperature_0cm)} C` : '+23 C'}
+                {weather?.current?.soil_temperature_0cm !== undefined ? `+${Math.round(weather.current.soil_temperature_0cm)} C` : '-- C'}
               </p>
             </div>
           </div>
 
           {/* Humidity */}
-          <div className="bg-[#FFF8F0] border border-orange-100 rounded-[2rem] p-4 flex items-center gap-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-[#FFE8D1] flex items-center justify-center text-gray-700">
+          <div className="glass rounded-[2rem] p-4 flex items-center gap-3 hover-lift cursor-default">
+            <div className="w-10 h-10 rounded-full bg-blue-50/80 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
               <Droplets size={18} fill="currentColor" />
             </div>
             <div>
               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Humidity</p>
               <p className="text-lg font-bold text-gray-900">
-                {weather?.current?.relative_humidity_2m ?? '78'}%
+                {weather?.current?.relative_humidity_2m ?? '--'}%
               </p>
             </div>
           </div>
 
           {/* Wind */}
-          <div className="bg-[#FFF8F0] border border-orange-100 rounded-[2rem] p-4 flex items-center gap-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-[#FFE8D1] flex items-center justify-center text-gray-700">
+          <div className="glass rounded-[2rem] p-4 flex items-center gap-3 hover-lift cursor-default">
+            <div className="w-10 h-10 rounded-full bg-amber-50/80 flex items-center justify-center text-amber-600 shadow-sm border border-amber-100">
               <Wind size={18} />
             </div>
             <div>
               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Wind</p>
               <p className="text-lg font-bold text-gray-900">
-                {weather?.current?.wind_speed_10m ?? '7'} m/s
+                {weather?.current?.wind_speed_10m ?? '--'} m/s
               </p>
             </div>
           </div>
 
-          {/* Precipitation (Correcting spelling from image 'Perception') */}
-          <div className="bg-[#FFF8F0] border border-orange-100 rounded-[2rem] p-4 flex items-center gap-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-[#FFE8D1] flex items-center justify-center text-gray-700">
+          {/* Precipitation */}
+          <div className="glass rounded-[2rem] p-4 flex items-center gap-3 hover-lift cursor-default">
+            <div className="w-10 h-10 rounded-full bg-indigo-50/80 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
               <CloudRain size={18} fill="currentColor" />
             </div>
             <div>
               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Precipitation</p>
               <p className="text-lg font-bold text-gray-900">
-                {weather?.current?.precipitation ?? '0'} mm
+                {weather?.current?.precipitation ?? '--'} mm
               </p>
             </div>
           </div>
@@ -318,11 +323,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       </div>
 
       {/* 3. Commodities & Food (Horizontal Scroll) */}
+      {crops.length > 0 && (
       <div className="px-6 mt-8 relative z-10 w-full overflow-hidden">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Commodities & Food</h2>
 
         <div className="flex gap-5 overflow-x-auto no-scrollbar pb-4 pr-6">
-          {['Rice', 'Corn', 'Grapes', 'Potato', 'Olive', 'Wheat'].map((crop, idx) => (
+          {crops.map((crop, idx) => (
             <div key={idx} className="flex flex-col items-center gap-3 flex-shrink-0 cursor-pointer active:scale-95 transition-transform group">
               <div className="w-[72px] h-[72px] rounded-full overflow-hidden shadow-lg border-2 border-white relative">
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all z-10"></div>
@@ -338,6 +344,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           ))}
         </div>
       </div>
+      )}
 
       {/* 4. My Fields Cards Carousel */}
       <div className="mt-4 relative z-10 pb-2 overflow-hidden w-full">
@@ -379,7 +386,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           )}
 
           {!isLoadingPlots && userPlots.map((plot) => (
-            <div key={plot.id} className="min-w-[85%] sm:min-w-[70%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-3 border border-orange-50 shadow-sm relative overflow-hidden flex-shrink-0 flex flex-col gap-3">
+            <div key={plot.id} className="min-w-[85%] sm:min-w-[70%] snap-center glass rounded-[2.5rem] p-3 shadow-md border border-white/40 relative overflow-hidden flex-shrink-0 flex flex-col gap-3 group hover-lift transition-all">
 
               {/* Header inside card */}
               <div className="px-3 pt-2 flex justify-between items-start">
@@ -394,42 +401,43 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                     </div>
                   </div>
                 </div>
-                <div className="bg-[#FFE8D1] px-3 py-2 rounded-full flex items-center gap-1 shrink-0">
-                  <Sprout size={16} className="text-orange-600" fill="currentColor" />
-                  <span className="text-sm font-bold text-gray-900">{plot.area} ha</span>
+                <div className="glass-dark px-3 py-2 rounded-full flex items-center gap-1 shrink-0 shadow-lg">
+                  <Sprout size={16} className="text-emerald-400" fill="currentColor" />
+                  <span className="text-sm font-bold text-white">{plot.area} ha</span>
                 </div>
               </div>
 
               {/* Big Image Section */}
-              <div className="relative h-40 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform w-full" onClick={() => navigateTo('map')}>
+              <div className="relative h-40 rounded-[2rem] overflow-hidden cursor-pointer active-press group-hover:shadow-lg transition-all w-full" onClick={() => navigateTo('map')}>
                 <img
                   src={getFieldImage(plot.id)}
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-700"
                   alt={plot.name}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </div>
 
               {/* Action Buttons Bar */}
-              <div className="flex justify-between items-center bg-white rounded-[1.5rem] p-2 shadow-sm border border-orange-100 w-full mt-1">
-                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active:scale-95" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
-                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+              <div className="flex justify-between items-center glass rounded-[1.5rem] p-2 shadow-sm w-full mt-1 border border-white/50">
+                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active-press" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
+                  <div className="w-10 h-10 rounded-full bg-blue-50/80 flex items-center justify-center group-hover:bg-blue-100 transition-colors border border-blue-100">
                     <MapPin size={18} className="text-blue-600" />
                   </div>
-                  <span className="text-[10px] font-bold text-gray-600">Map</span>
+                  <span className="text-[10px] font-bold text-gray-700">Map</span>
                 </button>
-                <div className="w-px h-8 bg-gray-100" />
-                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active:scale-95" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
-                  <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                    <Activity size={18} className="text-green-600" />
+                <div className="w-px h-8 bg-gray-200/50" />
+                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active-press" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
+                  <div className="w-10 h-10 rounded-full bg-emerald-50/80 flex items-center justify-center group-hover:bg-emerald-100 transition-colors border border-emerald-100">
+                    <Activity size={18} className="text-emerald-600" />
                   </div>
-                  <span className="text-[10px] font-bold text-gray-600">Health</span>
+                  <span className="text-[10px] font-bold text-gray-700">Health</span>
                 </button>
-                <div className="w-px h-8 bg-gray-100" />
-                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active:scale-95" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
-                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                <div className="w-px h-8 bg-gray-200/50" />
+                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active-press" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
+                  <div className="w-10 h-10 rounded-full bg-amber-50/80 flex items-center justify-center group-hover:bg-amber-100 transition-colors border border-amber-100">
                     <TrendingUp size={18} className="text-amber-600" />
                   </div>
-                  <span className="text-[10px] font-bold text-gray-600">Yield</span>
+                  <span className="text-[10px] font-bold text-gray-700">Yield</span>
                 </button>
               </div>
 

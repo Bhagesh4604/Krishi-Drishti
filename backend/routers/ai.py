@@ -12,44 +12,11 @@ from ..database import get_db
 from ..models import ChatMessage, User, StressReport
 from ..dependencies import get_current_user
 from ..services.satellite import get_real_satellite_data
-from ..services.hybrid_search import HybridSearchEngine
-from ..services.document_parser import parse_agronomy_pdf
+from ..services.rag_indexer import get_rag_engine
+from ..services.weather_fetcher import get_bioclimatic_data
 from ..ml_models.soc_model import train_soc_model
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
-
-# Global RAG Engine
-rag_engine = None
-
-def get_embeddings(texts):
-    """Uses Gemini to get embeddings for the FAISS index."""
-    import google.generativeai as genai
-    embeddings = []
-    for text in texts:
-        result = genai.embed_content(
-            model="models/text-embedding-004",
-            content=text,
-            task_type="retrieval_document",
-        )
-        embeddings.append(result['embedding'])
-    return embeddings
-
-def init_rag_engine():
-    global rag_engine
-    if rag_engine is None:
-        print("Initializing Advanced RAG Hybrid Search Engine...")
-        try:
-            rag_engine = HybridSearchEngine(embedding_function=get_embeddings, dimension=768)
-            # Add some mock document chunks representing parsed structured tables and text
-            mock_docs = [
-                "Late Blight is treated with chlorothalonil. Apply at first sign of disease.",
-                "AGRONOMIC TABLE DATA:\n Crop | N (kg/ha) | P (kg/ha) | K (kg/ha) \n Wheat | 120 | 60 | 40 \n Potato | 150 | 80 | 100",
-                "Optimal soil pH for cotton is between 5.8 and 8.0.",
-                "For stem borer in rice, apply Cartap hydrochloride 4G at 18 kg/ha."
-            ]
-            rag_engine.add_documents(mock_docs)
-        except Exception as e:
-            print(f"Failed to init RAG: {e}")
 
 
 class StressAnalysisRequest(BaseModel):
@@ -79,6 +46,7 @@ async def analyze_stress(
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
             genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-1.5-flash')
             
             prompt = f"""
             You are an expert Precision Agronomist. Analyze the following crop status:
@@ -106,7 +74,6 @@ async def analyze_stress(
             }}
             """
             
-            model = genai.GenerativeModel('gemini-2.5-flash')
             response = model.generate_content(prompt)
             
             ai_text = response.text
@@ -188,53 +155,68 @@ async def train_soc_calibration(
 ):
     """
     Accepts physical ground-truthed Soil Organic Carbon (SOC) data points.
-    It fetches the historical satellite NDVI for each point,
-    then trains a custom Linear Regression model for this specific farm.
-    Builds the equation: SOC = (Slope * NDVI) + Intercept
+    It fetches REAL historical bioclimatic data (Moisture, ET) from Open-Meteo for each point,
+    then trains a custom Multiple Linear Regression model for this specific farm.
+    Builds the equation: SOC = (m1 * Moisture) + (m2 * ET) + Intercept
     """
     if len(request.points) < 2:
-        return {"error": "At least 2 unique physical data points are required to train a linear model."}
+        return {"error": "At least 2 unique physical data points are required to train the model."}
         
-    ndvi_array = []
+    bioclimatic_array = []
     soc_array = []
     
-    # 1. Match Physical Data to Satellite Data
+    # Track averages for the AI prompt
+    total_moisture = 0
+    total_et = 0
+    
+    # 1. Match Physical Data to Real Bioclimatic Data
     for point in request.points:
-        # Get historical NDVI for that specific pixel from Earth Engine
-        satellite_data = get_real_satellite_data(point.lat, point.lng)
-        ndvi = satellite_data.get("ndvi", 0.5) 
+        # Get historical soil moisture and ET from Open-Meteo
+        climate_data = get_bioclimatic_data(point.lat, point.lng)
         
-        ndvi_array.append(ndvi)
+        moisture = climate_data.get("soil_moisture", 25.0)
+        et = climate_data.get("evapotranspiration", 4.0)
+        
+        bioclimatic_array.append([moisture, et])
         soc_array.append(point.soc_value)
         
-    print(f"Training SOC Model. X (NDVI): {ndvi_array}, y (SOC): {soc_array}")
+        total_moisture += moisture
+        total_et += et
+        
+    print(f"Training SOC Model. X (Bioclimatic): {bioclimatic_array}, y (SOC): {soc_array}")
     
-    # 2. Train Linear Regression Model (Scikit-Learn)
+    # 2. Train Multiple Linear Regression Model (Scikit-Learn)
     try:
-        model_result = train_soc_model(ndvi_array, soc_array)
+        model_result = train_soc_model(bioclimatic_array, soc_array)
         
-        # Calculate Average SOC for AI prompting
+        # Calculate Averages for AI prompting
         avg_soc = sum(soc_array) / len(soc_array)
+        avg_moisture = total_moisture / len(request.points)
+        avg_et = total_et / len(request.points)
         
-        # Give Actionable AI Insights via Gemini
-        ai_insights = "Model trained successfully."
-        carbon_credits = "Pending Analysis"
+        # Give Actionable AI Insights via Gemini using the real data
         try:
             api_key = os.getenv("GEMINI_API_KEY")
             if api_key:
-                import google.generativeai as genai
                 genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"""
-                You are an expert soil scientist and carbon market analyst.
-                A farmer just trained a Machine Learning model for their field. Their average Soil Organic Carbon (SOC) from physical lab samples is {avg_soc:.1f} g/kg.
+                You are an expert Agricultural Data Scientist and Carbon Market Analyst.
+                A farmer just trained a Machine Learning model for their field correlating clinical soil tests with real Open-Meteo satellite data.
+                
+                FARM DATA AVERAGES:
+                - Soil Organic Carbon (SOC) from physical lab samples: {avg_soc:.1f} g/kg
+                - Historical Soil Moisture (Top 7cm): {avg_moisture:.1f}%
+                - Historical Evapotranspiration (ET): {avg_et:.1f} mm/day
                 
                 Please provide:
-                1. A brief (2 sentence) explanation of what this SOC level means for their soil health and crop yield potential.
-                2. Two very specific, highly actionable farming practices they can implement THIS season to increase their SOC.
+                1. A brief (2 sentence) explanation of what this SOC level combined with their moisture/ET means for their soil health and crop yield potential.
+                2. Two very specific, highly actionable farming practices they can implement THIS season to increase their SOC, specifically considering their {avg_moisture:.1f}% average moisture.
                 3. A brief (1 sentence) estimation of their potential to earn Carbon Credits in the voluntary market based on this baseline.
                 
-                IMPORTANT: Write your response entirely in the language corresponding to language code '{current_user.language}' (e.g., if 'hi', respond in Hindi; if 'mr', respond in Marathi; if 'en', respond in English).
+                IMPORTANT: YOU MUST TRANSLATE YOUR ENTIRE RESPONSE INTO THE LANGUAGE CORRESPONDING TO THIS CODE: '{current_user.language}'.
+                DO NOT USE ENGLISH UNLESS THE CODE IS 'en'. For example, if the code is 'hi', output entirely in Hindi.
                 
                 Format EXACTLY as JSON:
                 {{
@@ -243,7 +225,6 @@ async def train_soc_calibration(
                     "carbon_credit_potential": "..."
                 }}
                 """
-                model = genai.GenerativeModel('gemini-2.5-flash')
                 response = model.generate_content(prompt)
                 
                 import json
@@ -262,13 +243,13 @@ async def train_soc_calibration(
             "success": True,
             "model": model_result,
             "data_points": {
-                "ndvi_values": ndvi_array,
+                "bioclimatic_values": bioclimatic_array,
                 "soc_values": soc_array
             },
             "ai_insights": ai_insights
         }
     except Exception as e:
-        return {"error": f"Failed to train SOC Linear Regression: {e}"}
+        return {"error": f"Failed to train SOC Multiple Linear Regression: {e}"}
 
 class ChatRequest(BaseModel):
     message: str
@@ -283,25 +264,57 @@ async def ai_chat(
     try:
         api_key = os.getenv("GEMINI_API_KEY")
         genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         # 1. Fetch History (Last 5 messages)
         history = db.query(ChatMessage).filter(ChatMessage.user_id == current_user.id).order_by(ChatMessage.timestamp.desc()).limit(5).all()
         history.reverse()
         
-        # 2. RAG Retrieval via Hybrid Search
-        init_rag_engine()
+        # 2. RAG Retrieval — search the real corpus (688KB agriculture knowledge base)
         rag_context = ""
-        if rag_engine:
-            rag_results = rag_engine.search(request.message, top_k=2, alpha=0.5)
+        try:
+            engine = get_rag_engine()
+            rag_results = engine.search(request.message, top_k=3, alpha=0.6)
             if rag_results:
-                rag_context = "\nVerified Agricultural Database References:\n"
+                rag_context = "\n--- Verified Agricultural Knowledge Base References ---\n"
                 for res in rag_results:
-                     rag_context += f"- {res['content']}\n"
+                    rag_context += f"• {res['content']}\n"
+                rag_context += "--- End of References ---\n"
+        except Exception as rag_err:
+            print(f"[AI Chat] RAG retrieval failed: {rag_err}")
+
+        # 3. Build user profile context for Gemini
+        user_crops = current_user.crops or "Not specified"
+        user_lang_map = {
+            'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'bn': 'Bengali',
+            'te': 'Telugu', 'ta': 'Tamil', 'pa': 'Punjabi', 'kn': 'Kannada'
+        }
+        user_lang_name = user_lang_map.get(current_user.language or 'en', 'English')
+
+        system_prompt = f"""You are Krishi-AI, an expert agricultural advisor for Indian farmers.
+
+FARMER PROFILE:
+- Name: {current_user.name or 'Farmer'}
+- District: {current_user.district or 'India'}
+- Crops grown: {user_crops}
+- Farming type: {current_user.farming_type or 'Mixed'}
+- Category: {current_user.category or 'General'}
+- Land: {current_user.land_size or 'Unknown'} acres
+
+KNOWLEDGE BASE (use these facts to ground your answer — do NOT ignore them):
+{rag_context}
+
+INSTRUCTIONS:
+1. Answer specifically for the farmer's crops and district.
+2. Give actionable, practical advice — not generic text.
+3. Cite specific numbers (kg/ha, dosage, timing) when relevant.
+4. If the knowledge base has relevant data, ALWAYS use it.
+5. Respond ENTIRELY in {user_lang_name}. Do not mix languages.
+6. Keep answers concise — 3–5 sentences max unless a detailed list is needed.
+"""
         
-        # 3. Construct Prompt
-        context = f"User Profile: Name={current_user.name}, Location={current_user.district}, Crops={current_user.farming_type}. "
         chat_history = "\n".join([f"{msg.role}: {msg.text}" for msg in history])
-        full_prompt = f"{context}\n{rag_context}\nHistory:\n{chat_history}\n\nUser: {request.message}\nAssistant:"
+        full_prompt = f"{system_prompt}\nConversation History:\n{chat_history}\n\nFarmer: {request.message}\nKrishi-AI:"
 
         
         # 3. Call Gemini (Async Wrapper)
@@ -332,7 +345,9 @@ async def ai_chat(
 
 def _generate_chat_response(prompt):
     """Helper to run blocking Gemini call in thread"""
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    api_key = os.getenv("GEMINI_API_KEY")
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content(prompt)
     return response.text
 
@@ -376,7 +391,8 @@ async def diagnose_crop(
         }
         """
         
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content([prompt, image])
     
     try:

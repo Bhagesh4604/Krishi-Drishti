@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Screen } from '../types';
 import { ArrowLeft, Leaf, TrendingUp, ShieldCheck, Satellite, ChevronRight, CheckCircle2, Upload, AlertCircle, Loader2 } from 'lucide-react';
-import { carbonService, plotService } from '../src/services/api';
+import { carbonService, plotService, getUserLocation } from '../src/services/api';
 
 interface CarbonVaultScreenProps {
    navigateTo: (screen: Screen) => void;
@@ -60,11 +60,12 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo, t }) 
    const handleUploadEvidence = async () => {
       if (!selectedProjectId) return;
       try {
-         // Mock Geoloc
+         const position = await getUserLocation();
+
          await carbonService.uploadEvidence(selectedProjectId, {
             description: evidenceDesc,
-            geo_lat: 21.1458,
-            geo_lng: 79.0882
+            geo_lat: position.lat,
+            geo_lng: position.lng
          });
          setShowEvidenceModal(false);
          alert("Evidence Uploaded! Sent for Verification.");

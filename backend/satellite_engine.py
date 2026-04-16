@@ -4,15 +4,14 @@ import datetime
 
 app = Flask(__name__)
 
-# Initialize Earth Engine
-# Note: You need valid credentials.
-# In production, use a service account key.
+# Initialize Earth Engine with a specific project
 try:
-    ee.Initialize()
+    # Use the user's ee project id, or read from env
+    import os
+    project_id = os.environ.get("EE_PROJECT_ID", "ee-bhagesh4604") 
+    ee.Initialize(project=project_id)
 except Exception as e:
     print(f"Earth Engine Authentication Failed: {e}")
-    # In a real scenario, you'd handle authentication flow or error out.
-    # For now, we proceed assuming authentication or local mock will happen.
 
 def calculate_ndvi(image):
     """Calculates NDVI for a given image."""

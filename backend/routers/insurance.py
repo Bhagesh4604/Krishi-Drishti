@@ -1,6 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from ..database import get_db
+from ..models import User, SchemeApplication
+from ..dependencies import get_current_user
 
 router = APIRouter(prefix="/api/insurance", tags=["insurance"])
 
@@ -85,31 +89,38 @@ INSURANCE_DB = [
     }
 ]
 
-@router.get("/search", response_model=List[InsuranceScheme])
-async def search_insurance(query: str = Query(None, min_length=0)):
+@router.get("/search")
+async def search_insurance(
+    query: str = Query(None, min_length=0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Search for insurance schemes by name, type, or crop.
     """
-    if not query:
-        return INSURANCE_DB
-
-    q = query.lower()
-    results = [
-        scheme for scheme in INSURANCE_DB
-        if q in scheme["name"].lower() 
-        or q in scheme["type"].lower()
-        or q in scheme["provider"].lower()
-        or any(q in crop.lower() for crop in scheme["crops"])
-    ]
+    results = INSURANCE_DB
+    if query:
+        q = query.lower()
+        results = [
+            scheme for scheme in INSURANCE_DB
+            if q in scheme["name"].lower() 
+            or q in scheme["type"].lower()
+            or q in scheme["provider"].lower()
+            or any(q in crop.lower() for crop in scheme["crops"])
+        ]
     
-    # Mark enrolled schemes
+    # Check DB for enrolled schemes
+    applications = db.query(SchemeApplication).filter(SchemeApplication.user_id == current_user.id).all()
+    enrolled_ids = [int(app.scheme_id) for app in applications if app.scheme_id.isdigit()]
+    
+    response_list = []
     for scheme in results:
-        scheme["is_enrolled"] = scheme["id"] in ENROLLED_SCHEMES
+        # Create a mutable copy
+        scheme_copy = dict(scheme)
+        scheme_copy["is_enrolled"] = scheme_copy["id"] in enrolled_ids
+        response_list.append(scheme_copy)
         
-    return results
-
-# In-memory storage for demo persistence
-ENROLLED_SCHEMES = set()
+    return response_list
 
 class EnrollmentRequest(BaseModel):
     scheme_id: int
@@ -120,7 +131,11 @@ class EnrollmentRequest(BaseModel):
     crop: str
 
 @router.post("/enroll")
-async def enroll_scheme(request: EnrollmentRequest):
+async def enroll_scheme(
+    request: EnrollmentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Process insurance enrollment.
     """
@@ -128,16 +143,33 @@ async def enroll_scheme(request: EnrollmentRequest):
     if not scheme:
         raise HTTPException(status_code=404, detail="Scheme not found")
     
-    # Mock logic: Verify Aadhar (just length check for demo)
-    if len(request.aadhar_number) != 12:
-         raise HTTPException(status_code=400, detail="Invalid Aadhar Number")
+    # Robust numeric Aadhar validation
+    if not request.aadhar_number.isdigit() or len(request.aadhar_number) != 12:
+         raise HTTPException(status_code=400, detail="Invalid Aadhar Number. Must be exactly 12 digits.")
 
-    # Save to "Database"
-    ENROLLED_SCHEMES.add(request.scheme_id)
+    # Check if already enrolled in DB
+    existing = db.query(SchemeApplication).filter(
+        SchemeApplication.user_id == current_user.id, 
+        SchemeApplication.scheme_id == str(request.scheme_id)
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="You have already applied for this scheme.")
+
+    # Save to SQLite Database
+    new_app = SchemeApplication(
+        user_id=current_user.id,
+        scheme_id=str(request.scheme_id),
+        scheme_name=scheme["name"],
+        status="In Review",
+        remarks=f"Area: {request.land_area} ha, Crop: {request.crop}"
+    )
+    db.add(new_app)
+    db.commit()
     
     return {
         "status": "success", 
-        "message": f"Application submitted for {scheme['name']}", 
+        "message": f"Application submitted securely for {scheme['name']}", 
         "enrollment_id": f"INS-{request.scheme_id}-{request.aadhar_number[-4:]}",
-        "details": request
+        "details": request.dict()
     }

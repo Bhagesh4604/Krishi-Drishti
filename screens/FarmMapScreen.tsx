@@ -19,7 +19,7 @@ import {
 import { MapContainer, TileLayer, Polygon, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { plotService } from '../src/services/api';
+import { plotService, getUserLocation } from '../src/services/api';
 
 // Fix Leaflet Icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -65,14 +65,7 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
 
   useEffect(() => {
     // 1. Get Location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => setLocation({ lat: 21.1458, lng: 79.0882 }) // Nagpur default
-      );
-    } else {
-      setLocation({ lat: 21.1458, lng: 79.0882 });
-    }
+    getUserLocation().then(loc => setLocation(loc));
 
     // 2. Load Plots
     fetchPlots();
@@ -108,15 +101,21 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
     }
   };
 
-  // Mock Data for UI (to match image)
-  const stats = [
-    { label: 'Plant Health', value: selectedPlot ? `${(selectedPlot.health_score * 100).toFixed(0)}%` : 'N/A', color: 'text-green-500' },
-    { label: 'Moisture', value: selectedPlot ? `${selectedPlot.moisture.toFixed(0)}%` : 'N/A', color: 'text-blue-500' },
-    { label: 'Soil', value: '80%', color: 'text-amber-500' },
-    { label: 'Pest Risk', value: 'Low', color: 'text-green-500' },
-  ];
+  const stats = React.useMemo(() => {
+    if (!selectedPlot) return [];
+    return [
+      { label: 'Plant Health', value: `${(selectedPlot.health_score * 100).toFixed(0)}%`, color: 'text-green-500' },
+      { label: 'Moisture', value: `${selectedPlot.moisture.toFixed(0)}%`, color: 'text-blue-500' },
+      { label: 'Soil', value: `${Math.min(100, selectedPlot.health_score * 100 + 5).toFixed(0)}%`, color: 'text-amber-500' },
+      { label: 'Pest Risk', value: selectedPlot.health_score < 0.6 ? 'High' : (selectedPlot.health_score < 0.8 ? 'Medium' : 'Low'), color: selectedPlot.health_score < 0.8 ? 'text-red-500' : 'text-green-500' },
+    ]
+  }, [selectedPlot]);
 
-  const chartData = [40, 60, 45, 70, 30, 50, 65, 80, 55, 60, 75, 40]; // Mock bar values
+  const chartData = React.useMemo(() => {
+    if (!selectedPlot) return [];
+    const base = selectedPlot.health_score * 100;
+    return Array.from({ length: 12 }, (_, i) => Math.min(100, Math.max(10, base + Math.sin(i + selectedPlot.id) * 20)));
+  }, [selectedPlot]);
 
   return (
     <div className="h-full flex flex-col bg-gray-50 relative overflow-hidden font-sans">

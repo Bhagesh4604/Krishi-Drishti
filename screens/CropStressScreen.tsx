@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
+import { getUserLocation } from '../src/services/api';
 import {
     AlertTriangle,
     CheckCircle,
@@ -34,10 +35,14 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 const CropStressScreen = ({ navigateTo }: { navigateTo: (screen: Screen) => void }) => {
-    const [position, setPosition] = useState<{ lat: number; lng: number } | null>({ lat: 20.5937, lng: 78.9629 }); // Default dummy position for demo
+    const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [cropType, setCropType] = useState("Wheat");
+
+    React.useEffect(() => {
+        getUserLocation().then(loc => setPosition(loc));
+    }, []);
 
     const LocationMarker = () => {
         useMapEvents({

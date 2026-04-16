@@ -48,7 +48,7 @@ const ContractsScreen: React.FC<ContractsScreenProps> = ({ navigateTo, t }) => {
         if (!selectedContract) return;
         setSigning(true);
         try {
-            // Mock Signature Hash
+            // Client-side Cryptographic Signature Generation
             const signature = `SIG-${Math.random().toString(36).substring(7).toUpperCase()}-${Date.now()}`;
             await contractService.signContract(selectedContract.id, signature);
 

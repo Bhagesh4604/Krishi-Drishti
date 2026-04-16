@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Screen, Listing } from '../types';
-import { marketService } from '../src/services/api';
+import { marketService, getUserLocation } from '../src/services/api';
 import {
   Search,
   Filter,
@@ -72,19 +72,7 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
     loadUser();
 
     // 2. Get GPS Location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.error("Error getting location", error);
-        }
-      );
-    }
+    getUserLocation().then(loc => setLocation(loc)).catch(() => {});
   }, []);
 
   const VERIFIED_LAND_ACRES = userProfile?.land_size || 2.5;
@@ -239,41 +227,40 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
         </button>
       </div>
 
-      {/* 2. Hero Card (3D Style) */}
+      {/* 2. Hero Card (Premium Glassmorphism Style) */}
       <div className="px-6 mt-6">
-        <div className="bg-[#E9F4E9] rounded-[2.5rem] p-6 relative overflow-hidden h-48 flex flex-col justify-center">
+        <div className="glass-dark rounded-[2.5rem] p-6 relative overflow-hidden h-48 flex flex-col justify-center border border-emerald-500/30">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/40 to-emerald-900/40 pointer-events-none"></div>
           <div className="relative z-10 max-w-[60%]">
             <div className="flex items-center gap-2 mb-2">
-              <div className="bg-white p-1.5 rounded-lg shadow-sm">
-                <TrendingUp size={16} className="text-green-600" />
+              <div className="glass p-1.5 rounded-lg shadow-sm border border-white/20">
+                <TrendingUp size={16} className="text-emerald-400" />
               </div>
-              <span className="text-xs font-bold text-green-800 uppercase tracking-widest">Top Commodity</span>
+              <span className="text-xs font-bold text-emerald-100 uppercase tracking-widest">Top Commodity</span>
             </div>
-            <h3 className="text-3xl font-black text-green-900 leading-none mb-4">Organic<br />Wheat</h3>
-            <button className="bg-green-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-green-200 active:scale-95 transition-transform">
+            <h3 className="text-3xl font-black text-white leading-none mb-4 drop-shadow-lg">Organic<br />Wheat</h3>
+            <button className="glass text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg hover-lift active:scale-95 transition-transform border border-emerald-400/50">
               View Trends
             </button>
           </div>
 
-          {/* 3D Illustration Placeholder */}
           <img
-            src="https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=800&auto=format&fit=crop&q=60"
-            className="absolute -right-4 top-4 w-40 h-40 object-contain drop-shadow-2xl rotate-12"
-            style={{ clipPath: 'circle(50%)' }}
+            src="https://images.unsplash.com/photo-1501430654243-c934cec2e1c0?w=800"
+            className="absolute -right-4 top-4 w-40 h-40 object-cover rounded-full shadow-[0_0_30px_rgba(16,185,129,0.3)] border-4 border-emerald-500/20 rotate-12"
           />
         </div>
       </div>
 
-      {/* 3. Categories (Pill Tabs) */}
+      {/* 3. Categories (Premium Chips) */}
       <div className="px-6 mt-8">
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
           {['All', 'Grains', 'Vegetables', 'Fruits', 'Machinery'].map((cat) => (
             <button
               key={cat}
               onClick={() => setTab(cat.toLowerCase() as any)}
-              className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${tab === cat.toLowerCase() || (tab === 'all' && cat === 'All')
-                ? 'bg-green-700 text-white shadow-lg shadow-green-200'
-                : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
+              className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-300 ${tab === cat.toLowerCase() || (tab === 'all' && cat === 'All')
+                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-[0_4px_15px_rgba(16,185,129,0.4)] scale-[1.02] border border-emerald-400/50'
+                : 'glass text-gray-600 border border-gray-200 hover:bg-white hover-lift'
                 }`}
             >
               {cat}
@@ -300,33 +287,34 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
               <div
                 key={item.id}
                 onClick={() => navigateTo('market-detail', { listing: item })}
-                className="bg-white p-3 rounded-[2rem] shadow-sm border border-gray-100 active:scale-[0.98] transition-transform group"
+                className="glass p-3 rounded-[2rem] shadow-sm border border-white hover-lift active-press transition-all group cursor-pointer"
               >
-                <div className="relative h-32 rounded-[1.5rem] overflow-hidden mb-3">
-                  <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <div className="relative h-32 rounded-[1.5rem] overflow-hidden mb-3 border border-gray-100 shadow-inner">
+                  <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   {item.isOrganic && (
-                    <div className="absolute top-2 left-2 bg-green-500/90 backdrop-blur-sm text-white px-2 py-0.5 rounded-lg text-[8px] font-black uppercase">
+                    <div className="absolute top-2 left-2 bg-emerald-500/90 backdrop-blur-md text-white px-2.5 py-1 rounded-lg text-[8px] font-black uppercase shadow-lg border border-emerald-400">
                       Organic
                     </div>
                   )}
-                  <button className="absolute top-2 right-2 w-6 h-6 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-white active:bg-red-500 transition-colors">
-                    <span className="text-[10px]">♥</span>
+                  <button className="absolute top-2 right-2 w-7 h-7 glass rounded-full flex items-center justify-center text-white hover:bg-red-500 hover:border-red-500 transition-colors z-10" onClick={(e) => {e.stopPropagation()}}>
+                    <span className="text-[12px] leading-none">♥</span>
                   </button>
                 </div>
 
                 <div className="px-1">
-                  <h4 className="text-sm font-bold text-gray-900 mb-0.5 truncate">{item.crop}</h4>
-                  <p className="text-[10px] text-gray-400 font-medium mb-2 flex items-center gap-1">
-                    <MapPin size={10} /> {item.loc}
+                  <h4 className="text-sm font-bold text-gray-900 mb-0.5 truncate group-hover:text-emerald-700 transition-colors">{item.crop}</h4>
+                  <p className="text-[10px] text-gray-400 font-medium mb-3 flex items-center gap-1">
+                    <MapPin size={10} className="text-emerald-500" /> {item.loc}
                   </p>
 
-                  <div className="flex justify-between items-end">
+                  <div className="flex justify-between items-end bg-white/50 rounded-xl p-2 -mx-1 border border-emerald-50/50 group-hover:bg-emerald-50/50 transition-colors">
                     <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">Price</p>
-                      <p className="text-lg font-black text-green-700 leading-none">{item.price.split('/')[0]}</p>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Price</p>
+                      <p className="text-lg font-black text-emerald-700 leading-none group-hover:scale-105 transition-transform origin-left">{item.price.split('/')[0]}</p>
                     </div>
-                    <button className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform">
-                      <Plus size={16} />
+                    <button className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 active:scale-90 transition-all border border-emerald-400/50">
+                      <ShoppingCart size={14} />
                     </button>
                   </div>
                 </div>
@@ -336,10 +324,10 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ navigateTo, t }) => {
         )}
       </div>
 
-      {/* Floating Sell Button */}
+      {/* Premium Floating Sell Button */}
       <button
         onClick={() => setShowAddForm(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-green-600 text-white rounded-full shadow-[0_4px_20px_rgba(22,163,74,0.4)] flex items-center justify-center active:scale-90 transition-transform z-40 border-4 border-white"
+        className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-full shadow-[0_8px_30px_rgba(16,185,129,0.4)] flex items-center justify-center hover-lift active-press transition-all z-40 border-2 border-white animate-pulse-glow"
       >
         <Plus size={24} strokeWidth={3} />
       </button>

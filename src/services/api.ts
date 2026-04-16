@@ -1,6 +1,35 @@
 import axios from 'axios';
 import { UserProfile, Listing, ChatMessage } from '../../types';
 
+export const getUserLocation = async (): Promise<{ lat: number; lng: number }> => {
+  return new Promise(async (resolve) => {
+    const fallback = { lat: 21.1458, lng: 79.0882 }; // Nagpur
+    const fetchIpLocation = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data.latitude && data.longitude) {
+          resolve({ lat: data.latitude, lng: data.longitude });
+        } else {
+          resolve(fallback);
+        }
+      } catch {
+        resolve(fallback);
+      }
+    };
+
+    if (navigator.geolocation && window.isSecureContext !== false) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        async () => fetchIpLocation(),
+        { timeout: 5000 }
+      );
+    } else {
+      fetchIpLocation();
+    }
+  });
+};
+
 const API_BASE_URL = '/api';
 
 const api = axios.create({

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
-import random
 from ..database import get_db
 from ..models import Contract, User
 from ..dependencies import get_current_user
@@ -38,12 +37,13 @@ async def get_contracts(
     # If status is Signed, show only MY signed contracts
     if status == "Open":
         contracts = db.query(Contract).filter(Contract.status == "Open").all()
-        # If empty (demo), create some Dummy Contracts
+        # If the central system hasn't posted any corporate contracts yet, seed initial institutional offers
         if not contracts:
             dummies = [
-                Contract(buyer_name="ITC Agribusiness", crop_type="Wheat", quantity=10, price_per_qt=2400, delivery_date=datetime(2026, 4, 15), terms="Moisture < 12%, Max 2% Foreign Matter", status="Open"),
-                Contract(buyer_name="Pepsico India", crop_type="Potato", quantity=50, price_per_qt=1800, delivery_date=datetime(2026, 3, 1), terms="Grade A Processable, Size > 45mm", status="Open"),
-                Contract(buyer_name="Reliance Fresh", crop_type="Tomato", quantity=5, price_per_qt=1500, delivery_date=datetime(2026, 2, 28), terms="Firm Red, No bruises", status="Open"),
+                Contract(buyer_name="ITC Agribusiness", crop_type="Wheat", quantity=100, price_per_qt=3200, delivery_date=datetime(2026, 6, 15), terms="Moisture < 12%, Max 2% Foreign Matter, Premium Grade", status="Open"),
+                Contract(buyer_name="Pepsico India", crop_type="Potato", quantity=500, price_per_qt=1800, delivery_date=datetime(2026, 5, 1), terms="Grade A Processable, Size > 45mm, No Green Ends", status="Open"),
+                Contract(buyer_name="Reliance Fresh", crop_type="Tomato", quantity=50, price_per_qt=1500, delivery_date=datetime(2026, 4, 30), terms="Firm Red, No bruises, Direct to local warehouse", status="Open"),
+                Contract(buyer_name="Godrej Agrovet", crop_type="Soybean", quantity=200, price_per_qt=5200, delivery_date=datetime(2026, 9, 10), terms="Oil content > 18%, Moisture < 10%", status="Open")
             ]
             db.add_all(dummies)
             db.commit()

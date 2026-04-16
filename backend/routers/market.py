@@ -86,17 +86,14 @@ async def check_price(query: str, lat: Optional[float] = None, lng: Optional[flo
     api_key = os.getenv("GEMINI_API_KEY")
     if not query: return {"error": "Query required"}
     
-    # Use Gemini with Google Search Tool
     genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
     location_context = ""
     if lat and lng:
         location_context = f"near coordinates {lat}, {lng}"
-    
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content(
-        f"What is the current market price of {query} in Indian mandis {location_context}? Provide a concise summary with prices specific to the nearest known location/district.",
-        # tools='google_search_retrieval' # Uncomment if your API key supports it directly in this SDK version
-    )
+        
+    prompt = f"What is the current market price of {query} in Indian mandis {location_context}? Provide a concise summary with prices specific to the nearest known location/district."
+    response = model.generate_content(prompt)
     
     return {"text": response.text, "sources": []} 

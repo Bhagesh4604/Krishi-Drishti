@@ -25,7 +25,7 @@ import SoilCarbonModelScreen from './screens/SoilCarbonModelScreen';
 // import GlobeView from './screens/GlobeView';
 import SplashScreen from './screens/SplashScreen';
 import BottomNav from './components/BottomNav';
-import { userService, weatherService } from './src/services/api';
+import { userService, weatherService, getUserLocation } from './src/services/api';
 
 import { translations } from './translations';
 import LandingScreen from './screens/LandingScreen';
@@ -112,30 +112,7 @@ const AppContent: React.FC = () => {
         log("[App] userService is present");
       }
 
-      // Helper to get location
-      const getLocation = (): Promise<{ lat: number, lng: number } | null> => {
-        return new Promise((resolve) => {
-          if (!navigator.geolocation) {
-            console.log("Geolocation not supported");
-            resolve(null);
-            return;
-          }
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              console.log("Got location", position.coords);
-              resolve({
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              });
-            },
-            (error) => {
-              console.log("Location error", error);
-              resolve(null);
-            },
-            { timeout: 4000, enableHighAccuracy: false }
-          );
-        });
-      };
+      // Removed local getLocation handler, imported getUserLocation
 
       const savedLang = localStorage.getItem('ks_lang') as Language;
       if (savedLang) setLanguage(savedLang);
@@ -148,7 +125,7 @@ const AppContent: React.FC = () => {
 
       try {
         // Fetch location in parallel or before profile
-        const location = await getLocation();
+        const location = await getUserLocation();
 
         // Start backend timeout timer strictly AFTER location is done/skipped
         const timeoutPromise = new Promise((_, reject) =>

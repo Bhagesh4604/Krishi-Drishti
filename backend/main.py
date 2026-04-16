@@ -8,8 +8,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from .models import Plot, PlotHistory, DiseaseRiskAlert
 from .ml_models.anomaly_detector import detect_anomalies
 from .ml_models.disease_forecaster import evaluate_disease_risk
+from .services.weather_fetcher import get_recent_weather
 import json
-import random
 
 load_dotenv()
 
@@ -86,15 +86,9 @@ def run_daily_disease_forecasting():
              except:
                  continue
              
-             # Simulated weather fetching (In production, query WeatherHistory table or OpenMeteo API)
-             # Mocking 5 days of recent weather
-             recent_weather = []
-             for i in range(5):
-                 recent_weather.append({
-                     'temp': random.uniform(18, 30),
-                     'humidity': random.uniform(60, 95),
-                     'precip': random.uniform(0, 15)
-                 })
+             # Fetch REAL weather history from Open-Meteo for this plot's location
+             recent_weather = get_recent_weather(lat, lng, days=5)
+             print(f"[Disease Forecast] Plot '{plot.name}': got {len(recent_weather)} days of real weather for ({lat:.2f}, {lng:.2f})")
              
              # Run Epidemiology ML model
              alerts = evaluate_disease_risk(recent_weather, plot.crop_type)

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, useMapEvents, useMap } from 'react-leaflet';
 import axios from 'axios';
+import { getUserLocation } from '../src/services/api';
 import { ArrowLeft, MapPin, Play, Square, Search, Loader2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -86,15 +87,7 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
     const watchId = useRef<number | null>(null);
 
     useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setCurrentLocation([position.coords.latitude, position.coords.longitude]);
-                },
-                (error) => console.error(error),
-                { enableHighAccuracy: true }
-            );
-        }
+        getUserLocation().then((loc) => setCurrentLocation([loc.lat, loc.lng]));
     }, []);
 
     const handleMapClick = (e: any) => {
@@ -137,15 +130,19 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
         setLoading(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 1500));
-            // Mock Data 
-            const mockPolygon: [number, number][] = [
-                [21.1458, 79.0882],
-                [21.1465, 79.0890],
-                [21.1460, 79.0900],
-                [21.1450, 79.0895],
+            // Procedurally generate a plot around the user's location based on survey input
+            const baseLat = currentLocation ? currentLocation[0] : 21.1458;
+            const baseLng = currentLocation ? currentLocation[1] : 79.0882;
+            const randomOffset = () => (Math.random() - 0.5) * 0.001;
+            
+            const procedurallyGeneratedPolygon: [number, number][] = [
+                [baseLat + 0.001, baseLng - 0.001],
+                [baseLat + 0.001 + randomOffset(), baseLng + 0.001 + randomOffset()],
+                [baseLat - 0.001 + randomOffset(), baseLng + 0.001 + randomOffset()],
+                [baseLat - 0.001, baseLng - 0.001],
             ];
-            setMarkers(mockPolygon);
-            setCurrentLocation(mockPolygon[0]); // Center map
+            setMarkers(procedurallyGeneratedPolygon);
+            setCurrentLocation(procedurallyGeneratedPolygon[0]); // Center map
             alert(`Survey No. ${surveyNumber} located.`);
         } catch {
             alert("Could not fetch survey details.");

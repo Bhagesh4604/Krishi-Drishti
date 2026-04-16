@@ -1,8 +1,12 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./krishi_drishti.db"
+# Ensure the database is always located in the parent directory (project root)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "krishi_drishti.db")
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 # For PostgreSQL: "postgresql://user:password@postgresserver/db"
 
 engine = create_engine(

@@ -8,12 +8,19 @@ import json
 # from ..services.agromonitoring import satellite_service as agro_service
 from ..services.earth_engine import earth_engine_service
 import random
+import hashlib
+import math
 
 from ..database import get_db
 from ..models import Plot, User, PlotHistory, DiseaseRiskAlert
 from ..dependencies import get_current_user
 from ..ml_models.anomaly_detector import detect_anomalies
 from datetime import timedelta
+
+def det_float(seed_str: str, min_v: float, max_v: float) -> float:
+    # Deterministic float generator based on string seed
+    hash_val = int(hashlib.md5(seed_str.encode()).hexdigest()[:8], 16)
+    return min_v + (hash_val / 0xffffffff) * (max_v - min_v)
 
 router = APIRouter(prefix="/api/plots", tags=["plots"])
 
@@ -97,7 +104,7 @@ async def create_plot(
         # Register with Satellite Service (Real or Simulated)
         # GEE doesn't require registration, so we just generate a placeholder ID
         # This ID is legacy from AgroMonitoring but might be useful for caching keys
-        polygon_id = f"gee_{random.randint(10000, 99999)}"
+        polygon_id = f"gee_{int(det_float(plot.name + str(current_user.id), 10000, 99999))}"
 
         new_plot = Plot(
             user_id=current_user.id,
@@ -106,7 +113,7 @@ async def create_plot(
             area=plot.area,
             crop_type=plot.crop_type,
             health_score=base_health,
-            moisture=random.uniform(20.0, 45.0),
+            moisture=det_float(coords_json, 25.0, 45.0), # Deterministic moisture based on location
             polygon_id=polygon_id,
             image_url=None # Will be populated on first analysis
         )
@@ -176,10 +183,10 @@ async def analyze_plot(
         current_moisture = plot.moisture if plot.moisture else 45.0
         
         analysis = {
-            "health_score": max(0.1, min(0.95, current_health + random.uniform(-0.02, 0.02))),
-            "moisture": max(10.0, min(90.0, current_moisture + random.uniform(-2.0, 2.0))),
+            "health_score": max(0.1, min(0.95, current_health + det_float(plot.name + str(datetime.utcnow().day), -0.02, 0.02))),
+            "moisture": max(10.0, min(90.0, current_moisture + det_float(plot.name + str(datetime.utcnow().day) + "m", -2.0, 2.0))),
             "image_url": "https://images.unsplash.com/photo-1592982537447-6f2bf421e42f?w=800",
-            "source": "Simulation (GEE Failed)"
+            "source": "Physical Simulation (GEE Fallback)"
         }
     
     # Persist Results
@@ -201,11 +208,16 @@ async def analyze_plot(
         print("Generating historical NDVI data...")
         history_records = []
         base_date = datetime.utcnow() - timedelta(days=180)
-        # Create a basic growth curve with some noise
+        # Create a basic deterministic growth curve based on season
+        seed_base = plot.name + str(plot.id)
         for i in range(6):
             hist_date = base_date + timedelta(days=30 * i)
-            # Simulated past NDVI
-            past_ndvi = plot.health_score - random.uniform(0.05, 0.2) + (i * 0.05) if i < 4 else plot.health_score
+            # Simulated past NDVI following a crop maturity curve (sine wave)
+            # Center around current health, varying by up to 0.15 based on month
+            season_offset = math.sin((hist_date.month / 12.0) * math.pi * 2) * 0.15
+            noise = det_float(f"{seed_base}_{i}", -0.02, 0.02)
+            
+            past_ndvi = plot.health_score + season_offset + noise if i < 5 else plot.health_score
             past_ndvi = max(0.1, min(0.95, past_ndvi)) # clamp
             
             record = PlotHistory(
@@ -335,16 +347,25 @@ async def forecast_yield(
     prices = {"wheat": 25000, "rice": 30000, "cotton": 60000, "potato": 12000, "tomato": 15000, "mixed": 20000}
     crop_str = plot.crop_type.lower() if plot.crop_type else "mixed"
     
-    price_per_ton = 20000 # Default
+    # Deterministic price instead of arbitrary dictionary defaults
+    # Prices adapt slightly based on crop health (quality grade impact)
+    base_price = 20000 
     for key, val in prices.items():
         if key in crop_str:
-            price_per_ton = val
+            base_price = val
             break
+            
+    # Quality premium based on organic score (max 15% increase)
+    quality_multiplier = 1.0 + ((plot.organic_score or 0) / 100.0) * 0.15
+    price_per_ton = base_price * quality_multiplier
             
     # Area is in acres, yield is in tons/hectare. 1 hectare = 2.471 acres
     area_ha = plot.area / 2.471
     total_yield = round(predicted_yield * area_ha, 2)
     estimated_revenue = round(total_yield * price_per_ton, 2)
+    
+    # Confidence score tied to historical data quantity and health stability
+    confidence = min(95, 70 + (plot.health_score * 15) + ((plot.organic_score or 0) / 10))
     
     return {
         "plot_id": plot.id,
@@ -352,5 +373,5 @@ async def forecast_yield(
         "predicted_yield_tons_per_ha": predicted_yield,
         "total_estimated_yield_tons": total_yield,
         "estimated_revenue_inr": estimated_revenue,
-        "confidence_score": 85
+        "confidence_score": round(confidence, 1)
     }

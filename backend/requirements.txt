@@ -6,7 +6,7 @@ pydantic-settings
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
-google-generativeai
+google-genai
 python-dotenv
 httpx
 pytest

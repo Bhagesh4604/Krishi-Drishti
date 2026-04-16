@@ -103,7 +103,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
         const startLat = currentPos.lat - 0.02;
         const startLng = currentPos.lng - 0.02;
 
-        // Ensure deterministic pseudo-random NDVI for visual variation
+        // Ensure deterministic pseudo-random variation for visual display of the grid
         const pseudoRandom = (seed: number) => {
             let x = Math.sin(seed++) * 10000;
             return x - Math.floor(x);
@@ -114,11 +114,12 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                 const lat = startLat + (i * gridSize);
                 const lng = startLng + (j * gridSize);
 
-                // Simulate spatial NDVI variation (0.2 to 0.8)
-                const simNdvi = 0.2 + (pseudoRandom(lat * lng) * 0.6);
+                // Simulate spatial moisture and ET variation based on the base averages
+                const simMoisture = 20 + (pseudoRandom(lat * lng) * 15); // e.g., 20% to 35%
+                const simEt = 3 + (pseudoRandom(lat + lng) * 3); // e.g., 3 to 6 mm/day
 
-                // CRITICAL: Apply the custom trained mathematical formula
-                let calcSoc = (modelResult.slope * simNdvi) + modelResult.intercept;
+                // CRITICAL: Apply the custom trained Multiple Linear Regression mathematical formula
+                let calcSoc = (modelResult.coef_moisture * simMoisture) + (modelResult.coef_et * simEt) + modelResult.intercept;
                 calcSoc = Math.max(0, calcSoc); // Floor at 0
 
                 // Color scale (Low=Red, Mid=Yellow, High=Green)
@@ -136,7 +137,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                             <div className="text-center">
                                 <div className="text-[10px] font-bold text-gray-500">Projected SOC</div>
                                 <div className="text-lg font-black text-gray-800">{calcSoc.toFixed(1)} <span className="text-xs">g/kg</span></div>
-                                <div className="text-[9px] text-gray-400 mt-1 mt-1">Simulated NDVI: {simNdvi.toFixed(2)}</div>
+                                <div className="text-[9px] text-gray-400 mt-1">Est. Moisture: {simMoisture.toFixed(1)}% | ET: {simEt.toFixed(1)}</div>
                             </div>
                         </Popup>
                     </Rectangle>
@@ -260,7 +261,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                             {loading ? (
                                 <>
                                     <Loader2 className="animate-spin w-5 h-5" />
-                                    <span>Syncing with Earth Engine...</span>
+                                    <span>Syncing with Open-Meteo Archive...</span>
                                 </>
                             ) : (
                                 <>

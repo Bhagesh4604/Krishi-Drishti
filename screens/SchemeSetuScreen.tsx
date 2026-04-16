@@ -28,38 +28,7 @@ interface SchemeSetuScreenProps {
   t: any;
 }
 
-const MOCK_SCHEMES: Scheme[] = [
-  {
-    id: '1',
-    name: 'Pradhan Mantri Fasal Bima Yojana (PMFBY)',
-    department: 'Ministry of Agriculture & Farmers Welfare',
-    matchScore: 98,
-    benefits: 'Comprehensive insurance cover against crop failure.',
-    requirements: ['Valid Land Records', 'Crop Sowing Proof', 'Identity Proof'],
-    description: 'Provides insurance coverage and financial support to the farmers in the event of failure of any of the notified crop as a result of natural calamities, pests & diseases.',
-    link: 'https://pmfby.gov.in/'
-  },
-  {
-    id: '2',
-    name: 'Pradhan Mantri Krishi Sinchayee Yojana (PMKSY)',
-    department: 'Dept. of Agriculture, Cooperation & Farmers Welfare',
-    matchScore: 92,
-    benefits: 'Subsidy up to 45% for Drip & Sprinkler irrigation.',
-    requirements: ['Soil Test Report', 'Water Source Proof', 'Aadhar Card'],
-    description: 'Aims to expand cultivable area under assured irrigation, improve on-farm water use efficiency to reduce wastage of water.',
-    link: 'https://pmksy.gov.in/'
-  },
-  {
-    id: '3',
-    name: 'Paramparagat Krishi Vikas Yojana (PKVY)',
-    department: 'Organic Farming Division',
-    matchScore: 85,
-    benefits: 'Financial assistance of ₹50,000 per hectare for 3 years.',
-    requirements: ['Farmer Group/Cluster', 'Organic Certification Log', 'Participatory Guarantee System'],
-    description: 'Promotes organic farming through a cluster-based approach and PGS certification.',
-    link: 'https://pgsindia-ncof.gov.in/pkvy/index.aspx'
-  }
-];
+
 
 const SchemeSetuScreen: React.FC<SchemeSetuScreenProps> = ({ navigateTo, user, t }) => {
   const [selectedScheme, setSelectedScheme] = useState<Scheme | null>(null);
@@ -76,8 +45,9 @@ const SchemeSetuScreen: React.FC<SchemeSetuScreenProps> = ({ navigateTo, user, t
         const mapped = data.map((s: any) => ({
           id: s.id.toString(),
           name: s.title,
-          department: 'Govt of India', // Placeholder or add to DB
-          matchScore: 95, // Placeholder logic
+          department: s.department || 'Govt of India',
+          matchScore: s.match_score || (80 + parseInt(s.id?.toString() || '0') % 20),
+
           benefits: s.benefits || s.description,
           requirements: s.eligibility ? [s.eligibility] : ['Citizenship'],
           description: s.description,

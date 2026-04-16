@@ -1,16 +1,67 @@
 import random
-import ee
 import datetime
+import requests
 
-# Attempt to initialize Earth Engine.
-# Note: For production, a service account key is required.
-try:
-    ee.Initialize()
-    EE_INITIALIZED = True
-except Exception as e:
-    print(f"[Satellite Service] Earth Engine Auth Failed or not configured: {e}")
-    EE_INITIALIZED = False
-
+def get_real_bioclimatic_data(lat: float, lng: float) -> dict:
+    """
+    Fetches real historical bioclimatic data (Soil Moisture, Evapotranspiration, Soil Temp) 
+    from the Open-Meteo Historical API for the exact coordinates provided over the last 30 days.
+    """
+    try:
+        # Fetch data from the last 30 days
+        end_date = datetime.date.today().strftime('%Y-%m-%d')
+        start_date = (datetime.date.today() - datetime.timedelta(days=30)).strftime('%Y-%m-%d')
+        
+        url = "https://archive-api.open-meteo.com/v1/archive"
+        params = {
+            "latitude": lat,
+            "longitude": lng,
+            "start_date": start_date,
+            "end_date": end_date,
+            "hourly": "soil_temperature_0_to_7cm,soil_moisture_0_to_7cm",
+            "daily": "et0_fao_evapotranspiration",
+            "timezone": "auto"
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Calculate 30-day averages
+        hourly_moisture = data.get("hourly", {}).get("soil_moisture_0_to_7cm", [])
+        hourly_temp = data.get("hourly", {}).get("soil_temperature_0_to_7cm", [])
+        daily_et = data.get("daily", {}).get("et0_fao_evapotranspiration", [])
+        
+        # Filter out Nones
+        hourly_moisture = [v for v in hourly_moisture if v is not None]
+        hourly_temp = [v for v in hourly_temp if v is not None]
+        daily_et = [v for v in daily_et if v is not None]
+        
+        avg_moisture = sum(hourly_moisture) / len(hourly_moisture) if hourly_moisture else 0.2
+        avg_temp = sum(hourly_temp) / len(hourly_temp) if hourly_temp else 25.0
+        avg_et = sum(daily_et) / len(daily_et) if daily_et else 4.0
+        
+        # Open-Meteo moisture is m³/m³, convert to percentage for easier display/modeling
+        moisture_percent = round(avg_moisture * 100, 2)
+        
+        return {
+            "source": "Open-Meteo Historical Archive",
+            "soil_moisture": moisture_percent,  # %
+            "evapotranspiration": round(avg_et, 2), # mm/day
+            "soil_temperature": round(avg_temp, 2), # °C
+            "status": "success"
+        }
+        
+    except Exception as e:
+        print(f"[Bioclimatic Service] Open-Meteo Fetch Failed: {e}")
+        return {
+            "source": "Fallback",
+            "soil_moisture": 25.0,
+            "evapotranspiration": 4.5,
+            "soil_temperature": 26.0,
+            "status": "error",
+            "error": str(e)
+        }
 
 def calculate_spectral_indices(image):
     """Calculates NDVI, NDRE, and GNDVI for a Sentinel-2 image."""
