@@ -22,4 +22,29 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-"backend/bioacoustic_service/venv/" 
+backend/bioacoustic_service/venv/
+
+# Environment / Secrets (NEVER commit these)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+*.env
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+venv/
+backend/venv/
+backend/.venv/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Home, Store, Camera, MessageCircle, User, Map } from 'lucide-react';
 import { Screen } from '../types';
 

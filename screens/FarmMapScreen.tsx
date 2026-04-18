@@ -14,7 +14,9 @@ import {
   ChevronRight,
   Plus,
   Loader2,
-  X
+  X,
+  Satellite,
+  AlertTriangle
 } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -290,7 +292,7 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
               <X size={20} />
             </button>
 
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
                 <Activity size={24} className="text-green-600" />
               </div>
@@ -299,6 +301,29 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
                 <p className="text-xs text-gray-500 font-bold">{selectedPlot?.name}</p>
               </div>
             </div>
+
+            {/* ── Satellite Data Source Transparency Banner ── */}
+            {analysisResult.status === 'earth_engine' ? (
+              <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-green-50 border border-green-200">
+                <Satellite size={14} className="text-green-600 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-black text-green-700 uppercase tracking-wide">🟢 Live Satellite Data</p>
+                  <p className="text-[10px] text-green-600 font-medium">Google Earth Engine · Sentinel-2 · SMAP Soil Moisture</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 mb-4 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
+                <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-black text-amber-700 uppercase tracking-wide">🟡 Estimated Data</p>
+                  <p className="text-[10px] text-amber-600 font-medium">
+                    {analysisResult.fallback_reason
+                      ? analysisResult.fallback_reason
+                      : 'Satellite imagery unavailable. Values are modelled estimates.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               {/* Yield Forecast */}

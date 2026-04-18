@@ -38,10 +38,12 @@ const App: React.FC = () => {
   );
 };
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
-  constructor(props: any) {
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+  declare props: { children: React.ReactNode };
+  constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: any) {
@@ -228,7 +230,7 @@ const AppContent: React.FC = () => {
     console.log("[App] Changing language to:", lang);
     setLanguage(lang);
     localStorage.setItem('ks_lang', lang);
-    if (userProfile || localStorage.getItem('ks_token')) {
+    if (user || localStorage.getItem('ks_token')) {
       try {
         await userService.updateProfile({ language: lang });
         console.log("[App] Synced language to backend profile.");
