@@ -1,33 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import hashlib
-import math
-import ee
 
 from ..database import get_db
-from ..models import CarbonProject, CarbonEvidence, Plot, User
+from ..models import CarbonProject, CarbonEvidence, CarbonTransaction, Plot, User
 from ..dependencies import get_current_user
-from ..ml_models.soc_estimator import estimate_soc
+from ..services.earth_engine import earth_engine_service
 
 router = APIRouter(prefix="/api/carbon", tags=["carbon"])
-
-# --- Earth Engine Setup ---
-EE_INITIALIZED = False
-try:
-    ee.Initialize()
-    EE_INITIALIZED = True
-except Exception as e:
-    print(f"Earth Engine Authentication Failed: {e}")
-    # In production, handle authentication (service account) here.
-
-def calculate_ndvi(image):
-    """Calculates NDVI for a given image."""
-    ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI')
-    return image.addBands(ndvi)
 
 def det_float(seed_str: str, min_v: float, max_v: float) -> float:
     # Deterministic float generator
@@ -45,7 +29,11 @@ class EvidenceCreate(BaseModel):
     geo_lng: float
 
 class AnalysisRequest(BaseModel):
-    geometry: Dict[str, Any] # GeoJSON Polygon
+    geometry: Dict[str, Any]  # GeoJSON Polygon
+    area: Optional[float] = None
+    crop_type: Optional[str] = "Mixed"
+    methodology: Optional[str] = "Cover-Crop"
+    plot_name: Optional[str] = "Farm"
 
 class ProjectResponse(BaseModel):
     id: int
@@ -57,6 +45,10 @@ class ProjectResponse(BaseModel):
     verified_credits: float
     available_credits: float
     locked_credits: float
+    aggregator_name: str
+    government_scheme: str
+    platform_fee_percentage: float
+    farmer_share_percentage: float
     start_date: datetime
     vesting_end_date: Optional[datetime]
     verification_cost_usd: float
@@ -68,6 +60,77 @@ class ProjectResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class WalletResponse(BaseModel):
+    total_verified_credits: float
+    total_available_credits: float
+    total_locked_credits: float
+    estimated_value_inr: float
+    projects: List[ProjectResponse]
+
+
+class AggregatorPartner(BaseModel):
+    name: str
+    fee_percentage: float
+    farmer_share_percentage: float
+    settlement_days: int
+    contact: str
+    role: str
+
+
+class ClaimRequest(BaseModel):
+    claim_credits: float
+
+
+class ClaimResponse(BaseModel):
+    project_id: int
+    claimed_credits: float
+    amount_inr: float
+    aggregator_fee_inr: float
+    farmer_payout_inr: float
+    remaining_available_credits: float
+    message: str
+
+    class Config:
+        from_attributes = True
+
+
+def _plot_ring(plot: Plot) -> List[List[float]]:
+    try:
+        coords = json.loads(plot.coordinates)
+    except Exception:
+        return []
+
+    ring = [[coord["lng"], coord["lat"]] for coord in coords if "lat" in coord and "lng" in coord]
+    if ring and ring[0] != ring[-1]:
+        ring.append(ring[0])
+    return ring
+
+
+def _project_response(project: CarbonProject) -> ProjectResponse:
+    return ProjectResponse(
+        id=project.id,
+        plot_id=project.plot_id,
+        plot_name=project.plot.name,
+        methodology=project.methodology,
+        status=project.status,
+        projected_credits=project.projected_sequestration,
+        verified_credits=project.verified_credits,
+        available_credits=project.available_credits,
+        locked_credits=project.locked_credits,
+        aggregator_name=project.aggregator_name,
+        government_scheme=project.government_scheme,
+        platform_fee_percentage=project.platform_fee_percentage,
+        farmer_share_percentage=project.farmer_share_percentage,
+        start_date=project.start_date,
+        vesting_end_date=project.vesting_end_date,
+        verification_cost_usd=project.verification_cost_usd,
+        buffer_pool_percentage=project.buffer_pool_percentage,
+        additionality_score=project.additionality_score,
+        requires_soil_sample=project.requires_soil_sample,
+        evidence_count=len(project.evidence),
+    )
+
 # --- Endpoints ---
 
 @router.post("/analyze")
@@ -78,92 +141,63 @@ async def analyze_farm(request: AnalysisRequest):
     Returns: Eligibility, Credits, NDVI Growth Data.
     """
     try:
-        geojson_polygon = request.geometry
-        
-        # If EE not initialized, fallback to mock (for dev environment without credentials)
-        if not EE_INITIALIZED:
-            # Simulate processing time deterministically
-            import time
-            time.sleep(2)
-            coords_str = str(geojson_polygon['coordinates'])
-            growth = det_float(coords_str, 0.12, 0.18) # Deterministic growth
-            credits = 1250 # Fixed value based on area normally
-            return {
-                "eligible": True,
-                "credits": credits,
-                "details": {
-                    "ndvi_2024": 0.42,
-                    "ndvi_2025": 0.42 + growth,
-                    "growth": growth
-                },
-                "status": "simulated"
-            }
+        geojson_polygon = request.geometry or {}
+        coordinates = geojson_polygon.get("coordinates", [])
+        ring = coordinates[0] if coordinates and isinstance(coordinates[0], list) else coordinates
 
-        # Real Earth Engine Analysis
-        roi = ee.Geometry.Polygon(geojson_polygon['coordinates'][0]) # Assuming simple polygon
-
-        start_date_2024 = '2024-01-01'
-        end_date_2024 = '2024-01-30'
-        
-        start_date_2025 = '2025-01-01'
-        end_date_2025 = '2025-01-30'
-
-        # Fetch Sentinel-2 Collections
-        s2_2024 = ee.ImageCollection('COPERNICUS/S2_SR') \
-            .filterBounds(roi) \
-            .filterDate(start_date_2024, end_date_2024) \
-            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) \
-            .map(calculate_ndvi) \
-            .select('NDVI') \
-            .median() \
-            .clip(roi)
-
-        s2_2025 = ee.ImageCollection('COPERNICUS/S2_SR') \
-            .filterBounds(roi) \
-            .filterDate(start_date_2025, end_date_2025) \
-            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) \
-            .map(calculate_ndvi) \
-            .select('NDVI') \
-            .median() \
-            .clip(roi)
-
-        # Reduce region
-        stats_2024 = s2_2024.reduceRegion(
-            reducer=ee.Reducer.mean(),
-            geometry=roi,
-            scale=10,
-            maxPixels=1e9
-        ).getInfo()
-
-        stats_2025 = s2_2025.reduceRegion(
-            reducer=ee.Reducer.mean(),
-            geometry=roi,
-            scale=10,
-            maxPixels=1e9
-        ).getInfo()
-
-        mean_ndvi_2024 = stats_2024.get('NDVI', 0) or 0
-        mean_ndvi_2025 = stats_2025.get('NDVI', 0) or 0
-        
-        growth = mean_ndvi_2025 - mean_ndvi_2024
-        
-        eligible = growth > 0.05 # Threshold
-        credits_earned = 0.5 if eligible else 0 # Simplified logic
+        analysis = earth_engine_service.monitor_plot(
+            geometry_coords=ring,
+            crop_type=request.crop_type or "Mixed",
+            plot_name=request.plot_name or "Farm",
+            declared_area=request.area,
+            methodology=request.methodology or "Cover-Crop",
+        )
 
         return {
-            "eligible": eligible,
-            "credits": credits_earned * 1000, # Convert to meaningful currency/tokens
+            "eligible": analysis["carbon"]["eligible"],
+            "credits": analysis["carbon"]["gross_credits"],
+            "issuable_credits": analysis["carbon"]["issuable_credits"],
+            "buffer_pool_credits": analysis["carbon"]["buffer_pool_credits"],
             "details": {
-                "ndvi_2024": mean_ndvi_2024,
-                "ndvi_2025": mean_ndvi_2025,
-                "growth": growth
+                "baseline_ndvi": analysis["monitoring"]["baseline_ndvi"],
+                "current_ndvi": analysis["monitoring"]["current_ndvi"],
+                "growth": analysis["monitoring"]["ndvi_change"],
+                "soil_moisture": analysis["monitoring"]["soil_moisture"],
+                "area_hectares": analysis["area_hectares"],
+                "estimated_value_inr": analysis["carbon"]["estimated_value_inr"],
             },
-            "status": "real"
+            "status": analysis["status"],
+            "analysis": analysis,
         }
+    except Exception as exc:
+        print(f"Analysis Error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
 
-    except Exception as e:
-        print(f"Analysis Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/plots/{plot_id}/monitor")
+async def monitor_plot_for_carbon(
+    plot_id: int,
+    methodology: str = "Cover-Crop",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
+    if not plot:
+        raise HTTPException(status_code=404, detail="Plot not found")
+
+    analysis = earth_engine_service.monitor_plot(
+        geometry_coords=_plot_ring(plot),
+        crop_type=plot.crop_type or "Mixed",
+        plot_name=plot.name,
+        declared_area=plot.area,
+        methodology=methodology,
+    )
+
+    return {
+        "plot_id": plot.id,
+        "plot_name": plot.name,
+        "analysis": analysis,
+    }
 
 
 @router.get("/projects", response_model=List[ProjectResponse])
@@ -172,28 +206,124 @@ async def get_my_projects(
     current_user: User = Depends(get_current_user)
 ):
     projects = db.query(CarbonProject).filter(CarbonProject.user_id == current_user.id).all()
-    
-    results = []
-    for p in projects:
-        results.append(ProjectResponse(
-            id=p.id,
-            plot_id=p.plot_id,
-            plot_name=p.plot.name,
-            methodology=p.methodology,
-            status=p.status,
-            projected_credits=p.projected_sequestration,
-            verified_credits=p.verified_credits,
-            available_credits=p.available_credits,
-            locked_credits=p.locked_credits,
-            start_date=p.start_date,
-            vesting_end_date=p.vesting_end_date,
-            verification_cost_usd=p.verification_cost_usd,
-            buffer_pool_percentage=p.buffer_pool_percentage,
-            additionality_score=p.additionality_score,
-            requires_soil_sample=p.requires_soil_sample,
-            evidence_count=len(p.evidence)
-        ))
-    return results
+
+    return [_project_response(project) for project in projects]
+
+
+def _wallet_response(projects: List[CarbonProject]) -> WalletResponse:
+    total_verified = sum([project.verified_credits for project in projects])
+    total_available = sum([project.available_credits for project in projects])
+    total_locked = sum([project.locked_credits for project in projects])
+    estimated_value = total_available * 1200.0
+
+    return WalletResponse(
+        total_verified_credits=total_verified,
+        total_available_credits=total_available,
+        total_locked_credits=total_locked,
+        estimated_value_inr=round(estimated_value, 2),
+        projects=[_project_response(project) for project in projects],
+    )
+
+
+@router.get("/wallet", response_model=WalletResponse)
+async def get_wallet_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    projects = db.query(CarbonProject).filter(CarbonProject.user_id == current_user.id).all()
+    return _wallet_response(projects)
+
+
+@router.get("/aggregators", response_model=List[AggregatorPartner])
+async def get_aggregator_partners():
+    return [
+        AggregatorPartner(
+            name="Krishi Drishti Aggregator",
+            fee_percentage=20.0,
+            farmer_share_percentage=80.0,
+            settlement_days=7,
+            contact="support@krishidrishti.org",
+            role="Aggregates carbon projects, manages verification and buyer settlement.",
+        ),
+        AggregatorPartner(
+            name="GreenField FPO",
+            fee_percentage=18.0,
+            farmer_share_percentage=82.0,
+            settlement_days=10,
+            contact="partners@greenfieldfpo.in",
+            role="Local farmer producer organization supporting project onboarding and compliance.",
+        ),
+    ]
+
+
+@router.post("/projects/{project_id}/claim", response_model=ClaimResponse)
+async def claim_carbon_payout(
+    project_id: int,
+    request: ClaimRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    project = db.query(CarbonProject).filter(CarbonProject.id == project_id, CarbonProject.user_id == current_user.id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.status not in ["Verified", "Issued"]:
+        raise HTTPException(status_code=400, detail="Only verified projects can be claimed")
+
+    if request.claim_credits <= 0:
+        raise HTTPException(status_code=400, detail="Claim amount must be greater than zero")
+
+    if request.claim_credits > project.available_credits:
+        raise HTTPException(status_code=400, detail="Claim amount exceeds available credits")
+
+    claim_amount = round(request.claim_credits, 3)
+    project.available_credits = round(project.available_credits - claim_amount, 3)
+    project.plot.carbon_credits = project.available_credits
+    if project.available_credits <= 0:
+        project.status = "Issued"
+
+    rate_inr = 1200.0
+    payout_amount = claim_amount * rate_inr
+    aggregator_fee = round(payout_amount * (project.platform_fee_percentage / 100.0), 2)
+    farmer_payout = round(payout_amount - aggregator_fee, 2)
+
+    transaction = CarbonTransaction(
+        project_id=project.id,
+        user_id=current_user.id,
+        amount_credits=claim_amount,
+        amount_inr=payout_amount,
+        aggregator_fee_inr=aggregator_fee,
+        farmer_payout_inr=farmer_payout,
+        status="Completed",
+    )
+
+    db.add(transaction)
+    db.commit()
+    db.refresh(project)
+
+    return ClaimResponse(
+        project_id=project.id,
+        claimed_credits=claim_amount,
+        amount_inr=payout_amount,
+        aggregator_fee_inr=aggregator_fee,
+        farmer_payout_inr=farmer_payout,
+        remaining_available_credits=project.available_credits,
+        message=f"Claimed {claim_amount} ACT for ₹{farmer_payout} after aggregator fees.",
+    )
+
+
+@router.get("/schemes")
+async def list_carbon_schemes():
+    return {
+        "frameworks": [
+            {"id": "CCTS", "name": "Carbon Credit Trading Scheme", "description": "BEE-backed carbon market for agri and methane reduction projects."},
+            {"id": "GCP", "name": "Green Credit Program", "description": "Government-supported market for tree-based and soil carbon credits."},
+        ],
+        "partners": [
+            {"name": "Krishi Drishti Aggregator", "type": "Platform", "role": "Aggregates small farms, manages enrollment, MRV and credit sale, and shares proceeds with farmers."},
+            {"name": "FPO Partner", "type": "Farmer Producer Organization", "role": "Mobilizes smallholders and acts as local field implementation partner."},
+        ]
+    }
 
 @router.post("/enroll", response_model=ProjectResponse)
 async def enroll_plot(
@@ -211,71 +341,44 @@ async def enroll_plot(
     if existing:
         raise HTTPException(status_code=400, detail="Plot already enrolled in a carbon project")
         
-    # 3. Calculate Potential (ML-based SOC Estimator)
-    # Estimate baseline sequestration potential based on plot health and moisture
-    estimated_soc_per_ha = estimate_soc(
-        ndvi_avg=plot.health_score,
-        evi_avg=plot.health_score * 0.9,
-        moisture_avg=plot.moisture,
-        days_enrolled=365.0  # Projecting for 1 year of enrollment
+    monitoring = earth_engine_service.monitor_plot(
+        geometry_coords=_plot_ring(plot),
+        crop_type=plot.crop_type or "Mixed",
+        plot_name=plot.name,
+        declared_area=plot.area,
+        methodology=project.methodology,
     )
-    
-    methodology_multiplier = 1.0
-    if project.methodology == "Cover-Crop":
-        methodology_multiplier = 1.2
-    elif project.methodology == "No-Till":
-        methodology_multiplier = 1.5
-    elif project.methodology == "Agroforestry":
-        methodology_multiplier = 2.5
-        
-    # Convert plot area (acres) to hectares roughly
-    hectares = plot.area / 2.471
-    # Total potential credits
-    total_potential = estimated_soc_per_ha * methodology_multiplier * hectares
 
-    # Set vesting period (5 years from enrollment)
-    from datetime import timedelta
-    vesting_date = datetime.utcnow() + timedelta(days=5*365)
-    
-    # additionality pre-check based on physical parameters
+    total_potential = monitoring["carbon"]["gross_credits"]
+    vesting_date = datetime.utcnow() + timedelta(days=5 * 365)
     initial_additionality = det_float(str(plot.id) + project.methodology, 0.1, 0.6)
+
+    plot.health_score = monitoring["health_score"]
+    plot.moisture = monitoring["moisture"]
+    plot.image_url = monitoring["image_url"]
+    plot.last_scan_date = datetime.utcnow()
+    plot.organic_score = max(plot.organic_score or 0.0, monitoring["carbon"]["eligibility_score"] * 100.0)
 
     new_project = CarbonProject(
         plot_id=plot.id,
         user_id=current_user.id,
         methodology=project.methodology,
-        status="Enrolled", # Starts as Enrolled, needs Evidence next
-        baseline_emission=0.5 * plot.area, # Dummy baseline
+        status="Enrolled",
+        baseline_emission=monitoring["carbon"]["baseline_soc_tons_per_ha"] * monitoring["area_hectares"],
         projected_sequestration=total_potential,
         verified_credits=0.0,
         vesting_end_date=vesting_date,
         additionality_score=initial_additionality,
-        buffer_pool_percentage=15.0,
-        verification_cost_usd=3000.0
+        buffer_pool_percentage=monitoring["carbon"]["buffer_pool_percentage"],
+        verification_cost_usd=monitoring["carbon"]["verification_cost_usd"],
+        requires_soil_sample=monitoring["carbon"]["requires_soil_sample"],
     )
     
     db.add(new_project)
     db.commit()
     db.refresh(new_project)
-    
-    return ProjectResponse(
-        id=new_project.id,
-        plot_id=new_project.plot_id,
-        plot_name=plot.name,
-        methodology=new_project.methodology,
-        status=new_project.status,
-        projected_credits=new_project.projected_sequestration,
-        verified_credits=new_project.verified_credits,
-        available_credits=new_project.available_credits,
-        locked_credits=new_project.locked_credits,
-        start_date=new_project.start_date,
-        vesting_end_date=new_project.vesting_end_date,
-        verification_cost_usd=new_project.verification_cost_usd,
-        buffer_pool_percentage=new_project.buffer_pool_percentage,
-        additionality_score=new_project.additionality_score,
-        requires_soil_sample=new_project.requires_soil_sample,
-        evidence_count=0
-    )
+
+    return _project_response(new_project)
 
 @router.post("/{project_id}/evidence")
 async def upload_evidence(

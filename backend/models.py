@@ -209,7 +209,23 @@ class CarbonProject(Base):
     additionality_score = Column(Float, default=0.0) # 0-1, rejection if practice is common (>0.5 = common)
     available_credits = Column(Float, default=0.0) # After buffer pool deduction
     locked_credits = Column(Float, default=0.0) # Buffer pool amount
-    
+
+    @property
+    def aggregator_name(self) -> str:
+        return "Krishi Drishti Aggregator"
+
+    @property
+    def government_scheme(self) -> str:
+        return "CCTS"
+
+    @property
+    def platform_fee_percentage(self) -> float:
+        return 20.0
+
+    @property
+    def farmer_share_percentage(self) -> float:
+        return round(100.0 - self.platform_fee_percentage, 1)
+
     plot = relationship("Plot", back_populates="carbon_projects")
     evidence = relationship("CarbonEvidence", back_populates="project")
 
@@ -226,6 +242,24 @@ class CarbonEvidence(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     project = relationship("CarbonProject", back_populates="evidence")
+
+
+class CarbonTransaction(Base):
+    __tablename__ = "carbon_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("carbon_projects.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    amount_credits = Column(Float, default=0.0)
+    amount_inr = Column(Float, default=0.0)
+    aggregator_fee_inr = Column(Float, default=0.0)
+    farmer_payout_inr = Column(Float, default=0.0)
+    status = Column(String, default="Completed")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("CarbonProject")
+    user = relationship("User")
+
 
 User.plots = relationship("Plot", back_populates="user")
 

@@ -1,7 +1,11 @@
 from fastapi import APIRouter, HTTPException
 import os
-from google import genai
 from pydantic import BaseModel
+
+try:
+    from google import genai
+except ImportError:
+    genai = None
 
 router = APIRouter(prefix="/api/news", tags=["news"])
 
@@ -13,7 +17,7 @@ class NewsRequest(BaseModel):
 async def get_news(request: NewsRequest):
     try:
         api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
+        if not api_key or genai is None:
              # Fallback if no API key
              return {"news": "Market prices for Soybeans are up by 4% in Nagpur mandi due to export demand. Cloudy weather expected in Vidarbha region."}
              

@@ -1,14 +1,28 @@
 import ee
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 # Try to get project from env
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+DEAD_PROXY_VALUES = {"http://127.0.0.1:9", "https://127.0.0.1:9"}
+
+
+def clear_dead_proxy_env():
+    cleared = False
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "GIT_HTTP_PROXY", "GIT_HTTPS_PROXY"):
+        value = (os.getenv(key) or "").strip().lower()
+        if value in DEAD_PROXY_VALUES:
+            os.environ.pop(key, None)
+            cleared = True
+    if cleared:
+        print("Cleared dead proxy environment variables before Earth Engine auth.")
 
 def authenticate_gee():
+    clear_dead_proxy_env()
     try:
         if PROJECT_ID:
             print(f"Initializing with project: {PROJECT_ID}")

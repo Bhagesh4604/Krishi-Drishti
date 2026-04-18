@@ -3,12 +3,26 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
 import os
-import google.generativeai as genai
+
+try:
+    import google.generativeai as genai
+except ModuleNotFoundError:
+    genai = None
+
 from ..database import get_db
 from ..models import Listing, User
 from ..dependencies import get_current_user
 
 router = APIRouter(prefix="/api/market", tags=["market"])
+
+
+def _get_gemini_model():
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or genai is None:
+        return None
+
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 class ListingCreate(BaseModel):
     crop_name: str
@@ -83,11 +97,15 @@ async def create_listing(
 
 @router.get("/price-check")
 async def check_price(query: str, lat: Optional[float] = None, lng: Optional[float] = None):
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not query: return {"error": "Query required"}
-    
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    if not query:
+        return {"error": "Query required"}
+
+    model = _get_gemini_model()
+    if model is None:
+        return {
+            "text": "Gemini market-price lookup is unavailable right now. Install google-generativeai or configure the AI dependency first.",
+            "sources": [],
+        }
     
     location_context = ""
     if lat and lng:

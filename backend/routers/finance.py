@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 import os
-import google.generativeai as genai
+
+try:
+    import google.generativeai as genai
+except ModuleNotFoundError:
+    genai = None
+
 from ..database import get_db
 from ..models import User
 from ..dependencies import get_current_user
@@ -9,6 +14,15 @@ import random
 import httpx
 
 router = APIRouter(prefix="/api/finance", tags=["finance"])
+
+
+def _get_gemini_model():
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or genai is None:
+        return None
+
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 @router.get("/status")
 async def get_finance_status(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -49,11 +63,9 @@ async def get_finance_status(current_user: User = Depends(get_current_user), db:
 
 @router.get("/schemes")
 async def recommend_schemes(current_user: User = Depends(get_current_user)):
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key: return {"schemes": "[]"}
-    
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = _get_gemini_model()
+    if model is None:
+        return {"schemes": "[]"}
     
     profile_summary = f"Farmer in {current_user.district}, Land: {current_user.land_size} acres, Category: {current_user.category}."
     

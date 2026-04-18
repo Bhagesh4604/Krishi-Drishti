@@ -1,96 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { Leaf, CheckCircle, Clock, Loader2, MapPin } from 'lucide-react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle, Clock, Leaf, Loader2, MapPin } from 'lucide-react';
+import { carbonService, plotService } from '../src/services/api';
 
 const CarbonWalletCard: React.FC = () => {
-    const [balance, setBalance] = useState(0);
-    // Status: 'none' -> 'analyzing' -> 'crunched' -> 'review_pending' -> 'verified'
-    const [status, setStatus] = useState<'none' | 'analyzing' | 'crunched' | 'review_pending' | 'verified'>('none');
+    const [status, setStatus] = useState<'idle' | 'analyzing' | 'preview'>('idle');
+    const [analysis, setAnalysis] = useState<any | null>(null);
+    const [userPlot, setUserPlot] = useState<any | null>(null);
 
-    // Analysis steps for realism
-    const [auditStep, setAuditStep] = useState<string>('');
-    const [analysisData, setAnalysisData] = useState<{ growth: number, credits: number } | null>(null);
-    const [userPlot, setUserPlot] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-
-    // Fetch user plot on mount
     useEffect(() => {
         const fetchPlot = async () => {
             try {
-                const token = localStorage.getItem('ks_token');
-                if (!token) return;
-
-                const response = await axios.get('http://localhost:8000/api/plots/', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-
-                if (response.data && response.data.length > 0) {
-                    setUserPlot(response.data[0]); // Use the first plot for now
+                const plots = await plotService.getPlots();
+                if (plots.length > 0) {
+                    setUserPlot(plots[0]);
                 }
             } catch (error) {
-                console.error("Failed to fetch plots", error);
+                console.error('Failed to fetch plots', error);
             }
         };
 
         fetchPlot();
     }, []);
 
-    const handleVerify = async () => {
+    const handleAudit = async () => {
         if (!userPlot) {
-            alert("No farm detected! Please use 'Locate My Farm' first.");
+            alert("No farm detected. Please locate your farm boundary first.");
             return;
         }
 
         setStatus('analyzing');
-
-        const steps = [
-            "Connecting to Sentinel-2 Satellite...",
-            "Fetching historical imagery (Jan 2024)...",
-            "Fetching current imagery (Jan 2025)...",
-            "Calculating Vegetation Index (NDVI)...",
-            "Analyzing Carbon Sequestration..."
-        ];
-
-        // Visual simulation of steps
-        for (const step of steps) {
-            setAuditStep(step);
-            await new Promise(resolve => setTimeout(resolve, 800));
-        }
-
         try {
-            // Real Backend Analysis Call
-            const token = localStorage.getItem('ks_token');
-            const geometry = {
-                type: "Polygon",
-                coordinates: [userPlot.coordinates.map((c: any) => [c.lng, c.lat])]
-            };
-
-            const response = await axios.post('http://localhost:8000/api/carbon/analyze',
-                { geometry: geometry },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-
-            if (response.data) {
-                setAnalysisData(response.data.details);
-                setBalance(response.data.credits); // Potential credits
-                setStatus('crunched');
-            }
+            const response = await carbonService.monitorPlot(userPlot.id, 'Cover-Crop');
+            setAnalysis(response.analysis);
+            setStatus('preview');
         } catch (error) {
             console.error(error);
-            alert("Analysis failed. Please try again.");
-            setStatus('none');
+            alert('Analysis failed. Please try again.');
+            setStatus('idle');
         }
     };
 
-    const handleSubmitForReview = () => {
-        // Here we would actually submit the data + user ID to backend for manual approval
-        alert("Audit Report Submitted! Your 7/12 extract and satellite data are being reviewed by our agronomy team.");
-        setStatus('review_pending');
-    };
+    const balance = analysis?.carbon?.gross_credits ?? 0;
+    const issuable = analysis?.carbon?.issuable_credits ?? 0;
+    const farmerShare = issuable * 0.8;
+    const aggregatorFee = issuable * 0.2;
 
     return (
         <div className="bg-white rounded-3xl p-6 relative overflow-hidden border border-green-50 shadow-sm my-4">
-            {/* Background Decoration */}
             <div className="absolute -top-12 -right-12 w-32 h-32 bg-green-50 rounded-full z-0" />
 
             <div className="flex items-center gap-4 mb-4 relative z-10">
@@ -99,102 +55,89 @@ const CarbonWalletCard: React.FC = () => {
                 </div>
                 <div>
                     <h3 className="text-lg font-bold text-gray-900">Carbon Earnings</h3>
-                    <p className="text-xs text-gray-500 font-medium">Satellite Verified Engine</p>
+                    <p className="text-xs text-gray-500 font-medium">Earth Engine preview</p>
                 </div>
 
-                <div className={`ml-auto flex items-center gap-1 px-3 py-1 rounded-full ${status === 'verified' ? 'bg-green-100 text-green-800' :
-                    status === 'review_pending' ? 'bg-blue-50 text-blue-700' :
-                        'bg-orange-50 text-orange-700'
-                    }`}>
-                    {status === 'verified' ? (
+                <div className={`ml-auto flex items-center gap-1 px-3 py-1 rounded-full ${analysis?.carbon?.eligible ? 'bg-green-100 text-green-800' : 'bg-orange-50 text-orange-700'}`}>
+                    {analysis?.carbon?.eligible ? (
                         <>
                             <CheckCircle size={12} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Verified</span>
-                        </>
-                    ) : status === 'review_pending' ? (
-                        <>
-                            <Clock size={12} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Under Review</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Eligible</span>
                         </>
                     ) : (
                         <>
                             <Clock size={12} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Pending Audit</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Preview</span>
                         </>
                     )}
                 </div>
             </div>
 
-            {/* Analysis Data View */}
-            {status === 'crunched' && analysisData && (
-                <div className="bg-green-50 rounded-xl p-4 mb-4 border border-green-100">
-                    <h4 className="text-sm font-bold text-gray-900 mb-2">Satellite Analysis Report</h4>
-                    <div className="flex justify-between text-xs mb-1">
-                        <span className="text-gray-600">NDVI Growth (YoY):</span>
-                        <span className="font-bold text-green-700">+{Math.round(analysisData.growth * 100)}%</span>
-                    </div>
-                    <div className="flex justify-between text-xs mb-3">
-                        <span className="text-gray-600">Potential Credits:</span>
-                        <span className="font-bold text-green-700">₹{balance.toLocaleString()}</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 italic">
-                        *Credits are subject to ownership verification (7/12 extract).
-                    </p>
-                </div>
-            )}
-
-            {/* Steps Progress */}
             {status === 'analyzing' && (
-                <div className="mb-4">
-                    <p className="text-xs font-bold text-green-600 animate-pulse mb-2">{auditStep}</p>
-                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-green-500 animate-progress" style={{ width: '60%' }}></div>
-                    </div>
+                <div className="mb-4 bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center gap-3 text-sm font-bold text-gray-600">
+                    <Loader2 className="animate-spin text-green-600" size={18} />
+                    Running Earth Engine monitoring...
                 </div>
             )}
 
-            <div className="flex items-start mb-6 relative z-10 opacity-50">
-                <span className="text-2xl font-bold text-green-600 mt-1">₹</span>
-                <span className="text-5xl font-black text-gray-900 ml-1">{balance.toLocaleString()}</span>
+            {status === 'preview' && analysis && (
+                <div className="space-y-3 mb-4">
+                    <div className="bg-green-50 rounded-xl p-4 border border-green-100">
+                        <h4 className="text-sm font-bold text-gray-900 mb-2">Satellite Analysis Report</h4>
+                        <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600">NDVI change:</span>
+                            <span className={`font-bold ${analysis.monitoring.ndvi_change >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                                {analysis.monitoring.ndvi_change >= 0 ? '+' : ''}{analysis.monitoring.ndvi_change?.toFixed(2)}
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600">Boundary area:</span>
+                            <span className="font-bold text-green-700">{analysis.area_hectares} ha</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">Issuable after buffer:</span>
+                            <span className="font-bold text-green-700">{issuable.toFixed(2)} ACT</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">Farmer share estimate:</span>
+                            <span className="font-bold text-green-700">{farmerShare.toFixed(2)} ACT</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                            <span className="text-gray-600">Platform fee estimate:</span>
+                            <span className="font-bold text-green-700">{aggregatorFee.toFixed(2)} ACT</span>
+                        </div>
+                    </div>
+
+                    {analysis.risk_flags?.[0] && (
+                        <div className="bg-orange-50 rounded-xl p-3 border border-orange-100 text-xs text-orange-800">
+                            {analysis.risk_flags[0]}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div className="flex items-start mb-6 relative z-10 opacity-90">
+                <span className="text-4xl font-black text-green-600">{balance.toFixed(2)}</span>
+                <span className="text-base font-bold text-gray-500 ml-2 mt-3">ACT</span>
             </div>
 
-            {!userPlot && status === 'none' && (
+            {!userPlot && status === 'idle' && (
                 <div className="mb-4 bg-orange-50 p-3 rounded-xl border border-orange-100 text-xs text-orange-800 flex items-center gap-2">
                     <MapPin size={16} />
                     <span>Please locate your farm boundary first.</span>
                 </div>
             )}
 
-            {status === 'none' && (
-                <button
-                    onClick={handleVerify}
-                    disabled={!userPlot}
-                    className={`w-full py-4 rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${!userPlot
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                        : 'bg-green-600 text-white shadow-green-200 hover:bg-green-700'
-                        }`}
-                >
-                    Start Carbon Audit
-                </button>
-            )}
-
-            {status === 'crunched' && (
-                <button
-                    onClick={handleSubmitForReview}
-                    className="w-full py-4 rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700"
-                >
-                    Submit for Approval
-                </button>
-            )}
-
-            {status === 'review_pending' && (
-                <button
-                    disabled
-                    className="w-full py-4 rounded-2xl font-bold text-sm shadow-none flex items-center justify-center gap-2 bg-gray-100 text-gray-500 cursor-not-allowed"
-                >
-                    Verification In Progress...
-                </button>
-            )}
+            <button
+                onClick={handleAudit}
+                disabled={!userPlot || status === 'analyzing'}
+                className={`w-full py-4 rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${!userPlot || status === 'analyzing'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                    : 'bg-green-600 text-white shadow-green-200 hover:bg-green-700'
+                    }`}
+            >
+                {status === 'analyzing' ? 'Monitoring...' : status === 'preview' ? 'Refresh Earth Engine Audit' : 'Start Earth Engine Audit'}
+            </button>
         </div>
     );
 };

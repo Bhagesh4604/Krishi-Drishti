@@ -1,7 +1,10 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from .database import engine, Base, SessionLocal
 from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -10,8 +13,6 @@ from .ml_models.anomaly_detector import detect_anomalies
 from .ml_models.disease_forecaster import evaluate_disease_risk
 from .services.weather_fetcher import get_recent_weather
 import json
-
-load_dotenv()
 
 # Create DB Tables
 Base.metadata.create_all(bind=engine)

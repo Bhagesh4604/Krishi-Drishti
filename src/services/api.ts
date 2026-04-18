@@ -298,6 +298,14 @@ export const carbonService = {
     const response = await api.get('/carbon/projects');
     return response.data;
   },
+  getSchemes: async () => {
+    const response = await api.get('/carbon/schemes');
+    return response.data;
+  },
+  monitorPlot: async (plotId: number, methodology: string = 'Cover-Crop') => {
+    const response = await api.get(`/carbon/plots/${plotId}/monitor`, { params: { methodology } });
+    return response.data;
+  },
   enrollPlot: async (plotId: number, methodology: string) => {
     const response = await api.post('/carbon/enroll', { plot_id: plotId, methodology });
     return response.data;
@@ -308,6 +316,18 @@ export const carbonService = {
   },
   verifyProject: async (projectId: number) => {
     const response = await api.post(`/carbon/${projectId}/verify`);
+    return response.data;
+  },
+  getWallet: async () => {
+    const response = await api.get('/carbon/wallet');
+    return response.data;
+  },
+  getAggregators: async () => {
+    const response = await api.get('/carbon/aggregators');
+    return response.data;
+  },
+  claimPayout: async (projectId: number, claimCredits: number) => {
+    const response = await api.post(`/carbon/projects/${projectId}/claim`, { claim_credits: claimCredits });
     return response.data;
   }
 };

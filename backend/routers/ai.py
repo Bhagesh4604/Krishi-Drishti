@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import os
-import google.generativeai as genai
+
+try:
+    import google.generativeai as genai
+except ModuleNotFoundError:
+    genai = None
+
 from PIL import Image
 import io
 from ..database import get_db
@@ -17,6 +22,15 @@ from ..services.weather_fetcher import get_bioclimatic_data
 from ..ml_models.soc_model import train_soc_model
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
+
+
+def _get_gemini_model():
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or genai is None:
+        return None
+
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 
 class StressAnalysisRequest(BaseModel):
@@ -43,10 +57,8 @@ async def analyze_stress(
     
     # 3. AI Analysis using Gemini (Precision Agronomist)
     try:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if api_key:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+        model = _get_gemini_model()
+        if model is not None:
             
             prompt = f"""
             You are an expert Precision Agronomist. Analyze the following crop status:
@@ -93,7 +105,7 @@ async def analyze_stress(
                 print(f"[AI AI-Agronomist] JSON Parsing failed: {e}")
                 # Fallbacks already set
         else:
-             print("Warning: GEMINI_API_KEY not found. Using simulation fallback.")
+             print("Warning: Gemini client unavailable. Using simulation fallback.")
              
     except Exception as e:
         print(f"AI Analysis Failed: {e}")
@@ -196,10 +208,8 @@ async def train_soc_calibration(
         
         # Give Actionable AI Insights via Gemini using the real data
         try:
-            api_key = os.getenv("GEMINI_API_KEY")
-            if api_key:
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+            model = _get_gemini_model()
+            if model is not None:
                 
                 prompt = f"""
                 You are an expert Agricultural Data Scientist and Carbon Market Analyst.
@@ -231,6 +241,8 @@ async def train_soc_calibration(
                 import re
                 cleaned = re.sub(r'```json|```', '', response.text).strip()
                 ai_insights = json.loads(cleaned)
+            else:
+                raise RuntimeError("Gemini client unavailable")
         except Exception as ai_e:
             print(f"[SOC AI] Failed to generate insights: {ai_e}")
             ai_insights = {
@@ -262,10 +274,6 @@ async def ai_chat(
 ):
     
     try:
-        api_key = os.getenv("GEMINI_API_KEY")
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
         # 1. Fetch History (Last 5 messages)
         history = db.query(ChatMessage).filter(ChatMessage.user_id == current_user.id).order_by(ChatMessage.timestamp.desc()).limit(5).all()
         history.reverse()
@@ -345,9 +353,9 @@ INSTRUCTIONS:
 
 def _generate_chat_response(prompt):
     """Helper to run blocking Gemini call in thread"""
-    api_key = os.getenv("GEMINI_API_KEY")
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = _get_gemini_model()
+    if model is None:
+        return "AI chat is unavailable right now because the Gemini dependency is not installed in this Python environment."
     response = model.generate_content(prompt)
     return response.text
 
@@ -358,9 +366,6 @@ async def diagnose_crop(
     mode: str = Form("diagnosis"),
     current_user: User = Depends(get_current_user)
 ):
-    api_key = os.getenv("GEMINI_API_KEY")
-    genai.configure(api_key=api_key)
-    
     content = await file.read()
     image = Image.open(io.BytesIO(content))
     
@@ -391,8 +396,16 @@ async def diagnose_crop(
         }
         """
         
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = _get_gemini_model()
+    if model is None:
+        return {
+            "diagnosis": "AI unavailable",
+            "confidence": 0,
+            "summary": "Gemini image analysis is not available because the required Python package is missing.",
+            "health_score": 0,
+            "remedies": []
+        }
+
     response = model.generate_content([prompt, image])
     
     try:

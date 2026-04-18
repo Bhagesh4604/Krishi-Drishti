@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, useMapEvents, useMap } from 'react-leaflet';
 import axios from 'axios';
-import { getUserLocation } from '../src/services/api';
+import { getUserLocation, plotService } from '../src/services/api';
 import { ArrowLeft, MapPin, Play, Square, Search, Loader2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -15,7 +15,7 @@ L.Icon.Default.mergeOptions({
 });
 
 interface LandMarkingScreenProps {
-    navigation: { goBack: () => void };
+    navigation: { goBack: () => void; goToAuth: () => void };
 }
 
 type Mode = 'tap' | 'walk' | 'survey';
@@ -177,6 +177,12 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
         setLoading(true);
         try {
             const token = localStorage.getItem('ks_token');
+            if (!token) {
+                alert("Please log in first to save your farm boundary.");
+                setShowSaveModal(false);
+                navigation.goToAuth();
+                return;
+            }
 
             // Determine Final Area
             let finalAreaHa = 0;
@@ -199,16 +205,28 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                 crop_type: "Mixed"
             };
 
-            await axios.post('http://localhost:8000/api/plots/', payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await plotService.createPlot(payload);
 
             alert(`Farm Saved! \nArea: ${finalAreaHa.toFixed(2)} ha (${(finalAreaHa * 2.471).toFixed(2)} Acre)\nOwnership Verification Request Sent for Gut No. ${gutNumber}.`);
             setShowSaveModal(false);
             navigation.goBack();
         } catch (error) {
             console.error(error);
-            alert("Failed to save farm details.");
+            if (axios.isAxiosError(error)) {
+                const detail = (error.response?.data as any)?.detail;
+                if (error.response?.status === 401) {
+                    localStorage.removeItem('ks_token');
+                    alert("Please log in again to save your farm boundary.");
+                    setShowSaveModal(false);
+                    navigation.goToAuth();
+                } else if (typeof detail === 'string' && detail.trim()) {
+                    alert(`Failed to save farm details.\n${detail}`);
+                } else {
+                    alert(`Failed to save farm details.\nRequest status: ${error.response?.status ?? 'network error'}`);
+                }
+            } else {
+                alert("Failed to save farm details.");
+            }
         } finally {
             setLoading(false);
         }

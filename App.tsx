@@ -239,6 +239,16 @@ const AppContent: React.FC = () => {
   };
 
   const navigateTo = (screen: Screen, data?: any) => {
+    const protectedScreens: Screen[] = ['map', 'carbon-vault', 'crop-stress', 'landmark', 'soil-carbon'];
+    const hasToken = !!localStorage.getItem('ks_token');
+
+    if (protectedScreens.includes(screen) && !hasToken) {
+      setIsGuestMode(false);
+      alert('Please log in to use farm tools and save your land.');
+      setCurrentScreen('auth');
+      return;
+    }
+
     if (screen === 'vision-result' && data?.image) {
       setCapturedImage(data.image);
       if (data.mode) setVisionMode(data.mode);
@@ -386,7 +396,7 @@ const AppContent: React.FC = () => {
         return <CropStressScreen navigateTo={navigateTo} />;
 
       case 'landmark':
-        return <LandMarkingScreen navigation={{ goBack: () => navigateTo('home') }} />;
+        return <LandMarkingScreen navigation={{ goBack: () => navigateTo('home'), goToAuth: () => navigateTo('auth') }} />;
       case 'acoustic-scanner':
         return <AcousticScannerScreen navigation={{ goBack: () => navigateTo('home') }} />;
       case 'soil-carbon':

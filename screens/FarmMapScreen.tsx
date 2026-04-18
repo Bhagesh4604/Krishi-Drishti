@@ -306,10 +306,18 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
                 <p className="text-[10px] uppercase font-black text-blue-500 mb-1">Predicted Yield</p>
                 <h4 className="text-2xl font-black text-blue-700">{analysisResult.predicted_yield_tons_per_ha} <span className="text-sm">Tons/ha</span></h4>
                 <p className="text-xs text-blue-600 font-medium mt-1">Total: {analysisResult.total_estimated_yield_tons} Tons | Rev: ₹{analysisResult.estimated_revenue_inr?.toLocaleString()}</p>
-              </div>
+                </div>
 
-              {/* Alerts / ML Models */}
-              <div>
+                <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                  <p className="text-[10px] uppercase font-black text-emerald-500 mb-1">Carbon Signal</p>
+                  <h4 className="text-2xl font-black text-emerald-700">{analysisResult.estimated_carbon_credits?.toFixed?.(2) ?? '0.00'} <span className="text-sm">ACT</span></h4>
+                  <p className="text-xs text-emerald-700 font-medium mt-1">
+                    Issuable: {analysisResult.issuable_carbon_credits?.toFixed?.(2) ?? '0.00'} | Area: {analysisResult.area_hectares?.toFixed?.(2) ?? '0.00'} ha
+                  </p>
+                </div>
+
+                {/* Alerts / ML Models */}
+                <div>
                 <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">System Alerts</h4>
                 <div className="space-y-2">
                   {analysisResult.alerts?.map((alert: string, idx: number) => (
