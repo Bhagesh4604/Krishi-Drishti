@@ -6,7 +6,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal
-from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance
+from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance, admin
 from apscheduler.schedulers.background import BackgroundScheduler
 from .models import Plot, PlotHistory, DiseaseRiskAlert
 from .ml_models.anomaly_detector import detect_anomalies
@@ -41,6 +41,7 @@ app.include_router(plots.router)
 app.include_router(carbon.router)
 app.include_router(contracts.router)
 app.include_router(insurance.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def read_root():
@@ -50,6 +51,17 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+@app.get("/admin", include_in_schema=False)
+def serve_admin_dashboard():
+    """Serves the admin ops dashboard at /admin"""
+    import os
+    from fastapi.responses import FileResponse
+    dashboard_path = os.path.join(os.path.dirname(__file__), "admin_dashboard.html")
+    if not os.path.exists(dashboard_path):
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse("<h1>Admin dashboard not found.</h1>", status_code=404)
+    return FileResponse(dashboard_path, media_type="text/html")
 
 # --- Periodic Tasks ---
 def run_weekly_anomaly_detection():

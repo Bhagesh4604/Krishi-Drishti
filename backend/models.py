@@ -210,6 +210,11 @@ class CarbonProject(Base):
     available_credits = Column(Float, default=0.0) # After buffer pool deduction
     locked_credits = Column(Float, default=0.0) # Buffer pool amount
 
+    # Admin Decision Tracking
+    rejection_reason = Column(String, nullable=True)      # Filled when ops team rejects
+    admin_reviewed_at = Column(DateTime, nullable=True)   # When ops team took action
+    admin_notes = Column(String, nullable=True)           # Optional ops team notes
+
     @property
     def aggregator_name(self) -> str:
         return "Krishi Drishti Aggregator"
@@ -262,6 +267,49 @@ class CarbonTransaction(Base):
 
 
 User.plots = relationship("Plot", back_populates="user")
+
+
+class FarmerOperationLog(Base):
+    """
+    Immutable audit log of every meaningful farmer action.
+    Used by the admin/ops team to monitor field activity and verify carbon credit claims.
+    """
+    __tablename__ = "farmer_operation_logs"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), index=True)
+    plot_id    = Column(Integer, ForeignKey("plots.id"), nullable=True, index=True)
+    project_id = Column(Integer, ForeignKey("carbon_projects.id"), nullable=True, index=True)
+
+    # Operation type — one of a controlled vocabulary:
+    # "plot_created", "plot_scan", "disease_alert_triggered",
+    # "project_enrolled", "evidence_upload", "verification_run",
+    # "credit_issued", "credit_claimed", "credit_rejected"
+    operation  = Column(String, index=True)
+    detail     = Column(String, nullable=True)   # JSON blob with operation-specific data
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user    = relationship("User")
+    plot    = relationship("Plot")
+
+
+class AdminCreditDecision(Base):
+    """
+    Immutable record of every approve/reject action taken by the ops team.
+    Forms the audit trail for CCTS/BEE submission.
+    """
+    __tablename__ = "admin_credit_decisions"
+
+    id               = Column(Integer, primary_key=True, index=True)
+    project_id       = Column(Integer, ForeignKey("carbon_projects.id"), index=True)
+    action           = Column(String)             # "approved" | "rejected"
+    credits_issued   = Column(Float, default=0.0)
+    rejection_reason = Column(String, nullable=True)
+    admin_note       = Column(String, nullable=True)
+    decided_at       = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("CarbonProject")
+
 
 class Contract(Base):
     __tablename__ = "contracts"

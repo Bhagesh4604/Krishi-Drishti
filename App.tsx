@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Screen, UserProfile, Language, VisionMode } from './types';
 import { MessageCircle } from 'lucide-react'; // Add icon import
 import AuthScreen from './screens/AuthScreen';
@@ -423,8 +424,19 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto shadow-xl relative overflow-hidden text-gray-900" style={{ transform: 'translate(0)' }}>
-      <main className="flex-1 overflow-y-auto pb-20 mobile-container">
-        {renderScreen()}
+      <main className="flex-1 overflow-y-auto pb-20 mobile-container relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentScreen}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="h-full"
+          >
+            {renderScreen()}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Global AI Chat Button - Only show on main screens where nav is visible */}

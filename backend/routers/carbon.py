@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import json
 
 from ..database import get_db
-from ..models import CarbonProject, CarbonEvidence, CarbonTransaction, Plot, User
+from ..models import CarbonProject, CarbonEvidence, CarbonTransaction, Plot, User, FarmerOperationLog
 from ..dependencies import get_current_user
 from ..services.earth_engine import earth_engine_service
 from ..services.additionality_service import is_additional
@@ -395,6 +395,21 @@ async def enroll_plot(
     db.commit()
     db.refresh(new_project)
 
+    # --- Operation Log ---
+    log = FarmerOperationLog(
+        user_id=current_user.id,
+        plot_id=plot.id,
+        project_id=new_project.id,
+        operation="project_enrolled",
+        detail=json.dumps({
+            "methodology": project.methodology,
+            "projected_credits": round(total_potential, 2),
+            "area_ha": round(monitoring.get("area_hectares", 0), 2),
+        }),
+    )
+    db.add(log)
+    db.commit()
+
     return _project_response(new_project)
 
 @router.post("/{project_id}/evidence")
@@ -460,6 +475,22 @@ async def upload_evidence(
 
     if project.status == "Enrolled":
         project.status = "Evidence_Pending"
+
+    # --- Operation Log ---
+    log = FarmerOperationLog(
+        user_id=current_user.id,
+        plot_id=project.plot_id,
+        project_id=project.id,
+        operation="evidence_upload",
+        detail=json.dumps({
+            "description": description,
+            "geo_lat": geo_lat,
+            "geo_lng": geo_lng,
+            "photo_stored": image_url is not None,
+            "photo_url": image_url,
+        }),
+    )
+    db.add(log)
 
     db.commit()
 
@@ -557,7 +588,23 @@ async def trigger_verification(
         project.plot.organic_score = 100.0
     else:
         project.status = "Audit_Failed"
-        
+
+    # --- Operation Log ---
+    log = FarmerOperationLog(
+        user_id=current_user.id,
+        project_id=project.id,
+        plot_id=project.plot_id,
+        operation="verification_run",
+        detail=json.dumps({
+            "result": project.status,
+            "additionality_score": round(project.additionality_score, 3),
+            "adoption_rate": round(adoption_rate, 3),
+            "credits_issued": round(project.verified_credits, 2) if success else 0,
+            "district": farmer_district,
+        }),
+    )
+    db.add(log)
+
     db.commit()
     
     return {

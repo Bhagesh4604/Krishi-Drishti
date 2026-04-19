@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..dependencies import get_current_user
 from ..ml_models.anomaly_detector import detect_anomalies
-from ..models import DiseaseRiskAlert, Plot, PlotHistory, User
+from ..models import DiseaseRiskAlert, FarmerOperationLog, Plot, PlotHistory, User
 from ..services.earth_engine import earth_engine_service
 
 
@@ -127,6 +127,16 @@ async def create_plot(
     db.add(new_plot)
     db.commit()
     db.refresh(new_plot)
+
+    # --- Operation Log ---
+    log = FarmerOperationLog(
+        user_id=current_user.id,
+        plot_id=new_plot.id,
+        operation="plot_created",
+        detail=json.dumps({"name": new_plot.name, "area_acres": new_plot.area, "crop_type": new_plot.crop_type}),
+    )
+    db.add(log)
+    db.commit()
 
     return PlotResponse(
         id=new_plot.id,
@@ -261,6 +271,22 @@ async def analyze_plot(
     for alert in active_disease_alerts:
         prefix = "High disease risk" if alert.risk_level == "High" else "Disease watch"
         alerts.insert(0, f"{prefix} ({alert.disease_name}): {alert.recommendation}")
+
+    # --- Operation Log ---
+    scan_log = FarmerOperationLog(
+        user_id=current_user.id,
+        plot_id=plot.id,
+        operation="plot_scan",
+        detail=json.dumps({
+            "ndvi": round(plot.health_score, 3),
+            "moisture": round(plot.moisture, 1),
+            "source": analysis.get("source", "unknown"),
+            "is_anomaly": current_is_anomaly,
+            "carbon_credits_estimated": round(analysis["carbon"]["gross_credits"], 2),
+        }),
+    )
+    db.add(scan_log)
+    db.commit()
 
     return {
         "plot_id": plot.id,
