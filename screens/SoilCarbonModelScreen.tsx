@@ -167,7 +167,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
 
                 {/* 1. Map for adding points */}
                 <div className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100" ref={mapContainerRef}>
-                    <div className="h-[220px] w-full rounded-[1.5rem] overflow-hidden relative z-0 border border-slate-100">
+                    <div className="h-[320px] w-full rounded-[1.5rem] overflow-hidden relative z-0 border border-slate-100">
                         <MapContainer center={[20.5937, 78.9629]} zoom={5} scrollWheelZoom={false} style={{ height: "100%", width: "100%", zIndex: 0 }}>
                             <TileLayer
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

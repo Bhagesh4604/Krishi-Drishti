@@ -48,3 +48,13 @@ backend/.venv/
 *.db
 *.sqlite
 *.sqlite3
+*.bak
+
+# Large Files & Documents
+Documents/
+*.txt
+*.pdf
+*.zip
+*.tar.gz
+*.mp4
+*.mp3

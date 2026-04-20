@@ -1,0 +1,55 @@
+/* Admin Dashboard Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Force light background on html/body so the AgritechDashboard landing page
+   always renders with its natural light theme. The .admin-console wrapper
+   overrides this for the authenticated admin area. */
+html, body, #root {
+  background-color: #fff;
+  color: #111;
+  color-scheme: light;
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Dark theme variables scoped ONLY inside .admin-console ────────────────── */
+.admin-console {
+  --bg-main: #0d0d0d;
+  --bg-card: #161616;
+  --bg-card-hover: #1e1e1e;
+  --bg-sidebar: #111111;
+  --border: #2a2a2a;
+  --border-light: #333333;
+  --text-primary: #f0f0f0;
+  --text-secondary: #888888;
+  --text-muted: #555555;
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.12);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.12);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --purple: #a855f7;
+  --purple-dim: rgba(168,85,247,0.12);
+  --accent: #22c55e;
+
+  /* Override html/body light defaults inside admin console */
+  background: var(--bg-main) !important;
+  color: var(--text-primary);
+  color-scheme: dark;
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Scrollbars only inside admin console */
+.admin-console ::-webkit-scrollbar { width: 6px; height: 6px; }
+.admin-console ::-webkit-scrollbar-track { background: var(--bg-main); }
+.admin-console ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+.admin-console ::-webkit-scrollbar-thumb:hover { background: #555; }

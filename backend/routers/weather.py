@@ -50,16 +50,24 @@ async def reverse_geocode(lat: float, lng: float):
     Actually, Open-Meteo doesn't support reverse. Using BigDataCloud free API.
     """
     try:
-        # bigdatacloud is free and simple
-        url = f"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}&longitude={lng}&localityLanguage=en"
+        # Use OpenStreetMap Nominatim for free reverse geocoding
+        url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
+        headers = {
+            "User-Agent": "Krishi-Drishti/1.0"
+        }
         async with httpx.AsyncClient() as client:
-            response = await client.get(url)
+            response = await client.get(url, headers=headers, timeout=10.0)
             data = response.json()
             
+        address = data.get("address", {})
+        city = address.get("city") or address.get("town") or address.get("village") or address.get("county") or "Unknown Location"
+        district = address.get("state_district") or address.get("state")
+        
         return {
-            "city": data.get("city") or data.get("locality") or "Unknown Location",
-            "district": data.get("principalSubdivision")
+            "city": city,
+            "district": district
         }
     except Exception as e:
         # Fallback to simple coordinates string if fail
+        print(f"Reverse geocode error: {e}")
         return {"city": f"{lat:.2f}, {lng:.2f}", "district": ""}

@@ -30,7 +30,7 @@ def _get_gemini_model():
         return None
 
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-1.5-flash")
+    return genai.GenerativeModel("gemini-flash-latest")
 
 
 class StressAnalysisRequest(BaseModel):
@@ -349,7 +349,7 @@ INSTRUCTIONS:
         import traceback
         traceback.print_exc()
         # Fallback response so user isn't invalid
-        return {"response": "I am having trouble connecting to the brain. Please try again or check API keys."}
+        return {"response": f"I am having trouble connecting to the brain. Error: {str(e)}"}
 
 def _generate_chat_response(prompt):
     """Helper to run blocking Gemini call in thread"""
@@ -406,7 +406,16 @@ async def diagnose_crop(
             "remedies": []
         }
 
-    response = model.generate_content([prompt, image])
+    try:
+        response = model.generate_content([prompt, image])
+    except Exception as e:
+        return {
+            "diagnosis": "AI Connection Error",
+            "confidence": 0,
+            "summary": f"Gemini Error: {str(e)}",
+            "health_score": 0,
+            "remedies": []
+        }
     
     try:
         import json

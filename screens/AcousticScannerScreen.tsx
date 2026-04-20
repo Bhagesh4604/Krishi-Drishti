@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { Mic, FileAudio, Loader2, ShieldAlert, ArrowLeft, Activity } from 'lucide-react';
+import { aiService } from '../src/services/api';
 
 // Constants
 const SERVER_URL = 'http://localhost:8002/analyze-audio';
@@ -34,6 +35,7 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [result, setResult] = useState<AnalysisResult | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [dynamicAdvice, setDynamicAdvice] = useState<string | null>(null);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -133,6 +135,22 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
             });
 
             setResult(response.data);
+            
+            // Trigger dynamic real AI analysis if a pest is actually detected
+            if (response.data.pest_detected) {
+                setDynamicAdvice("Consulting Krishi AI Agronomist on this pattern...");
+                try {
+                    const aiChat = await aiService.chat(
+                        `Bioacoustic scanner detected ${response.data.pest_type} pest frequency patterns in my crop. Provide 1 specific, highly-actionable organic recommended action right now in English.`
+                    );
+                    setDynamicAdvice(aiChat.response);
+                } catch (e) {
+                    setDynamicAdvice(getPestAdvice(response.data.pest_type));
+                }
+            } else {
+                setDynamicAdvice(null);
+            }
+
         } catch (error: any) {
             console.error("Error analyzing audio:", error);
             setErrorMsg(error.response?.data?.detail || "Could not connect to the bioacoustic server.");
@@ -268,7 +286,14 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
                                     Recommended Action
                                 </h3>
                                 <p className="text-amber-800 text-sm leading-relaxed font-medium">
-                                    {getPestAdvice(result.pest_type)}
+                                    {dynamicAdvice === "Consulting Krishi AI Agronomist on this pattern..." ? (
+                                        <span className="flex items-center gap-2">
+                                            <Loader2 size={14} className="animate-spin inline" />
+                                            {dynamicAdvice}
+                                        </span>
+                                    ) : (
+                                        dynamicAdvice || getPestAdvice(result.pest_type)
+                                    )}
                                 </p>
                             </div>
                         )}

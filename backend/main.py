@@ -1,7 +1,9 @@
 import os
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,14 +56,33 @@ def health_check():
 
 @app.get("/admin", include_in_schema=False)
 def serve_admin_dashboard():
-    """Serves the admin ops dashboard at /admin"""
-    import os
-    from fastapi.responses import FileResponse
-    dashboard_path = os.path.join(os.path.dirname(__file__), "admin_dashboard.html")
-    if not os.path.exists(dashboard_path):
-        from fastapi.responses import HTMLResponse
-        return HTMLResponse("<h1>Admin dashboard not found.</h1>", status_code=404)
-    return FileResponse(dashboard_path, media_type="text/html")
+    from fastapi.responses import HTMLResponse
+    html = """<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Krishi-Drishti Admin</title>
+  <style>
+    body { background: #0d0d0d; color: #fff; display: flex; align-items: center;
+           justify-content: center; height: 100vh; margin: 0;
+           font-family: 'Segoe UI', sans-serif; flex-direction: column; gap: 12px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #333;
+               border-top-color: #22c55e; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    p { color: #888; font-size: 14px; margin: 0; }
+    code { color: #22c55e; }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <p>Redirecting to Admin Console...</p>
+  <p><code>localhost:3001</code></p>
+  <script>
+    setTimeout(() => window.location.replace("http://localhost:3001"), 500);
+  </script>
+</body>
+</html>"""
+    return HTMLResponse(html)
 
 # --- Periodic Tasks ---
 def run_weekly_anomaly_detection():

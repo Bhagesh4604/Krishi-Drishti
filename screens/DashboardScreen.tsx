@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, UserProfile, Language } from '../types';
 import { languages } from '../translations';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
   Bell,
@@ -57,7 +58,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         const data = await plotService.getPlots();
         setUserPlots(data);
 
-        // Fetch location names for ALL plots that have coordinates
         const locationPromises = data.map(async (plot: any) => {
           if (plot.coordinates && plot.coordinates.length > 0) {
             const firstCoord = plot.coordinates[0];
@@ -118,8 +118,27 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
     return fieldImages[id % fieldImages.length];
   };
 
+  // Animation Variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  };
+
   return (
-    <div className="min-h-full pb-0 font-sans text-gray-800 relative bg-white">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-full pb-0 font-sans text-gray-800 relative bg-white"
+    >
 
       {/* Dynamic Animated Background Mesh */}
       <div className="absolute top-0 left-0 w-full h-[600px] z-0 overflow-hidden pointer-events-none">
@@ -130,7 +149,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       </div>
 
       {/* 1. Header Section */}
-      <div className="px-6 pt-12 pb-6 flex justify-between items-start relative z-20">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        className="px-6 pt-12 pb-6 flex justify-between items-start relative z-20"
+      >
         <div>
           <h1 className="text-4xl font-light text-gray-800 tracking-tight">Hello, <span className="font-bold text-gray-900">{user?.name?.split(' ')[0] || 'Harris'}</span></h1>
           <div className="flex items-center gap-1 mt-1 text-gray-600 self-start px-2 py-1 rounded-lg">
@@ -140,93 +164,105 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         </div>
 
         <div className="flex items-center gap-3 relative">
-          <button
-            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors active:scale-95"
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
             onClick={() => setShowLangMenu(!showLangMenu)}
           >
             <span className="sr-only">Change Language</span>
             <div className={`w-5 h-5 flex items-center justify-center font-bold text-xs border-2 rounded-full transition-colors ${showLangMenu ? 'bg-gray-900 text-white border-gray-900' : 'text-gray-900 border-gray-900'}`}>
               {currentLang.toUpperCase()}
             </div>
-          </button>
+          </motion.button>
 
-          {showLangMenu && (
-            <>
-              {/* Backdrop to close */}
-              <div
-                className="fixed inset-0 z-[60]"
-                onClick={() => {
-                  console.log("Backdrop clicked -> Closing");
-                  setShowLangMenu(false);
-                }}
-              />
-              {/* Dropdown Menu */}
-              <div
-                className="absolute top-full mt-2 right-12 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-[70] w-48 max-h-80 overflow-y-auto"
-                style={{ minWidth: '200px' }}
-              >
-                <div className="px-3 py-2 border-b border-gray-100 mb-1">
-                  <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Language ({languages.length})</span>
-                </div>
-                {languages.map((lang: any) => (
-                  <button
-                    key={lang.code}
-                    className={`w-full text-left px-3 py-3 rounded-xl text-sm font-bold flex justify-between items-center transition-all mb-1 ${currentLang === lang.code
-                      ? 'bg-green-50 text-green-700 shadow-sm'
-                      : 'text-gray-700 hover:bg-gray-50'}`}
-                    onClick={() => {
-                      console.log("Selected language:", lang.code);
-                      onLangChange(lang.code as Language);
-                      setShowLangMenu(false);
-                    }}
-                  >
-                    <div className="flex flex-col">
-                      <span>{lang.label}</span>
-                      <span className="text-[10px] font-medium text-gray-400">{lang.native}</span>
-                    </div>
-                    {currentLang === lang.code && <div className="w-2 h-2 rounded-full bg-green-500 shadow-green-200 shadow-lg" />}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          <button
-            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors active:scale-95"
-            onClick={() => { }}
+          <AnimatePresence>
+            {showLangMenu && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[60]"
+                  onClick={() => setShowLangMenu(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className="absolute top-full mt-2 right-12 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-[70] w-48 max-h-80 overflow-y-auto"
+                  style={{ minWidth: '200px' }}
+                >
+                  <div className="px-3 py-2 border-b border-gray-100 mb-1">
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Language ({languages.length})</span>
+                  </div>
+                  {languages.map((lang: any) => (
+                    <motion.button
+                      key={lang.code}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`w-full text-left px-3 py-3 rounded-xl text-sm font-bold flex justify-between items-center transition-all mb-1 ${currentLang === lang.code
+                        ? 'bg-green-50 text-green-700 shadow-sm'
+                        : 'text-gray-700 hover:bg-gray-50'}`}
+                      onClick={() => {
+                        onLangChange(lang.code as Language);
+                        setShowLangMenu(false);
+                      }}
+                    >
+                      <div className="flex flex-col">
+                        <span>{lang.label}</span>
+                        <span className="text-[10px] font-medium text-gray-400">{lang.native}</span>
+                      </div>
+                      {currentLang === lang.code && <div className="w-2 h-2 rounded-full bg-green-500 shadow-green-200 shadow-lg" />}
+                    </motion.button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
           >
             <div className="w-2 h-2 bg-black rounded-full absolute top-3 right-3 border border-white pointer-events-none" />
             <Bell size={20} className="text-gray-900" fill="black" />
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* 2. Weather Section (Design from Image) */}
-      <div className="px-6 mb-8 relative">
-        <div className="flex justify-between items-start relative z-10 mb-6">
+      {/* 2. Weather Section */}
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="px-6 mb-8 relative"
+      >
+        <motion.div variants={itemVariants} className="flex justify-between items-start relative z-10 mb-6">
           <div>
             <div className="flex items-start gap-2">
               <span className="text-7xl font-medium text-gray-900 tracking-tighter">{currentTemp}°</span>
-              <Sun size={32} className="text-yellow-400 fill-yellow-400 mt-2" />
+              <motion.div 
+                animate={{ rotate: 360 }} 
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              >
+                <Sun size={32} className="text-yellow-400 fill-yellow-400 mt-2" />
+              </motion.div>
             </div>
             <p className="text-md font-medium text-gray-500 mt-1">
               {locationName.split(',').slice(-1)[0]?.trim() || locationName}
             </p>
           </div>
-          {/* Wheat Stalks Image Requirement */}
-          {/* Wheat Stalks Image Requirement */}
           <div className="absolute -top-60 -right-8 w-64 h-[34rem] z-0 pointer-events-none mix-blend-multiply opacity-90">
-            <img
-              src="/assets/crops/Wheat.jpg"
-              className="w-full h-full object-contain"
-              alt="Wheat"
-            />
+            <img src="/assets/crops/Wheat.jpg" className="w-full h-full object-contain" alt="Wheat" />
           </div>
-        </div>
+        </motion.div>
 
         {/* 2x2 Grid Pills */}
         <div className="grid grid-cols-2 gap-4 relative z-10">
-          {/* Soil Temp */}
-          <div className="glass rounded-[2rem] p-4 flex items-center gap-3 hover-lift cursor-default">
+          <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default">
             <div className="w-10 h-10 rounded-full bg-emerald-50/80 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
               <Thermometer size={18} />
             </div>
@@ -236,10 +272,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                 {weather?.current?.soil_temperature_0cm !== undefined ? `+${Math.round(weather.current.soil_temperature_0cm)} C` : '-- C'}
               </p>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Humidity */}
-          <div className="glass rounded-[2rem] p-4 flex items-center gap-3 hover-lift cursor-default">
+          <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default">
             <div className="w-10 h-10 rounded-full bg-blue-50/80 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
               <Droplets size={18} fill="currentColor" />
             </div>
@@ -249,10 +284,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                 {weather?.current?.relative_humidity_2m ?? '--'}%
               </p>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Wind */}
-          <div className="glass rounded-[2rem] p-4 flex items-center gap-3 hover-lift cursor-default">
+          <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default">
             <div className="w-10 h-10 rounded-full bg-amber-50/80 flex items-center justify-center text-amber-600 shadow-sm border border-amber-100">
               <Wind size={18} />
             </div>
@@ -262,10 +296,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                 {weather?.current?.wind_speed_10m ?? '--'} m/s
               </p>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Precipitation */}
-          <div className="glass rounded-[2rem] p-4 flex items-center gap-3 hover-lift cursor-default">
+          <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default">
             <div className="w-10 h-10 rounded-full bg-indigo-50/80 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
               <CloudRain size={18} fill="currentColor" />
             </div>
@@ -275,26 +308,36 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                 {weather?.current?.precipitation ?? '--'} mm
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Carbon Wallet Integration */}
-      <div className="mx-6 mb-6">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 20 }}
+        className="mx-6 mb-6"
+      >
         <CarbonWalletCard />
-
-        {/* Quick Action to Mark Land */}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => navigateTo('landmark')}
-          className="w-full mt-4 bg-white border-2 border-green-600 border-dashed rounded-2xl p-4 flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-sm"
+          className="w-full mt-4 bg-white border-2 border-green-600 border-dashed rounded-2xl p-4 flex items-center justify-center gap-2 shadow-sm"
         >
           <MapPin size={20} className="text-green-700" />
           <span className="font-bold text-green-800">Locate My Farm Boundary</span>
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      {/* 4. Services Grid (Re-added for Navigation) */}
-      <div className="px-6 mt-8 relative z-10 w-full">
+      {/* 4. Services Grid */}
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="px-6 mt-8 relative z-10 w-full"
+      >
         <h2 className="text-lg font-bold text-gray-900 mb-4">Services</h2>
         <div className="grid grid-cols-4 gap-4">
           {[
@@ -307,29 +350,43 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             { icon: <Zap size={28} strokeWidth={1.5} />, label: 'Forecast', bg: 'bg-gradient-to-br from-yellow-300 to-amber-500', shadow: 'shadow-amber-500/40', text: 'text-white', screen: 'forecast' },
             { icon: <Radio size={28} strokeWidth={1.5} />, label: 'Acoustic', bg: 'bg-gradient-to-br from-rose-400 to-rose-600', shadow: 'shadow-rose-500/40', text: 'text-white', screen: 'acoustic-scanner' },
           ].map((item, idx) => (
-            <button
+            <motion.button
               key={idx}
+              variants={itemVariants}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => navigateTo(item.screen as Screen)}
               className="flex flex-col items-center gap-2 group"
             >
-              <div className={`w-[60px] h-[60px] rounded-[1.2rem] flex items-center justify-center shadow-lg border border-white/80 ${item.bg} ${item.shadow} ${item.text} group-active:scale-90 group-active:opacity-80 transition-all duration-300 relative overflow-hidden`}>
-                <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent"></div>
+              <div className={`w-[60px] h-[60px] rounded-[1.2rem] flex items-center justify-center shadow-lg border border-white/80 ${item.bg} ${item.shadow} ${item.text} relative overflow-hidden`}>
+                <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"></div>
                 {item.icon}
               </div>
-              <span className="text-[10px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors uppercase tracking-wider">{item.label}</span>
-            </button>
+              <span className="text-[10px] font-semibold text-gray-600 transition-colors uppercase tracking-wider">{item.label}</span>
+            </motion.button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      {/* 3. Commodities & Food (Horizontal Scroll) */}
+      {/* 3. Commodities & Food */}
       {crops.length > 0 && (
-      <div className="px-6 mt-8 relative z-10 w-full overflow-hidden">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-50px" }}
+        className="px-6 mt-10 relative z-10 w-full overflow-hidden"
+      >
         <h2 className="text-lg font-bold text-gray-900 mb-4">Commodities & Food</h2>
-
         <div className="flex gap-5 overflow-x-auto no-scrollbar pb-4 pr-6">
           {crops.map((crop, idx) => (
-            <div key={idx} className="flex flex-col items-center gap-3 flex-shrink-0 cursor-pointer active:scale-95 transition-transform group">
+            <motion.div 
+              key={idx} 
+              variants={itemVariants}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex flex-col items-center gap-3 flex-shrink-0 cursor-pointer group"
+            >
               <div className="w-[72px] h-[72px] rounded-full overflow-hidden shadow-lg border-2 border-white relative">
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all z-10"></div>
                 <img
@@ -340,28 +397,34 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                 />
               </div>
               <span className="text-sm font-semibold text-gray-700 tracking-wide">{crop}</span>
-            </div>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
       )}
 
       {/* 4. My Fields Cards Carousel */}
-      <div className="mt-4 relative z-10 pb-2 overflow-hidden w-full">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-50px" }}
+        className="mt-6 relative z-10 pb-6 overflow-hidden w-full"
+      >
         <h2 className="text-lg font-bold text-gray-900 mb-4 px-6">My Fields</h2>
         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-6 snap-x snap-mandatory">
 
           {isLoadingPlots && (
-            <div className="min-w-[85%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden flex items-center justify-center h-64">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-w-[85%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden flex items-center justify-center h-64">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
                 <span className="text-orange-600 font-bold text-sm">Loading Fields...</span>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {!isLoadingPlots && userPlots.length === 0 && (
-            <div className="min-w-[85%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden">
+            <motion.div variants={itemVariants} className="min-w-[85%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden">
               <div className="px-4 pt-4 pb-2 flex justify-between items-start mb-2">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
@@ -371,24 +434,22 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                     <h3 className="text-lg font-bold text-gray-900">No Fields Added</h3>
                   </div>
                 </div>
-                <button onClick={() => navigateTo('landmark')} className="bg-green-100 px-4 py-2 rounded-full flex items-center gap-2 active:scale-95">
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={() => navigateTo('landmark')} className="bg-green-100 px-4 py-2 rounded-full flex items-center gap-2">
                   <Plus size={16} className="text-green-700" />
                   <span className="text-xs font-bold text-green-800">Add</span>
-                </button>
+                </motion.button>
               </div>
-              <div className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer active:scale-95 transition-transform" onClick={() => navigateTo('map')}>
+              <motion.div whileTap={{ scale: 0.98 }} className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer" onClick={() => navigateTo('map')}>
                 <img src="https://images.unsplash.com/photo-1592982537447-6f23349c258d?w=800" className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale" alt="Main Field" />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
                   <p className="bg-white/90 text-gray-800 font-bold px-4 py-2 rounded-xl shadow-lg border border-white">Tap to locate your farm</p>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           )}
 
           {!isLoadingPlots && userPlots.map((plot) => (
-            <div key={plot.id} className="min-w-[85%] sm:min-w-[70%] snap-center glass rounded-[2.5rem] p-3 shadow-md border border-white/40 relative overflow-hidden flex-shrink-0 flex flex-col gap-3 group hover-lift transition-all">
-
-              {/* Header inside card */}
+            <motion.div key={plot.id} variants={itemVariants} className="min-w-[85%] sm:min-w-[70%] snap-center glass rounded-[2.5rem] p-3 shadow-md border border-white/40 relative overflow-hidden flex-shrink-0 flex flex-col gap-3 group">
               <div className="px-3 pt-2 flex justify-between items-start">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
@@ -407,52 +468,39 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                 </div>
               </div>
 
-              {/* Big Image Section */}
-              <div className="relative h-40 rounded-[2rem] overflow-hidden cursor-pointer active-press group-hover:shadow-lg transition-all w-full" onClick={() => navigateTo('map')}>
-                <img
-                  src={getFieldImage(plot.id)}
-                  className="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-700"
-                  alt={plot.name}
-                />
+              <motion.div whileTap={{ scale: 0.98 }} className="relative h-40 rounded-[2rem] overflow-hidden cursor-pointer w-full" onClick={() => navigateTo('map')}>
+                <img src={getFieldImage(plot.id)} className="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-700" alt={plot.name} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </div>
+              </motion.div>
 
-              {/* Action Buttons Bar */}
               <div className="flex justify-between items-center glass rounded-[1.5rem] p-2 shadow-sm w-full mt-1 border border-white/50">
-                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active-press" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
                   <div className="w-10 h-10 rounded-full bg-blue-50/80 flex items-center justify-center group-hover:bg-blue-100 transition-colors border border-blue-100">
                     <MapPin size={18} className="text-blue-600" />
                   </div>
                   <span className="text-[10px] font-bold text-gray-700">Map</span>
-                </button>
+                </motion.button>
                 <div className="w-px h-8 bg-gray-200/50" />
-                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active-press" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
                   <div className="w-10 h-10 rounded-full bg-emerald-50/80 flex items-center justify-center group-hover:bg-emerald-100 transition-colors border border-emerald-100">
                     <Activity size={18} className="text-emerald-600" />
                   </div>
                   <span className="text-[10px] font-bold text-gray-700">Health</span>
-                </button>
+                </motion.button>
                 <div className="w-px h-8 bg-gray-200/50" />
-                <button className="flex-1 flex flex-col items-center gap-1 group py-1 active-press" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
                   <div className="w-10 h-10 rounded-full bg-amber-50/80 flex items-center justify-center group-hover:bg-amber-100 transition-colors border border-amber-100">
                     <TrendingUp size={18} className="text-amber-600" />
                   </div>
                   <span className="text-[10px] font-bold text-gray-700">Yield</span>
-                </button>
+                </motion.button>
               </div>
-
-            </div>
+            </motion.div>
           ))}
-
         </div>
-      </div>
-
-    </div>
-
-
+      </motion.div>
+    </motion.div>
   );
 };
-
-
 
 export default DashboardScreen;
