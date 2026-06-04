@@ -13,6 +13,7 @@ from ..dependencies import get_current_user
 from ..ml_models.anomaly_detector import detect_anomalies
 from ..models import DiseaseRiskAlert, FarmerOperationLog, Plot, PlotHistory, User
 from ..services.earth_engine import earth_engine_service
+from ..tasks.gee_tasks import run_gee_analysis
 
 
 def det_float(seed_str: str, min_v: float, max_v: float) -> float:
@@ -158,152 +159,37 @@ async def analyze_plot(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    Triggers an asynchronous GEE analysis for the plot.
+
+    Returns immediately with a job_id. Poll GET /api/jobs/{job_id} every
+    2-3 seconds until status == 'success', then read the 'result' field.
+    Alternatively, connect to GET /api/jobs/{job_id}/stream for SSE push.
+    """
     plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
     if not plot:
         raise HTTPException(status_code=404, detail="Plot not found")
 
-    analysis = earth_engine_service.monitor_plot(
-        geometry_coords=_plot_ring(plot),
+    ring = _plot_ring(plot)
+
+    task = run_gee_analysis.delay(
+        geometry_coords=ring,
         crop_type=plot.crop_type or "Mixed",
         plot_name=plot.name,
         declared_area=plot.area,
         methodology="Cover-Crop",
-    )
-
-    plot.health_score = analysis["health_score"]
-    plot.moisture = analysis["moisture"]
-    plot.image_url = analysis["image_url"]
-    plot.last_scan_date = datetime.utcnow()
-    plot.organic_score = max(plot.organic_score or 0.0, analysis["carbon"]["eligibility_score"] * 100.0)
-
-    history_records = db.query(PlotHistory).filter(PlotHistory.plot_id == plot.id).order_by(PlotHistory.date.asc()).all()
-
-    if not history_records and analysis["timeline"]:
-        seeded_history: List[PlotHistory] = []
-        for point in analysis["timeline"]:
-            ndvi = point.get("ndvi")
-            if ndvi is None:
-                continue
-
-            evi = point.get("evi")
-            record = PlotHistory(
-                plot_id=plot.id,
-                date=datetime.fromisoformat(point["date"]),
-                ndvi=ndvi,
-                evi=evi if evi is not None else ndvi * 0.9,
-                msavi=ndvi * 0.8,
-            )
-            db.add(record)
-            seeded_history.append(record)
-
-        db.commit()
-        history_records = seeded_history
-
-    if not history_records or len(history_records) < 5:
-        history_records = []
-        base_date = datetime.utcnow() - timedelta(days=180)
-        seed_base = plot.name + str(plot.id)
-        for index in range(6):
-            hist_date = base_date + timedelta(days=30 * index)
-            season_offset = math.sin((hist_date.month / 12.0) * math.pi * 2) * 0.15
-            noise = det_float(f"{seed_base}_{index}", -0.02, 0.02)
-            past_ndvi = plot.health_score + season_offset + noise if index < 5 else plot.health_score
-            past_ndvi = max(0.1, min(0.95, past_ndvi))
-
-            record = PlotHistory(
-                plot_id=plot.id,
-                date=hist_date,
-                ndvi=past_ndvi,
-                evi=past_ndvi * 0.9,
-                msavi=past_ndvi * 0.8,
-            )
-            db.add(record)
-            history_records.append(record)
-        db.commit()
-
-    current_evi = analysis["monitoring"]["current_evi"] or (plot.health_score * 0.9)
-    current_record = PlotHistory(
         plot_id=plot.id,
-        date=datetime.utcnow(),
-        ndvi=plot.health_score,
-        evi=current_evi,
-        msavi=plot.health_score * 0.8,
-    )
-    db.add(current_record)
-    history_records.append(current_record)
-    db.commit()
-
-    ndvi_values = [record.ndvi for record in history_records if record.ndvi is not None]
-    anomalies = detect_anomalies(ndvi_values)
-
-    for index, record in enumerate(history_records):
-        record.is_anomaly = anomalies[index]
-    db.commit()
-
-    current_is_anomaly = anomalies[-1] if anomalies else False
-
-    alerts: List[str] = []
-    if plot.health_score < 0.4:
-        alerts.append("Vegetation index critically low")
-    elif plot.health_score < 0.70:
-        alerts.append("Crop health moderate (stress detected)")
-    else:
-        alerts.append("Crop health optimal")
-
-    if plot.moisture < 35:
-        alerts.append("Irrigation needed")
-    elif plot.moisture > 55:
-        alerts.append("Field may be overly wet for stable residue cover")
-    else:
-        alerts.append("Soil moisture is in a healthy range")
-
-    if current_is_anomaly:
-        alerts.insert(0, "Anomaly detected: unexpected change in crop health.")
-
-    for risk_flag in analysis.get("risk_flags", []):
-        alerts.insert(0, risk_flag)
-
-    active_disease_alerts = db.query(DiseaseRiskAlert).filter(
-        DiseaseRiskAlert.plot_id == plot.id,
-        DiseaseRiskAlert.is_active == True,
-    ).all()
-
-    for alert in active_disease_alerts:
-        prefix = "High disease risk" if alert.risk_level == "High" else "Disease watch"
-        alerts.insert(0, f"{prefix} ({alert.disease_name}): {alert.recommendation}")
-
-    # --- Operation Log ---
-    scan_log = FarmerOperationLog(
         user_id=current_user.id,
-        plot_id=plot.id,
-        operation="plot_scan",
-        detail=json.dumps({
-            "ndvi": round(plot.health_score, 3),
-            "moisture": round(plot.moisture, 1),
-            "source": analysis.get("source", "unknown"),
-            "is_anomaly": current_is_anomaly,
-            "carbon_credits_estimated": round(analysis["carbon"]["gross_credits"], 2),
-        }),
     )
-    db.add(scan_log)
-    db.commit()
 
     return {
+        "job_id": task.id,
+        "status": "queued",
         "plot_id": plot.id,
-        "ndvi_avg": plot.health_score,
-        "chlorophyll_index": plot.health_score * 45,
-        "soil_moisture": plot.moisture,
-        "alerts": alerts,
-        "satellite_image": plot.image_url,
-        "source": analysis["source"],
-        "status": analysis["status"],
-        "is_anomaly": current_is_anomaly,
-        "history_count": len(history_records),
-        "area_hectares": analysis["area_hectares"],
-        "vegetation_change": analysis["monitoring"]["ndvi_change"],
-        "estimated_carbon_credits": analysis["carbon"]["gross_credits"],
-        "issuable_carbon_credits": analysis["carbon"]["issuable_credits"],
-        "timeline": analysis["timeline"],
+        "plot_name": plot.name,
+        "poll_url": f"/api/jobs/{task.id}",
+        "stream_url": f"/api/jobs/{task.id}/stream",
+        "message": "GEE analysis started. Poll poll_url or connect to stream_url for live results.",
     }
 
 
@@ -313,31 +199,35 @@ async def analyze_carbon(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    Triggers an async GEE carbon analysis for the plot.
+    Returns immediately with a job_id — poll /api/jobs/{job_id} for results.
+    """
     plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
     if not plot:
         raise HTTPException(status_code=404, detail="Plot not found")
 
-    analysis = earth_engine_service.monitor_plot(
+    task = run_gee_analysis.delay(
         geometry_coords=_plot_ring(plot),
         crop_type=plot.crop_type or "Mixed",
         plot_name=plot.name,
         declared_area=plot.area,
         methodology="Cover-Crop",
+        plot_id=plot.id,
+        user_id=current_user.id,
     )
 
     return {
+        "job_id": task.id,
+        "status": "queued",
         "plot_id": plot.id,
-        "carbon_credits": plot.carbon_credits,
-        "potential_credits": analysis["carbon"]["gross_credits"],
-        "issuable_credits": analysis["carbon"]["issuable_credits"],
-        "organic_score": plot.organic_score,
-        "currency_value": analysis["carbon"]["estimated_value_inr"],
-        "sequestration_rate": f"{analysis['carbon']['incremental_tco2e_per_ha']} tCO2e/ha/year",
-        "verification_status": "Eligible" if analysis["carbon"]["eligible"] else "Needs more evidence",
+        "plot_name": plot.name,
+        "poll_url": f"/api/jobs/{task.id}",
+        "stream_url": f"/api/jobs/{task.id}/stream",
+        "carbon_credits_cached": plot.carbon_credits,
+        "organic_score_cached": plot.organic_score,
         "last_scan": plot.last_scan_date,
-        "area_hectares": analysis["area_hectares"],
-        "source": analysis["source"],
-        "eligibility_score": analysis["carbon"]["eligibility_score"],
+        "message": "Carbon analysis started. Cached values are shown above; poll poll_url for fresh satellite data.",
     }
 
 

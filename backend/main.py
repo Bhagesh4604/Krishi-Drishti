@@ -8,7 +8,8 @@ load_dotenv(override=True)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal
-from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance, admin
+from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance, admin, jobs
+from .celery_app import is_redis_available, configure_eager_fallback
 from apscheduler.schedulers.background import BackgroundScheduler
 from .models import Plot, PlotHistory, DiseaseRiskAlert
 from .ml_models.anomaly_detector import detect_anomalies
@@ -44,6 +45,7 @@ app.include_router(carbon.router)
 app.include_router(contracts.router)
 app.include_router(insurance.router)
 app.include_router(admin.router)
+app.include_router(jobs.router)
 
 @app.get("/")
 def read_root():
@@ -151,6 +153,14 @@ def run_daily_disease_forecasting():
 # Start scheduler on startup
 @app.on_event("startup")
 def startup_event():
+    # --- Celery / Redis ---
+    if is_redis_available():
+        print("[Startup] Redis reachable — Celery async mode active. Start a worker with:")
+        print("  celery -A backend.celery_app worker --loglevel=info --pool=solo")
+    else:
+        configure_eager_fallback()
+
+    # --- Background ML Scheduler ---
     scheduler = BackgroundScheduler()
     scheduler.add_job(run_weekly_anomaly_detection, 'interval', days=7)
     scheduler.add_job(run_daily_disease_forecasting, 'interval', days=1)

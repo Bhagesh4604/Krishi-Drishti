@@ -11,8 +11,17 @@ from ..dependencies import get_current_user
 from ..services.earth_engine import earth_engine_service
 from ..services.additionality_service import is_additional
 from ..services.upload_service import upload_evidence_photo, is_configured as cloudinary_ready
+from ..tasks.gee_tasks import run_gee_analysis
+
+import hashlib
 
 router = APIRouter(prefix="/api/carbon", tags=["carbon"])
+
+
+def det_float(seed_str: str, min_v: float, max_v: float) -> float:
+    """Deterministic pseudo-random float from a seed string."""
+    hash_val = int(hashlib.md5(seed_str.encode()).hexdigest()[:8], 16)
+    return min_v + (hash_val / 0xFFFFFFFF) * (max_v - min_v)
 
 # --- Pydantic Models ---
 class ProjectCreate(BaseModel):
@@ -132,16 +141,16 @@ def _project_response(project: CarbonProject) -> ProjectResponse:
 @router.post("/analyze")
 async def analyze_farm(request: AnalysisRequest):
     """
-    Real-time Satellite Analysis for Carbon Potential.
-    Expects GeoJSON Polygon.
-    Returns: Eligibility, Credits, NDVI Growth Data.
+    Async Satellite Analysis for Carbon Potential.
+    Dispatches a Celery GEE task and returns a job_id immediately.
+    Poll GET /api/jobs/{job_id} for the full analysis result.
     """
     try:
         geojson_polygon = request.geometry or {}
         coordinates = geojson_polygon.get("coordinates", [])
         ring = coordinates[0] if coordinates and isinstance(coordinates[0], list) else coordinates
 
-        analysis = earth_engine_service.monitor_plot(
+        task = run_gee_analysis.delay(
             geometry_coords=ring,
             crop_type=request.crop_type or "Mixed",
             plot_name=request.plot_name or "Farm",
@@ -150,20 +159,11 @@ async def analyze_farm(request: AnalysisRequest):
         )
 
         return {
-            "eligible": analysis["carbon"]["eligible"],
-            "credits": analysis["carbon"]["gross_credits"],
-            "issuable_credits": analysis["carbon"]["issuable_credits"],
-            "buffer_pool_credits": analysis["carbon"]["buffer_pool_credits"],
-            "details": {
-                "baseline_ndvi": analysis["monitoring"]["baseline_ndvi"],
-                "current_ndvi": analysis["monitoring"]["current_ndvi"],
-                "growth": analysis["monitoring"]["ndvi_change"],
-                "soil_moisture": analysis["monitoring"]["soil_moisture"],
-                "area_hectares": analysis["area_hectares"],
-                "estimated_value_inr": analysis["carbon"]["estimated_value_inr"],
-            },
-            "status": analysis["status"],
-            "analysis": analysis,
+            "job_id": task.id,
+            "status": "queued",
+            "poll_url": f"/api/jobs/{task.id}",
+            "stream_url": f"/api/jobs/{task.id}/stream",
+            "message": "Analysis started. Poll poll_url for results.",
         }
     except Exception as exc:
         print(f"Analysis Error: {exc}")
@@ -177,22 +177,32 @@ async def monitor_plot_for_carbon(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    Async carbon monitoring for a specific plot.
+    Returns a job_id immediately — poll /api/jobs/{job_id} for results.
+    """
     plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
     if not plot:
         raise HTTPException(status_code=404, detail="Plot not found")
 
-    analysis = earth_engine_service.monitor_plot(
+    task = run_gee_analysis.delay(
         geometry_coords=_plot_ring(plot),
         crop_type=plot.crop_type or "Mixed",
         plot_name=plot.name,
         declared_area=plot.area,
         methodology=methodology,
+        plot_id=plot.id,
+        user_id=current_user.id,
     )
 
     return {
+        "job_id": task.id,
+        "status": "queued",
         "plot_id": plot.id,
         "plot_name": plot.name,
-        "analysis": analysis,
+        "methodology": methodology,
+        "poll_url": f"/api/jobs/{task.id}",
+        "stream_url": f"/api/jobs/{task.id}/stream",
     }
 
 
@@ -348,54 +358,63 @@ async def enroll_plot(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Enroll a plot in a carbon project.
+
+    Strategy: The CarbonProject record is created immediately with status
+    'Analyzing' so the farmer sees instant feedback. A Celery task then runs
+    the real GEE analysis in the background. When the task completes, the
+    projected_sequestration and other fields are updated by the task itself.
+
+    The frontend should poll GET /api/jobs/{job_id} or use the SSE stream;
+    when status == 'success' it can re-fetch GET /api/carbon/projects to see
+    the updated project with real satellite data.
+    """
     # 1. Verify Plot Ownership
     plot = db.query(Plot).filter(Plot.id == project.plot_id, Plot.user_id == current_user.id).first()
     if not plot:
         raise HTTPException(status_code=404, detail="Plot not found")
-        
+
     # 2. Check if already enrolled
     existing = db.query(CarbonProject).filter(CarbonProject.plot_id == plot.id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Plot already enrolled in a carbon project")
-        
-    monitoring = earth_engine_service.monitor_plot(
+
+    # 3. Compute initial additionality score (deterministic, no GEE needed)
+    initial_additionality = det_float(str(plot.id) + project.methodology, 0.1, 0.6)
+    vesting_date = datetime.utcnow() + timedelta(days=5 * 365)
+
+    # 4. Create project immediately with placeholder values
+    new_project = CarbonProject(
+        plot_id=plot.id,
+        user_id=current_user.id,
+        methodology=project.methodology,
+        status="Analyzing",           # Temporary status until GEE completes
+        baseline_emission=0.0,
+        projected_sequestration=0.0,  # Will be updated by the Celery task
+        verified_credits=0.0,
+        vesting_end_date=vesting_date,
+        additionality_score=initial_additionality,
+        buffer_pool_percentage=15.0,
+        verification_cost_usd=1800.0, # Default; task will update
+        requires_soil_sample=True,
+    )
+    db.add(new_project)
+    db.commit()
+    db.refresh(new_project)
+
+    # 5. Dispatch GEE analysis asynchronously
+    task = run_gee_analysis.delay(
         geometry_coords=_plot_ring(plot),
         crop_type=plot.crop_type or "Mixed",
         plot_name=plot.name,
         declared_area=plot.area,
         methodology=project.methodology,
-    )
-
-    total_potential = monitoring["carbon"]["gross_credits"]
-    vesting_date = datetime.utcnow() + timedelta(days=5 * 365)
-    initial_additionality = det_float(str(plot.id) + project.methodology, 0.1, 0.6)
-
-    plot.health_score = monitoring["health_score"]
-    plot.moisture = monitoring["moisture"]
-    plot.image_url = monitoring["image_url"]
-    plot.last_scan_date = datetime.utcnow()
-    plot.organic_score = max(plot.organic_score or 0.0, monitoring["carbon"]["eligibility_score"] * 100.0)
-
-    new_project = CarbonProject(
         plot_id=plot.id,
         user_id=current_user.id,
-        methodology=project.methodology,
-        status="Enrolled",
-        baseline_emission=monitoring["carbon"]["baseline_soc_tons_per_ha"] * monitoring["area_hectares"],
-        projected_sequestration=total_potential,
-        verified_credits=0.0,
-        vesting_end_date=vesting_date,
-        additionality_score=initial_additionality,
-        buffer_pool_percentage=monitoring["carbon"]["buffer_pool_percentage"],
-        verification_cost_usd=monitoring["carbon"]["verification_cost_usd"],
-        requires_soil_sample=monitoring["carbon"]["requires_soil_sample"],
     )
-    
-    db.add(new_project)
-    db.commit()
-    db.refresh(new_project)
 
-    # --- Operation Log ---
+    # 6. Audit log
     log = FarmerOperationLog(
         user_id=current_user.id,
         plot_id=plot.id,
@@ -403,22 +422,29 @@ async def enroll_plot(
         operation="project_enrolled",
         detail=json.dumps({
             "methodology": project.methodology,
-            "projected_credits": round(total_potential, 2),
-            "area_ha": round(monitoring.get("area_hectares", 0), 2),
+            "area_acres": plot.area,
+            "gee_job_id": task.id,
+            "async": True,
         }),
     )
     db.add(log)
     db.commit()
 
-    return _project_response(new_project)
+    # 7. Return the project + the job_id so frontend can poll
+    response = _project_response(new_project)
+    # Attach job tracking info (extra fields beyond the response model)
+    return {
+        **response.model_dump(),
+        "gee_job_id": task.id,
+        "poll_url": f"/api/jobs/{task.id}",
+        "stream_url": f"/api/jobs/{task.id}/stream",
+        "message": "Project enrolled. GEE analysis running in background — poll poll_url for updated satellite metrics.",
+    }
 
 @router.post("/{project_id}/evidence")
 async def upload_evidence(
     project_id: int,
-    description: str = Form(...),
-    geo_lat: float = Form(...),
-    geo_lng: float = Form(...),
-    file: Optional[UploadFile] = File(None),
+    evidence: EvidenceCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -434,41 +460,12 @@ async def upload_evidence(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    image_url: Optional[str] = None
-    upload_warning: Optional[str] = None
-
-    if file is not None:
-        if not cloudinary_ready():
-            # Cloudinary not configured — accept metadata but warn
-            upload_warning = (
-                "Photo could not be stored: Cloudinary credentials are not configured. "
-                "Evidence metadata has been recorded but photo proof is missing. "
-                "Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET to .env."
-            )
-        else:
-            try:
-                file_bytes = await file.read()
-                content_type = file.content_type or "image/jpeg"
-                result = upload_evidence_photo(
-                    file_bytes=file_bytes,
-                    content_type=content_type,
-                    farmer_id=current_user.id,
-                    project_id=project.id,
-                )
-                image_url = result["url"]
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e))
-            except RuntimeError as e:
-                raise HTTPException(status_code=503, detail=str(e))
-    else:
-        upload_warning = "No photo file provided. Evidence recorded as metadata only."
-
     new_evidence = CarbonEvidence(
         project_id=project.id,
-        description=description,
-        geo_lat=geo_lat,
-        geo_lng=geo_lng,
-        image_url=image_url,
+        description=evidence.description,
+        geo_lat=evidence.geo_lat,
+        geo_lng=evidence.geo_lng,
+        image_url=None,
         verified=False,
     )
     db.add(new_evidence)
@@ -483,26 +480,19 @@ async def upload_evidence(
         project_id=project.id,
         operation="evidence_upload",
         detail=json.dumps({
-            "description": description,
-            "geo_lat": geo_lat,
-            "geo_lng": geo_lng,
-            "photo_stored": image_url is not None,
-            "photo_url": image_url,
+            "description": evidence.description,
+            "geo_lat": evidence.geo_lat,
+            "geo_lng": evidence.geo_lng,
         }),
     )
     db.add(log)
 
     db.commit()
 
-    response = {
+    return {
         "message": "Evidence uploaded successfully",
         "status": project.status,
-        "photo_stored": image_url is not None,
-        "photo_url": image_url,
     }
-    if upload_warning:
-        response["warning"] = upload_warning
-    return response
 
 @router.post("/{project_id}/verify")
 async def trigger_verification(

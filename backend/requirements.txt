@@ -19,3 +19,5 @@ apscheduler
 faiss-cpu
 rank-bm25
 pdfplumber
+celery[redis]==5.3.6
+redis==5.0.3

@@ -240,10 +240,7 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
             alert("Please provide Owner Name and Gut Number to verify ownership.");
             return;
         }
-        if (!proofFile) {
-            alert("Please attach 7/12 Extract or equivalent proof of ownership.");
-            return;
-        }
+        // Proof file is optional — enrollment can proceed, verification happens later
 
         setLoading(true);
         try {

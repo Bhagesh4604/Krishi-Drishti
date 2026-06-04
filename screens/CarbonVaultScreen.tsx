@@ -33,6 +33,7 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
    const [walletInfo, setWalletInfo] = useState<any | null>(null);
    const [aggregators, setAggregators] = useState<any[]>([]);
    const [claimLoading, setClaimLoading] = useState(false);
+   const [enrollLoading, setEnrollLoading] = useState(false);
 
    useEffect(() => {
       loadData();
@@ -95,14 +96,20 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
    const handleEnroll = async () => {
       if (!selectedPlotId) return;
 
+      setEnrollLoading(true);
       try {
          await carbonService.enrollPlot(selectedPlotId, selectedMethodology);
          setShowEnrollModal(false);
          setMonitoringPreview(null);
          await loadData();
-      } catch (error) {
+      } catch (error: any) {
          console.error(error);
-         alert('Enrollment failed');
+         const detail = error?.response?.data?.detail || 'Enrollment failed. Please try again.';
+         alert(`Enrollment Error: ${detail}`);
+         setShowEnrollModal(false);
+         await loadData(); // Refresh so UI matches actual DB state
+      } finally {
+         setEnrollLoading(false);
       }
    };
 
@@ -118,11 +125,12 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
          });
          setShowEvidenceModal(false);
          setEvidenceDesc('');
-         alert('Evidence uploaded and sent for verification.');
+         alert('Evidence submitted for verification.');
          await loadData();
-      } catch (error) {
+      } catch (error: any) {
          console.error(error);
-         alert('Upload failed');
+         const detail = error?.response?.data?.detail || 'Upload failed. Please try again.';
+         alert(`Upload Error: ${detail}`);
       }
    };
 
@@ -163,7 +171,13 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
       }
    };
 
-   const unenrolledPlots = plots.filter(plot => !projects.find(project => project.plot_id === plot.id));
+   // Exclude plots that have an active project (ignore Audit_Failed — those can be re-enrolled)
+   const activeProjectPlotIds = new Set(
+      projects
+         .filter((p: any) => p.status !== 'Audit_Failed')
+         .map((p: any) => p.plot_id)
+   );
+   const unenrolledPlots = plots.filter((plot: any) => !activeProjectPlotIds.has(plot.id));
    const totalVerifiedCredits = projects.reduce((acc, curr) => acc + (curr.verified_credits || 0), 0);
    const totalAvailableCredits = projects.reduce((acc, curr) => acc + (curr.available_credits || 0), 0);
    const totalLockedCredits = projects.reduce((acc, curr) => acc + (curr.locked_credits || 0), 0);
