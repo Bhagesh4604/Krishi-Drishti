@@ -6,7 +6,8 @@ import {
    CheckCircle2,
    Loader2,
    ShieldCheck,
-   Upload
+   Upload,
+   Link2
 } from 'lucide-react';
 import { carbonService, plotService, getUserLocation } from '../src/services/api';
 
@@ -292,6 +293,14 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                                  <CheckCircle2 size={16} /> Credits Issued
                               </div>
                            ) : null}
+                           {(project.status === 'Verified' || project.status === 'Issued') && (
+                              <button
+                                 onClick={() => navigateTo('traceability')}
+                                 className="w-full py-3 bg-gradient-to-r from-teal-600 to-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md"
+                              >
+                                 <Link2 size={14} /> 🌾 Mint Harvest Token
+                              </button>
+                           )}
                         </div>
                      </div>
                   ))}

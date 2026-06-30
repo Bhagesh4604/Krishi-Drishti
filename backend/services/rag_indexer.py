@@ -64,7 +64,7 @@ def _get_embeddings(texts: list[str]) -> list[list[float]]:
         # Gemini embed_content accepts one text at a time
         for text in texts:
             result = client.models.embed_content(
-                model="text-embedding-004",
+                model="models/embedding-001",
                 contents=text,
                 config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
             )
@@ -110,11 +110,11 @@ def get_rag_engine() -> HybridSearchEngine:
                 engine.add_documents(batch, meta)
                 print(f"[RAG]   Indexed chunks {i}–{i + len(batch) - 1}")
 
-            print(f"[RAG] ✓ Corpus indexed: {len(chunks)} chunks ready for retrieval.")
+            print(f"[RAG] [OK] Corpus indexed: {len(chunks)} chunks ready for retrieval.")
         except Exception as e:
-            print(f"[RAG] ✗ Failed to index corpus: {e}")
+            print(f"[RAG] [X] Failed to index corpus: {e}")
     else:
-        print(f"[RAG] ✗ Corpus file not found at: {corpus_path}")
+        print(f"[RAG] [X] Corpus file not found at: {corpus_path}")
 
     # --- Fallback: hardcoded domain facts (always present as a safety net) ---
     fallback_docs = [

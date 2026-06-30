@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 import os
 
 try:
-    import google.generativeai as genai
+    from google import genai
 except ModuleNotFoundError:
     genai = None
 
@@ -15,14 +15,22 @@ import httpx
 
 router = APIRouter(prefix="/api/finance", tags=["finance"])
 
+class GeminiWrapper:
+    def __init__(self, model_name="gemini-1.5-flash"):
+        self.model_name = model_name
+        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        
+    def generate_content(self, contents):
+        return self.client.models.generate_content(
+            model=self.model_name,
+            contents=contents
+        )
 
 def _get_gemini_model():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key or genai is None:
         return None
-
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-1.5-flash")
+    return GeminiWrapper()
 
 @router.get("/status")
 async def get_finance_status(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

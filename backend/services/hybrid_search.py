@@ -40,6 +40,8 @@ class HybridSearchEngine:
         if self.index is not None:
             try:
                 embeddings = self.embedding_fn(documents)
+                if not embeddings:
+                    return
                 vectors = np.array(embeddings).astype('float32')
                 self.index.add(vectors)
             except Exception as e:

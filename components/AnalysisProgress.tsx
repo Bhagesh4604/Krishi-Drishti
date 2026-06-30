@@ -16,10 +16,12 @@
 import React, { useEffect, useState } from 'react';
 import { useJobPoller, JobPollerOptions } from '../hooks/useJobPoller';
 
-interface AnalysisProgressProps<T = any> extends JobPollerOptions<T> {
+interface AnalysisProgressProps<T = any> {
   jobId: string | null;
   title?: string;
   subtitle?: string;
+  onComplete?: (result: T) => void;
+  onError?: (error: string) => void;
 }
 
 const STAGE_LABELS: { threshold: number; label: string }[] = [

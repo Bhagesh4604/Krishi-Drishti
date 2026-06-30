@@ -90,7 +90,7 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
     setIsScanning(true);
     try {
       const [analysis, yieldRes] = await Promise.all([
-        plotService.analyzePlot(selectedPlot.id),
+        plotService.startAnalysis(selectedPlot.id),
         plotService.forecastYield(selectedPlot.id)
       ]);
       setAnalysisResult({ ...analysis, ...yieldRes });

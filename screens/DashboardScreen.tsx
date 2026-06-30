@@ -28,7 +28,9 @@ import {
   ArrowRight,
   MessageCircle,
   Sun,
-  Plus
+  Plus,
+  Link2,
+  Building2
 } from 'lucide-react';
 import { weatherService } from '../src/services/api';
 import WeatherModal from '../components/WeatherModal';
@@ -226,6 +228,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.9 }}
             className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
+            onClick={() => navigateTo('corporate-dashboard')}
+          >
+            <Building2 size={20} className="text-gray-900" />
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
           >
             <div className="w-2 h-2 bg-black rounded-full absolute top-3 right-3 border border-white pointer-events-none" />
             <Bell size={20} className="text-gray-900" fill="black" />
@@ -331,6 +342,54 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         </motion.button>
       </motion.div>
 
+      {/* Supply Chain Traceability Discovery Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, type: 'spring', stiffness: 200, damping: 20 }}
+        className="mx-6 mb-6"
+      >
+        <div
+          onClick={() => navigateTo('traceability')}
+          className="cursor-pointer overflow-hidden"
+          style={{ background: '#0D0D0D', border: '1px solid #292524' }}
+        >
+          {/* Header strip */}
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #1c1917' }}>
+            <div className="flex items-center gap-2">
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#F59E0B', letterSpacing: '0.2em' }}>SUPPLY CHAIN TRACEABILITY</span>
+            </div>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#57534e', letterSpacing: '0.15em' }}>OPEN LEDGER →</span>
+          </div>
+
+          {/* 4-step cycle */}
+          <div className="grid grid-cols-4" style={{ borderBottom: '1px solid #1c1917' }}>
+            {[
+              { step: '01', label: 'HARVEST', icon: '🌾' },
+              { step: '02', label: 'MINT', icon: '◆' },
+              { step: '03', label: 'QR CODE', icon: '▣' },
+              { step: '04', label: 'VERIFY', icon: '✓' },
+            ].map((item, i) => (
+              <div key={item.step}
+                className="py-3 flex flex-col items-center gap-1"
+                style={{ borderRight: i < 3 ? '1px solid #1c1917' : 'none' }}
+              >
+                <span className="text-base">{item.icon}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '8px', color: '#F59E0B', fontWeight: 700 }}>{item.step}</span>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '7px', color: '#57534e', letterSpacing: '0.1em' }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Tagline */}
+          <div className="px-4 py-2.5">
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#78716c', lineHeight: 1.6 }}>
+              Mint a harvest token after every crop cycle. Buyers scan a QR to verify your crop's carbon footprint, chemical inputs &amp; origin — CBAM compliant.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
       {/* 4. Services Grid */}
       <motion.div 
         variants={containerVariants}
@@ -349,6 +408,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             { icon: <Sprout size={28} strokeWidth={1.5} />, label: 'Carbon', bg: 'bg-gradient-to-br from-emerald-400 to-emerald-600', shadow: 'shadow-emerald-500/40', text: 'text-white', screen: 'carbon-vault' },
             { icon: <Zap size={28} strokeWidth={1.5} />, label: 'Forecast', bg: 'bg-gradient-to-br from-yellow-300 to-amber-500', shadow: 'shadow-amber-500/40', text: 'text-white', screen: 'forecast' },
             { icon: <Radio size={28} strokeWidth={1.5} />, label: 'Acoustic', bg: 'bg-gradient-to-br from-rose-400 to-rose-600', shadow: 'shadow-rose-500/40', text: 'text-white', screen: 'acoustic-scanner' },
+            { icon: <Link2 size={28} strokeWidth={1.5} />, label: 'Trace', bg: 'bg-gradient-to-br from-teal-400 to-cyan-600', shadow: 'shadow-teal-500/40', text: 'text-white', screen: 'traceability' },
           ].map((item, idx) => (
             <motion.button
               key={idx}
@@ -481,11 +541,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                   <span className="text-[10px] font-bold text-gray-700">Map</span>
                 </motion.button>
                 <div className="w-px h-8 bg-gray-200/50" />
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('crop-stress'); }}>
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('field-monitor', { plotId: plot.id }); }}>
                   <div className="w-10 h-10 rounded-full bg-emerald-50/80 flex items-center justify-center group-hover:bg-emerald-100 transition-colors border border-emerald-100">
                     <Activity size={18} className="text-emerald-600" />
                   </div>
-                  <span className="text-[10px] font-bold text-gray-700">Health</span>
+                  <span className="text-[10px] font-bold text-gray-700">Satellite</span>
                 </motion.button>
                 <div className="w-px h-8 bg-gray-200/50" />
                 <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>

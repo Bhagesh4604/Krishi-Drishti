@@ -1,4 +1,4 @@
-export type Screen = 'landing' | 'auth' | 'home' | 'chat' | 'vision' | 'vision-result' | 'map' | 'market' | 'market-detail' | 'insurance' | 'forecast' | 'live-audio' | 'carbon-vault' | 'scheme-setu' | 'contracts' | 'crop-stress' | 'profile' | 'globe' | 'contracts' | 'landmark' | 'acoustic-scanner' | 'soil-carbon';
+export type Screen = 'landing' | 'auth' | 'home' | 'chat' | 'vision' | 'vision-result' | 'map' | 'market' | 'market-detail' | 'insurance' | 'forecast' | 'live-audio' | 'carbon-vault' | 'scheme-setu' | 'contracts' | 'crop-stress' | 'profile' | 'globe' | 'contracts' | 'landmark' | 'acoustic-scanner' | 'soil-carbon' | 'traceability' | 'trace-verify' | 'field-monitor' | 'crop-cycle' | 'marketplace' | 'corporate-dashboard';
 
 export type Language = 'en' | 'hi' | 'mr' | 'bn' | 'te' | 'ta' | 'pa' | 'kn';
 
@@ -71,4 +71,53 @@ export interface Listing {
   isFraud?: boolean;
   grade?: 'A' | 'B' | 'C';
   distanceKm?: number;
+}
+
+export interface ChemicalInput {
+  name: string;
+  quantity: string;
+  unit: string;
+  applied_date: string;
+}
+
+export interface TokenTransferLog {
+  from_entity: string;
+  to_entity: string;
+  transfer_date: string;
+  transfer_hash: string;
+  notes?: string;
+}
+
+export interface HarvestToken {
+  token_id: string;
+  crop_type: string;
+  variety?: string;
+  harvest_date: string;
+  yield_kg: number;
+  area_harvested_acres: number;
+  carbon_footprint_kg_co2e: number;
+  carbon_credits_linked: number;
+  farming_methodology?: string;
+  ndvi_at_harvest?: number;
+  status: 'Draft' | 'Minted' | 'Transferred';
+  token_hash?: string;
+  previous_hash?: string;
+  sequence_number: number;
+  qr_url?: string;
+  minted_at?: string;
+  buyer_name?: string;
+  buyer_entity?: string;
+  transferred_at?: string;
+  chemical_inputs: ChemicalInput[];
+  transfer_logs: TokenTransferLog[];
+  plot_name: string;
+  farmer_initials: string;
+  farmer_district: string;
+  geo_lat?: number;
+  geo_lng?: number;
+  // Public verify fields
+  hash_payload?: string;
+  hash_algorithm?: string;
+  cbam_eligible?: boolean;
+  ccts_eligible?: boolean;
 }

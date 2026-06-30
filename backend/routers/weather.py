@@ -11,7 +11,7 @@ async def get_weather(lat: float = 21.1458, lng: float = 79.0882):
     """
     try:
         print(f"Fetching weather for lat={lat}, lng={lng}")
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=temperature_2m,relative_humidity_2m,rain,precipitation,weather_code,is_day,wind_speed_10m,soil_temperature_0cm&hourly=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,wind_speed_10m_max&timezone=auto"
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=temperature_2m,relative_humidity_2m,rain,precipitation,weather_code,is_day,wind_speed_10m,soil_temperature_0cm&hourly=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,wind_speed_10m_max&timezone=auto&forecast_days=14"
         async with httpx.AsyncClient() as client:
             response = await client.get(url, timeout=10.0)
             data = response.json()

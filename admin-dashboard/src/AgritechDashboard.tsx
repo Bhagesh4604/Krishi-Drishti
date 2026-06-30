@@ -19,13 +19,13 @@ const LS=(s)=>({fontFamily:"'League Spartan',sans-serif",...s});
 const LAB=(s)=>LS({fontSize:10,fontWeight:900,letterSpacing:"0.4em",textTransform:"uppercase",...s});
 
 function useReveal(){
-  const ref=useRef(null);const[v,setV]=useState(false);
+  const ref=useRef<any>(null);const[v,setV]=useState(false);
   useEffect(()=>{
     const el=ref.current;if(!el)return;
     const ob=new IntersectionObserver(([e])=>{if(e.isIntersecting){setV(true);ob.disconnect();}},{threshold:0.1});
     ob.observe(el);return()=>ob.disconnect();
   },[]);
-  return[ref,v];
+  return[ref,v] as const;
 }
 
 function Spark({data,color="#e4a4bd",w=130,h=40}){

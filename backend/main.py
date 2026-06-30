@@ -8,7 +8,7 @@ load_dotenv(override=True)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal
-from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance, admin, jobs
+from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance, admin, jobs, traceability, corporate, crop_cycles, sse_analysis
 from .celery_app import is_redis_available, configure_eager_fallback
 from apscheduler.schedulers.background import BackgroundScheduler
 from .models import Plot, PlotHistory, DiseaseRiskAlert
@@ -46,6 +46,10 @@ app.include_router(contracts.router)
 app.include_router(insurance.router)
 app.include_router(admin.router)
 app.include_router(jobs.router)
+app.include_router(traceability.router)
+app.include_router(corporate.router)
+app.include_router(crop_cycles.router)
+app.include_router(sse_analysis.router)
 
 @app.get("/")
 def read_root():

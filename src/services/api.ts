@@ -21,8 +21,11 @@ export const getUserLocation = async (): Promise<{ lat: number; lng: number }> =
     if (navigator.geolocation && window.isSecureContext !== false) {
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        async () => fetchIpLocation(),
-        { timeout: 5000 }
+        async (err) => {
+          console.warn("Geolocation failed on device:", err.message);
+          fetchIpLocation();
+        },
+        { timeout: 10000 }
       );
     } else {
       fetchIpLocation();
@@ -279,16 +282,21 @@ export const plotService = {
     const response = await api.post('/plots/', plot);
     return response.data;
   },
-  analyzePlot: async (plotId: number) => {
-    const response = await api.get(`/plots/${plotId}/analyze`);
-    return response.data;
-  },
   getCarbonAnalysis: async (plotId: number) => {
     const response = await api.get(`/plots/${plotId}/carbon`);
     return response.data;
   },
   forecastYield: async (plotId: number) => {
     const response = await api.get(`/plots/${plotId}/yield-forecast`);
+    return response.data;
+  },
+  startAnalysis: async (plotId: number) => {
+    // Triggers Celery GEE task, returns job_id
+    const response = await api.get(`/plots/${plotId}/analyze`);
+    return response.data;
+  },
+  pollJob: async (jobId: string) => {
+    const response = await api.get(`/jobs/${jobId}`);
     return response.data;
   }
 };
@@ -310,8 +318,20 @@ export const carbonService = {
     const response = await api.post('/carbon/enroll', { plot_id: plotId, methodology });
     return response.data;
   },
-  uploadEvidence: async (projectId: number, data: { description: string, geo_lat: number, geo_lng: number }) => {
-    const response = await api.post(`/carbon/${projectId}/evidence`, data);
+  uploadEvidence: async (projectId: number, data: { description: string, geo_lat: number, geo_lng: number, file?: File }) => {
+    const formData = new FormData();
+    formData.append('description', data.description);
+    formData.append('geo_lat', data.geo_lat.toString());
+    formData.append('geo_lng', data.geo_lng.toString());
+    if (data.file) {
+      formData.append('file', data.file);
+    } else {
+      const dummyBlob = new Blob(['dummy'], { type: 'text/plain' });
+      formData.append('file', dummyBlob, 'dummy.txt');
+    }
+    const response = await api.post(`/carbon/${projectId}/evidence`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data;
   },
   verifyProject: async (projectId: number) => {
@@ -388,6 +408,60 @@ export const systemService = {
     }
 
     return results;
+  }
+};
+
+export const traceabilityService = {
+  getMyTokens: async () => {
+    const response = await api.get('/trace/tokens');
+    return response.data;
+  },
+  mintToken: async (payload: any) => {
+    const response = await api.post('/trace/mint', payload);
+    return response.data;
+  },
+  transferToken: async (tokenId: string, payload: { buyer_name: string; buyer_entity: string; notes?: string }) => {
+    const response = await api.post(`/trace/transfer/${tokenId}`, payload);
+    return response.data;
+  },
+  verifyToken: async (tokenId: string) => {
+    // Public endpoint — no auth needed, but the api instance will include token if present
+    const response = await api.get(`/trace/verify/${tokenId}`);
+    return response.data;
+  },
+  deleteToken: async (tokenId: string) => {
+    const response = await api.delete(`/trace/tokens/${tokenId}`);
+    return response.data;
+  }
+};
+
+export const marketplaceService = {
+  getTokens: async (crop?: string) => {
+    const params = crop ? { crop } : {};
+    const response = await api.get('/trace/marketplace', { params });
+    return response.data;
+  }
+};
+
+export const corporateService = {
+  getPortfolio: async () => {
+    const response = await api.get('/corporate/portfolio');
+    return response.data;
+  }
+};
+
+export const cropCycleService = {
+  getCycles: async (plotId: number) => {
+    const response = await api.get(`/cycles/plot/${plotId}`);
+    return response.data;
+  },
+  startCycle: async (plotId: number, data: { crop_type: string, variety?: string }) => {
+    const response = await api.post(`/cycles/plot/${plotId}/start`, data);
+    return response.data;
+  },
+  logEvent: async (cycleId: number, data: { event_type: string, geo_lat?: number, geo_lng?: number, notes?: string, media_url?: string }) => {
+    const response = await api.post(`/cycles/${cycleId}/events`, data);
+    return response.data;
   }
 };
 

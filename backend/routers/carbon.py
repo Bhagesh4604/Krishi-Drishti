@@ -444,7 +444,10 @@ async def enroll_plot(
 @router.post("/{project_id}/evidence")
 async def upload_evidence(
     project_id: int,
-    evidence: EvidenceCreate,
+    description: str = Form(...),
+    geo_lat: float = Form(...),
+    geo_lng: float = Form(...),
+    file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -460,12 +463,27 @@ async def upload_evidence(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    image_url = None
+    if cloudinary_ready():
+        content = await file.read()
+        try:
+            result = upload_evidence_photo(
+                file_bytes=content,
+                content_type=file.content_type,
+                farmer_id=current_user.id,
+                project_id=project.id
+            )
+            image_url = result["url"]
+        except Exception as e:
+            print(f"Cloudinary upload failed: {e}")
+            # Fallback to none if upload fails
+
     new_evidence = CarbonEvidence(
         project_id=project.id,
-        description=evidence.description,
-        geo_lat=evidence.geo_lat,
-        geo_lng=evidence.geo_lng,
-        image_url=None,
+        description=description,
+        geo_lat=geo_lat,
+        geo_lng=geo_lng,
+        image_url=image_url,
         verified=False,
     )
     db.add(new_evidence)
@@ -480,9 +498,9 @@ async def upload_evidence(
         project_id=project.id,
         operation="evidence_upload",
         detail=json.dumps({
-            "description": evidence.description,
-            "geo_lat": evidence.geo_lat,
-            "geo_lng": evidence.geo_lng,
+            "description": description,
+            "geo_lat": geo_lat,
+            "geo_lng": geo_lng,
         }),
     )
     db.add(log)

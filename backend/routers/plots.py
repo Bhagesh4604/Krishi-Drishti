@@ -106,6 +106,59 @@ async def create_plot(
         except AttributeError:
             coords_list = [coord.dict() for coord in plot.coordinates]
 
+        # ─── Upgrade B: Server-Side Area Calculation (Haversine Shoelace) ───────
+        # Ignore client-submitted area entirely. Compute it server-side.
+        def haversine_area_acres(coords: list) -> float:
+            """
+            Compute the approximate area of a polygon using the spherical excess formula.
+            This prevents clients from spoofing area values.
+            """
+            R = 6371000  # Earth radius in meters
+            n = len(coords)
+            if n < 3:
+                return 0.0
+            area_m2 = 0.0
+            for i in range(n):
+                j = (i + 1) % n
+                lat1 = math.radians(coords[i]["lat"])
+                lat2 = math.radians(coords[j]["lat"])
+                dlng = math.radians(coords[j]["lng"] - coords[i]["lng"])
+                area_m2 += (dlng) * (2 + math.sin(lat1) + math.sin(lat2))
+            area_m2 = abs(area_m2) * R * R / 2.0
+            return area_m2 * 0.000247105  # Convert sq meters to acres
+
+        server_area_acres = haversine_area_acres(coords_list)
+
+        # ─── Upgrade B: Overlap Detection using Shapely ───────────────────────────
+        try:
+            from shapely.geometry import Polygon as ShapelyPolygon
+            new_poly_coords = [(c["lng"], c["lat"]) for c in coords_list]
+            if len(new_poly_coords) >= 3:
+                new_shapely_poly = ShapelyPolygon(new_poly_coords)
+                if new_shapely_poly.is_valid:
+                    # Check overlap against all other users' plots
+                    existing_plots = db.query(Plot).filter(Plot.user_id != current_user.id).all()
+                    for ep in existing_plots:
+                        try:
+                            ep_coords = json.loads(ep.coordinates)
+                            ep_poly_coords = [(c["lng"], c["lat"]) for c in ep_coords]
+                            if len(ep_poly_coords) >= 3:
+                                ep_poly = ShapelyPolygon(ep_poly_coords)
+                                if ep_poly.is_valid and new_shapely_poly.intersects(ep_poly):
+                                    raise HTTPException(
+                                        status_code=409,
+                                        detail=f"Plot boundary overlaps with an existing registered land plot (Plot ID: {ep.id}). "
+                                               "You cannot claim carbon credits on land already registered by another farmer."
+                                    )
+                        except HTTPException:
+                            raise
+                        except Exception:
+                            pass  # Skip malformed existing polygons
+        except HTTPException:
+            raise
+        except ImportError:
+            pass  # Shapely not installed, skip overlap check
+
         coords_json = json.dumps(coords_list)
         base_health = 0.75 if (plot.crop_type or "").lower() == "cotton" else 0.85
         polygon_id = f"gee_{int(det_float(plot.name + str(current_user.id), 10000, 99999))}"
@@ -114,13 +167,15 @@ async def create_plot(
             user_id=current_user.id,
             name=plot.name,
             coordinates=coords_json,
-            area=plot.area,
+            area=server_area_acres,  # ← Always server-computed, never from client
             crop_type=plot.crop_type,
             health_score=base_health,
             moisture=det_float(coords_json, 25.0, 45.0),
             polygon_id=polygon_id,
             image_url=None,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         print(f"CREATE PLOT ERROR: {exc}")
         raise HTTPException(status_code=500, detail=f"Server Error: {str(exc)}")
@@ -134,7 +189,7 @@ async def create_plot(
         user_id=current_user.id,
         plot_id=new_plot.id,
         operation="plot_created",
-        detail=json.dumps({"name": new_plot.name, "area_acres": new_plot.area, "crop_type": new_plot.crop_type}),
+        detail=json.dumps({"name": new_plot.name, "area_acres": new_plot.area, "server_computed": True, "crop_type": new_plot.crop_type}),
     )
     db.add(log)
     db.commit()

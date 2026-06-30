@@ -203,22 +203,21 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
         if (!surveyNumber.trim()) return;
         setLoading(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            const baseLat = currentLocation ? currentLocation[0] : 21.1458;
-            const baseLng = currentLocation ? currentLocation[1] : 79.0882;
-            const randomOffset = () => (Math.random() - 0.5) * 0.001;
-
-            const procedurallyGeneratedPolygon: [number, number][] = [
-                [baseLat + 0.001, baseLng - 0.001],
-                [baseLat + 0.001 + randomOffset(), baseLng + 0.001 + randomOffset()],
-                [baseLat - 0.001 + randomOffset(), baseLng + 0.001 + randomOffset()],
-                [baseLat - 0.001, baseLng - 0.001],
-            ];
-            setMarkers(procedurallyGeneratedPolygon);
-            setCurrentLocation(procedurallyGeneratedPolygon[0]);
-            alert(`Survey No. ${surveyNumber} located.`);
+            // Use OpenStreetMap Nominatim to search for the location
+            const res = await axios.get(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(surveyNumber)}&format=json&limit=1`);
+            
+            if (res.data && res.data.length > 0) {
+                const lat = parseFloat(res.data[0].lat);
+                const lon = parseFloat(res.data[0].lon);
+                
+                setCurrentLocation([lat, lon]);
+                setMarkers([]); // clear old markers
+                alert(`Found location: ${res.data[0].display_name}`);
+            } else {
+                alert("Location not found. Try entering a village or city name.");
+            }
         } catch {
-            alert("Could not fetch survey details.");
+            alert("Could not fetch location details.");
         } finally {
             setLoading(false);
         }

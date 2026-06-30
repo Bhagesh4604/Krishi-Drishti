@@ -4,15 +4,12 @@ from pydantic import BaseModel
 import os
 
 try:
-    import google.generativeai as genai
+    from google import genai
 except ModuleNotFoundError:
     genai = None
 
 from PIL import Image
 import io
-from ..database import get_db
-from ..models import ChatMessage, User, StressReport
-from ..dependencies import get_current_user
 from ..database import get_db
 from ..models import ChatMessage, User, StressReport
 from ..dependencies import get_current_user
@@ -23,14 +20,22 @@ from ..ml_models.soc_model import train_soc_model
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
+class GeminiWrapper:
+    def __init__(self, model_name="gemini-1.5-flash"):
+        self.model_name = model_name
+        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        
+    def generate_content(self, contents):
+        return self.client.models.generate_content(
+            model=self.model_name,
+            contents=contents
+        )
 
 def _get_gemini_model():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key or genai is None:
         return None
-
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-flash-latest")
+    return GeminiWrapper()
 
 
 class StressAnalysisRequest(BaseModel):
@@ -340,7 +345,6 @@ INSTRUCTIONS:
         # 5. Save AI Message
         ai_msg = ChatMessage(user_id=current_user.id, role="model", text=answer)
         db.add(ai_msg)
-        
         db.commit()
         
         return {"response": answer}
@@ -348,14 +352,19 @@ INSTRUCTIONS:
     except Exception as e:
         import traceback
         traceback.print_exc()
-        # Fallback response so user isn't invalid
-        return {"response": f"I am having trouble connecting to the brain. Error: {str(e)}"}
+        # Friendly fallback so user sees helpful content
+        err_str = str(e)
+        if "API_KEY_INVALID" in err_str or "API key not valid" in err_str or "API Key not found" in err_str:
+            fallback = "Krishi-AI is temporarily unavailable. The Gemini API key needs to be updated. Please contact the administrator."
+        else:
+            fallback = "Krishi-AI is temporarily unavailable. Please try again in a moment."
+        return {"response": fallback}
 
 def _generate_chat_response(prompt):
     """Helper to run blocking Gemini call in thread"""
     model = _get_gemini_model()
     if model is None:
-        return "AI chat is unavailable right now because the Gemini dependency is not installed in this Python environment."
+        return "Krishi-AI is unavailable: GEMINI_API_KEY is not configured. Please add it to backend/.env"
     response = model.generate_content(prompt)
     return response.text
 

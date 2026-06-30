@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -356,3 +356,150 @@ class DiseaseRiskAlert(Base):
 
     plot = relationship("Plot")
     user = relationship("User")
+
+
+class CropCycle(Base):
+    """
+    Tracks a crop from planting to harvest.
+    Provides the container for geo-tagged timeline events.
+    """
+    __tablename__ = "crop_cycles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plot_id = Column(Integer, ForeignKey("plots.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    crop_type = Column(String)
+    variety = Column(String, nullable=True)
+    status = Column(String, default="Active") # Active, Harvested, Abandoned
+    start_date = Column(DateTime, default=datetime.utcnow)
+    end_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    plot = relationship("Plot")
+    user = relationship("User")
+    events = relationship("CropCycleEvent", back_populates="cycle", cascade="all, delete-orphan")
+    harvest_tokens = relationship("HarvestToken", back_populates="crop_cycle")
+
+
+class CropCycleEvent(Base):
+    """
+    An immutable event logged during the crop cycle (e.g., Sowing, Fertilizing, Inspection).
+    Must include geotag and media for proof.
+    """
+    __tablename__ = "crop_cycle_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cycle_id = Column(Integer, ForeignKey("crop_cycles.id"), index=True)
+    event_type = Column(String) # Sowing, Fertilizing, Weeding, Inspection, Harvest
+    event_date = Column(DateTime, default=datetime.utcnow)
+    
+    # Geofenced proof
+    geo_lat = Column(Float, nullable=True)
+    geo_lng = Column(Float, nullable=True)
+    media_url = Column(String, nullable=True) # Photo/Video proof URL
+    notes = Column(String, nullable=True)
+
+    # Cryptographic link
+    event_hash = Column(String, nullable=True) # Hash of this event's data + media URL
+
+    cycle = relationship("CropCycle", back_populates="events")
+
+
+class HarvestToken(Base):
+    """
+    Tokenized representation of a harvested crop batch.
+    Forms an immutable, cryptographically-linked provenance record
+    for supply chain traceability (CBAM, CCTS compliance).
+    Each token hashes all its fields + the previous token hash, creating
+    a mini-blockchain ledger without requiring a live chain node.
+    """
+    __tablename__ = "harvest_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Identity
+    token_id = Column(String, unique=True, index=True)  # e.g. KD-HTK-2025-00042
+    plot_id = Column(Integer, ForeignKey("plots.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    carbon_project_id = Column(Integer, ForeignKey("carbon_projects.id"), nullable=True)
+    crop_cycle_id = Column(Integer, ForeignKey("crop_cycles.id"), nullable=True, index=True)
+
+    # Crop provenance
+    crop_type = Column(String)
+    variety = Column(String, nullable=True)          # e.g. "Sharbati Wheat"
+    harvest_date = Column(DateTime)
+    yield_kg = Column(Float, default=0.0)            # Total harvested weight
+    area_harvested_acres = Column(Float, default=0.0)
+    geo_lat = Column(Float, nullable=True)
+    geo_lng = Column(Float, nullable=True)
+
+    # Carbon & environment
+    carbon_footprint_kg_co2e = Column(Float, default=0.0)  # kg CO2e per kg yield
+    carbon_credits_linked = Column(Float, default=0.0)     # Verified credits from project
+    farming_methodology = Column(String, nullable=True)    # From carbon project
+    ndvi_at_harvest = Column(Float, nullable=True)         # Satellite NDVI
+
+    # Chemical inputs — JSON: [{"name": str, "quantity": str, "unit": str, "applied_date": str}]
+    chemical_inputs = Column(Text, default="[]")
+
+    # Blockchain fields
+    status = Column(String, default="Draft")         # Draft, Minted, Transferred
+    previous_hash = Column(String, nullable=True)    # Hash of the previous token in chain
+    token_hash = Column(String, unique=True, nullable=True)  # sha256 of all fields
+    sequence_number = Column(Integer, default=0)     # Global monotonic sequence
+
+    # Public verification
+    qr_url = Column(String, nullable=True)           # Public verify URL
+    minted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Transfer
+    buyer_name = Column(String, nullable=True)
+    buyer_entity = Column(String, nullable=True)     # Company / exporter
+    transferred_at = Column(DateTime, nullable=True)
+    transfer_signature = Column(String, nullable=True)  # Buyer acknowledgement hash
+
+    # Relationships
+    plot = relationship("Plot")
+    user = relationship("User")
+    carbon_project = relationship("CarbonProject")
+    crop_cycle = relationship("CropCycle", back_populates="harvest_tokens")
+    transfer_logs = relationship("TokenTransferLog", back_populates="token", cascade="all, delete-orphan")
+
+
+class TokenTransferLog(Base):
+    """
+    Immutable record of every custody transfer of a HarvestToken.
+    Creates a full provenance chain for auditors and regulators.
+    """
+    __tablename__ = "token_transfer_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token_id = Column(String, ForeignKey("harvest_tokens.token_id"), index=True)
+    from_entity = Column(String)     # Farmer name / KD Platform
+    to_entity = Column(String)       # Buyer / Processor
+    transfer_date = Column(DateTime, default=datetime.utcnow)
+    transfer_hash = Column(String)   # sha256 of transfer details
+    notes = Column(String, nullable=True)
+
+    token = relationship("HarvestToken", back_populates="transfer_logs")
+
+
+class MerkleAnchor(Base):
+    """
+    Upgrade C: Daily Merkle Root Anchor.
+    Each row represents one day's cryptographic commitment over all crop cycle events.
+    The merkle_root field is the mathematical proof that event records for anchor_date
+    have not been tampered with. In production, the l2_tx_hash field holds a transaction
+    hash from a public Layer-2 blockchain (e.g., Base, Polygon) for external verifiability.
+    """
+    __tablename__ = "merkle_anchors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    anchor_date = Column(DateTime, unique=True, index=True)   # Midnight UTC of the anchored day
+    merkle_root = Column(String, nullable=False)              # 64-char SHA-256 Merkle root
+    event_count = Column(Integer, default=0)                  # Number of events included
+    chain_id = Column(String, default="internal-postgres-v1") # e.g. "base-mainnet", "polygon"
+    l2_tx_hash = Column(String, nullable=True)                # Public blockchain tx hash (future)
+    created_at = Column(DateTime, default=datetime.utcnow)
+

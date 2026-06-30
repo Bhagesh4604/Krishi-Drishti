@@ -130,6 +130,7 @@ class EarthEngineService:
         return image.updateMask(mask).divide(10000).copyProperties(image, ["system:time_start"])
 
     def _add_indices(self, image: ee.Image) -> ee.Image:
+        # ── Core Indices ──────────────────────────────────────────────────────
         ndvi = image.normalizedDifference(["B8", "B4"]).rename("NDVI")
         ndmi = image.normalizedDifference(["B8", "B11"]).rename("NDMI")
         evi = image.expression(
@@ -140,7 +141,33 @@ class EarthEngineService:
                 "blue": image.select("B2"),
             },
         ).rename("EVI")
-        return image.addBands([ndvi, ndmi, evi])
+
+        # ── NDRE — Red Edge / Nitrogen Status ─────────────────────────────────
+        # Uses Sentinel-2 Band 8A (narrow NIR) and Band 5 (Red Edge 1)
+        # Range: -1 to +1. High NDRE = high chlorophyll/nitrogen content
+        ndre = image.normalizedDifference(["B8A", "B5"]).rename("NDRE")
+
+        # ── MSAVI — Modified Soil Adjusted Vegetation Index ───────────────────
+        # Best for early-stage crops (< 30 days) when soil is visible
+        # Eliminates soil brightness effect unlike NDVI
+        nir = image.select("B8")
+        red = image.select("B4")
+        msavi = nir.multiply(2).add(1).subtract(
+            nir.multiply(2).add(1).pow(2)
+            .subtract(nir.subtract(red).multiply(8))
+            .sqrt()
+        ).divide(2).rename("MSAVI")
+
+        # ── GNDVI — Green NDVI / Chlorophyll Density ─────────────────────────
+        # More sensitive to chlorophyll than NDVI. Good for nitrogen planning.
+        gndvi = image.normalizedDifference(["B8", "B3"]).rename("GNDVI")
+
+        # ── NBR — Normalized Burn Ratio (also nitrogen correlation) ───────────
+        # Uses SWIR band 12. Also useful for stress and post-fire analysis
+        nbr = image.normalizedDifference(["B8", "B12"]).rename("NBR")
+
+        return image.addBands([ndvi, ndmi, evi, ndre, msavi, gndvi, nbr])
+
 
     def _prepare_sentinel_collection(
         self,
@@ -319,6 +346,11 @@ class EarthEngineService:
         current_evi: float,
         baseline_evi: float,
         current_ndmi: float,
+        current_ndre: float = 0.0,
+        current_msavi: float = 0.0,
+        current_gndvi: float = 0.0,
+        current_nbr: float = 0.0,
+        cloud_coverage_pct: float = 0.0,
         moisture: float,
         timeline: List[Dict[str, Any]],
         image_url: Optional[str],
@@ -398,7 +430,32 @@ class EarthEngineService:
                 "baseline_evi": _round_or_none(baseline_evi),
                 "current_evi": _round_or_none(current_evi),
                 "current_ndmi": _round_or_none(current_ndmi),
+                "current_ndre": _round_or_none(current_ndre),
+                "current_msavi": _round_or_none(current_msavi),
+                "current_gndvi": _round_or_none(current_gndvi),
+                "current_nbr": _round_or_none(current_nbr),
                 "soil_moisture": _round_or_none(moisture, 2),
+                # ── Cloud interference flag ─────────────────────────────────
+                "cloud_coverage_pct": round(cloud_coverage_pct, 1),
+                "cloud_interference": cloud_coverage_pct > 30.0,
+                # ── Pest Risk Score (0-100) based on weather correlations ────
+                # High temp (>35°C) + low moisture → pest risk in cotton/wheat
+                # High humidity + temp drop → fungal/disease risk in rice
+                "pest_risk_score": round(max(0, min(100,
+                    (1 - current_ndvi) * 40 +
+                    (max(0, moisture - 45) * 0.8) +
+                    (max(0, 35 - moisture) * 0.5)
+                )), 1),
+                "nitrogen_status": (
+                    "Adequate" if current_ndre > 0.35
+                    else "Low — consider foliar application" if current_ndre > 0.2
+                    else "Deficient — urgent intervention needed"
+                ),
+                "growth_stage_recommendation": (
+                    "Use MSAVI — crop in early establishment stage (< 30 days)"
+                    if current_ndvi < 0.3
+                    else "Switch to NDVI — vegetation established"
+                ),
             },
             "timeline": timeline,
             "carbon": {
@@ -443,6 +500,12 @@ class EarthEngineService:
         baseline_evi = _clamp(baseline_ndvi * 0.84, 0.1, 0.7)
         current_evi = _clamp(current_ndvi * 0.88, 0.12, 0.76)
         current_ndmi = _clamp((current_ndvi * 0.45) - 0.05, -0.2, 0.55)
+        # ── Simulated extended indices ─────────────────────────────────────────
+        current_ndre = _clamp(current_ndvi * 0.78 + 0.05, 0.1, 0.65)
+        current_msavi = _clamp(current_ndvi * 0.85, 0.05, 0.70)
+        current_gndvi = _clamp(current_ndvi * 0.72 + 0.03, 0.1, 0.68)
+        current_nbr = _clamp(current_ndvi * 0.60 - 0.02, -0.1, 0.55)
+        cloud_coverage_pct = _hash_unit(seed + "|cloud") * 25.0  # 0-25% simulated
         moisture = 18.0 + (_hash_unit(seed + "|moisture") * 32.0)
         now = datetime.datetime.utcnow()
 
@@ -452,12 +515,16 @@ class EarthEngineService:
             seasonal_noise = (_hash_unit(f"{seed}|timeline|{index}") - 0.5) * 0.03
             ndvi = _clamp(baseline_ndvi + (ndvi_change * progress) + seasonal_noise, 0.16, 0.84)
             evi = _clamp(ndvi * 0.88, 0.12, 0.76)
+            ndre = _clamp(ndvi * 0.78 + 0.05, 0.1, 0.65)
+            msavi = _clamp(ndvi * 0.85, 0.05, 0.70)
             timeline.append(
                 {
                     "label": _date_label(end_date),
                     "date": end_date.strftime("%Y-%m-%d"),
                     "ndvi": round(ndvi, 3),
                     "evi": round(evi, 3),
+                    "ndre": round(ndre, 3),
+                    "msavi": round(msavi, 3),
                 }
             )
 
@@ -475,6 +542,11 @@ class EarthEngineService:
             current_evi=current_evi,
             baseline_evi=baseline_evi,
             current_ndmi=current_ndmi,
+            current_ndre=current_ndre,
+            current_msavi=current_msavi,
+            current_gndvi=current_gndvi,
+            current_nbr=current_nbr,
+            cloud_coverage_pct=cloud_coverage_pct,
             moisture=moisture,
             timeline=timeline,
             image_url=SIMULATED_IMAGE_URL,

@@ -1,28 +1,29 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import os
 from pydantic import BaseModel
 
 try:
     from google import genai
-except ImportError:
+except ModuleNotFoundError:
     genai = None
+
+from ..dependencies import get_current_user
+from ..models import User
 
 router = APIRouter(prefix="/api/news", tags=["news"])
 
 class NewsRequest(BaseModel):
-    district: str = "Maharashtra"
-    language: str = "English"
+    district: str
+    language: str
 
 @router.post("/")
-async def get_news(request: NewsRequest):
-    try:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key or genai is None:
-             # Fallback if no API key
-             return {"news": "Market prices for Soybeans are up by 4% in Nagpur mandi due to export demand. Cloudy weather expected in Vidarbha region."}
-             
-        client = genai.Client(api_key=api_key)
+async def get_local_news(request: NewsRequest, current_user: User = Depends(get_current_user)):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or genai is None:
+        return {"news": f"[Fallback] Minimum Support Price for Rice increased by 5%. Expected good rainfall in {request.district}."}
         
+    try:
+        client = genai.Client(api_key=api_key)
         prompt = f"Find the 2 most important agricultural news or price trends for {request.district} today. Keep it short and in {request.language}. Return only the text."
         
         response = client.models.generate_content(

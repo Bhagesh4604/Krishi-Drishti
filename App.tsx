@@ -32,10 +32,17 @@ import VoiceAssistantModal from './components/VoiceAssistantModal';
 import AcousticScannerScreen from './screens/AcousticScannerScreen';
 import SoilCarbonModelScreen from './screens/SoilCarbonModelScreen';
 import SplashScreen from './screens/SplashScreen';
+import TraceabilityScreen from './screens/TraceabilityScreen';
+import TraceabilityVerifyScreen from './screens/TraceabilityVerifyScreen';
 import BottomNav from './components/BottomNav';
 import { userService, weatherService, getUserLocation } from './src/services/api';
 import { translations } from './translations';
 import LandingScreen from './screens/LandingScreen';
+import AgritechDashboardNew from './screens/AgritechDashboardNew';
+import FieldMonitorScreen from './screens/FieldMonitorScreen';
+import CorporateDashboardScreen from './screens/CorporateDashboardScreen';
+import CropCycleScreen from './screens/CropCycleScreen';
+import FarmerMarketplaceScreen from './screens/FarmerMarketplaceScreen';
 
 const App: React.FC = () => {
   return (
@@ -105,8 +112,20 @@ const AppContent: React.FC = () => {
   const [weather, setWeather] = useState<any>(null);
   const [locationName, setLocationName] = useState<string>("Locating...");
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
+  const [traceVerifyId, setTraceVerifyId] = useState<string | undefined>(undefined);
+  const [screenData, setScreenData] = useState<any>(null);
 
   // Admin fast-path handled above at state init time
+
+  // ── QR deep-link: ?verify=KD-HTK-YYYY-NNNNN ──
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verifyId = params.get('verify');
+    if (verifyId) {
+      setTraceVerifyId(verifyId);
+      setCurrentScreen('trace-verify');
+    }
+  }, []);
 
   const log = (msg: string) => {
     console.log(msg);
@@ -144,7 +163,7 @@ const AppContent: React.FC = () => {
         const location = await getUserLocation();
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout")), 15000)
+          setTimeout(() => reject(new Error("Timeout")), 60000)
         );
         timeoutPromise.catch(() => { });
 
@@ -243,7 +262,7 @@ const AppContent: React.FC = () => {
   };
 
   const navigateTo = (screen: Screen, data?: any) => {
-    const protectedScreens: Screen[] = ['map', 'carbon-vault', 'crop-stress', 'landmark', 'soil-carbon'];
+    const protectedScreens: Screen[] = ['map', 'carbon-vault', 'crop-stress', 'landmark', 'soil-carbon', 'traceability', 'field-monitor'];
     const hasToken = !!localStorage.getItem('ks_token');
 
     if (protectedScreens.includes(screen) && !hasToken) {
@@ -259,6 +278,12 @@ const AppContent: React.FC = () => {
     }
     if (screen === 'market-detail' && data?.listing) {
       setSelectedListing(data.listing);
+    }
+    if (screen === 'trace-verify' && data?.tokenId) {
+      setTraceVerifyId(data.tokenId);
+    }
+    if (screen === 'field-monitor' && data?.plotId) {
+      setScreenData({ plotId: data.plotId });
     }
     setCurrentScreen(screen);
     setFabMenuOpen(false);
@@ -547,6 +572,18 @@ const AppContent: React.FC = () => {
         return <AcousticScannerScreen navigation={{ goBack: () => navigateTo('home') }} />;
       case 'soil-carbon':
         return <SoilCarbonModelScreen navigateTo={navigateTo} />;
+      case 'traceability':
+        return <TraceabilityScreen navigateTo={navigateTo} />;
+      case 'trace-verify':
+        return <TraceabilityVerifyScreen navigateTo={navigateTo} tokenId={traceVerifyId} />;
+      case 'field-monitor':
+        return <FieldMonitorScreen navigateTo={navigateTo} screenData={screenData} t={t} />;
+      case 'corporate-dashboard':
+        return <CorporateDashboardScreen navigateTo={navigateTo} t={t} />;
+      case 'crop-cycle':
+        return <CropCycleScreen navigateTo={navigateTo} screenData={screenData} t={t} />;
+      case 'marketplace':
+        return <FarmerMarketplaceScreen navigateTo={navigateTo} t={t} />;
       default:
         return (
           <AuthScreen
@@ -562,11 +599,11 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result', 'acoustic-scanner'].includes(currentScreen);
+  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result', 'acoustic-scanner', 'traceability', 'trace-verify', 'field-monitor', 'corporate-dashboard', 'crop-cycle'].includes(currentScreen);
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden text-gray-900 bg-white" style={{ transform: 'translate(0)' }}>
-      <main className="flex-1 overflow-y-auto pb-20 mobile-container relative">
+      <main className={`flex-1 overflow-y-auto mobile-container relative ${showNav ? 'pb-20' : 'pb-0'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentScreen}
