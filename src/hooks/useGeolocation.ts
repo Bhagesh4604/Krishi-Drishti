@@ -72,24 +72,15 @@ const useGeolocation = (): GeolocationHook => {
 
     try {
       console.log("[useGeolocation] Starting Capacitor Watch...");
-      // For desktop tracking, we should also allow fallback, but capacitor watchPosition doesn't fallback automatically.
-      // Since they are just testing, we will use a more forgiving timeout.
+      // For precise tracking (Land Marking), we MUST use high accuracy (GPS).
+      // Give the GPS chip plenty of time to lock on (e.g., 60 seconds)
       watchId.current = await Geolocation.watchPosition(
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 60000, maximumAge: 0 },
         async (pos, err) => {
           if (err) {
-            console.warn("[useGeolocation] High Acc Watch Error, restarting with Wi-Fi only:", err);
-            // If it fails, stop this watch and restart with low accuracy
-            stopTracking();
-            watchId.current = await Geolocation.watchPosition(
-                { enableHighAccuracy: false, timeout: 30000, maximumAge: 0 },
-                (lowPos, lowErr) => {
-                    if (lowPos) {
-                        setPosition(lowPos);
-                        if (positionCallbackRef.current) positionCallbackRef.current(lowPos);
-                    }
-                }
-            );
+            console.warn("[useGeolocation] High Acc Watch Error:", err);
+            // Do NOT fallback to low accuracy here, otherwise the user's area will be drawn 1.5km away.
+            // Just let it retry or fail gracefully.
             return;
           }
           if (pos) {
