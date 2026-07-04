@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Screen, UserProfile, Language, VisionMode } from './types';
 import {
@@ -111,6 +111,7 @@ const AppContent: React.FC = () => {
   const [connectionError, setConnectionError] = useState(false);
   const [weather, setWeather] = useState<any>(null);
   const [locationName, setLocationName] = useState<string>("Locating...");
+  const locationFetched = useRef(false);
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const [traceVerifyId, setTraceVerifyId] = useState<string | undefined>(undefined);
   const [screenData, setScreenData] = useState<any>(null);
@@ -167,61 +168,124 @@ const AppContent: React.FC = () => {
         );
         timeoutPromise.catch(() => { });
 
-        if (token) {
+      if (token) {
           log("[App] Fetching profile...");
-          const profile = await Promise.race([
-            userService.getProfile(),
-            timeoutPromise
-          ]) as UserProfile;
+          try {
+            const profile = await Promise.race([
+              userService.getProfile(),
+              new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 10000))
+            ]) as UserProfile;
 
-          log(`[App] Profile fetched: ${profile?.name}`);
+            log(`[App] Profile fetched: ${profile?.name}`);
 
-          if (location) {
-            profile.location = location;
+            // Normalize crops field — backend returns comma-string, we need array
+            if (profile.crops && typeof profile.crops === 'string') {
+              (profile as any).crops = (profile.crops as string).split(',').filter(Boolean);
+            }
+
+            if (location) profile.location = location;
+
+            // Cache the profile locally so app works even if backend is slow
+            localStorage.setItem('ks_profile_cache', JSON.stringify(profile));
+
+            setUser(profile);
+            setCurrentScreen(profile.name ? 'home' : 'profile');
+            if (profile.language) setLanguage(profile.language);
+            log("[App] Profile loaded, going to: " + (profile.name ? 'home' : 'profile'));
+          } catch (profileErr: any) {
+            log(`[App] Profile fetch failed: ${profileErr.message}`);
+
+            // Try restoring from local cache before giving up
+            const cachedRaw = localStorage.getItem('ks_profile_cache');
+            if (cachedRaw) {
+              try {
+                const cached = JSON.parse(cachedRaw);
+                if (location) cached.location = location;
+                setUser(cached);
+                setCurrentScreen(cached.name ? 'home' : 'profile');
+                log("[App] Restored from local cache");
+              } catch {
+                // Cache corrupt — force re-login only on auth errors, not network errors
+                if (profileErr.response?.status === 401) {
+                  localStorage.removeItem('ks_token');
+                  localStorage.removeItem('ks_profile_cache');
+                  setCurrentScreen('auth');
+                } else {
+                  setCurrentScreen('profile'); // let them retry saving
+                }
+              }
+            } else {
+              // Only clear token on explicit 401 Unauthorized
+              if (profileErr.response?.status === 401) {
+                localStorage.removeItem('ks_token');
+                setCurrentScreen('auth');
+              } else {
+                setCurrentScreen('profile');
+              }
+            }
           }
-
-          setUser(profile);
-          setCurrentScreen(profile.name ? 'home' : 'profile');
-          if (profile.language) setLanguage(profile.language);
-          log("[App] Profile loaded");
         } else {
-          log("[App] No profile, go to Auth");
-          if (!token) setCurrentScreen('auth');
-          else setCurrentScreen(user?.name ? 'home' : 'profile');
+          log("[App] No token, go to Auth");
+          setCurrentScreen('auth');
         }
 
         console.log("[App] Fetching weather/location...");
-        try {
-          const lat = location?.lat || 21.1458;
-          const lng = location?.lng || 79.0882;
+        const lat = location?.lat || 21.1458;
+        const lng = location?.lng || 79.0882;
 
-          const [weatherData, locData] = await Promise.all([
-            weatherService.getWeather(lat, lng),
-            weatherService.reverseGeocode(lat, lng)
-          ]);
+        // ── Reverse geocode: try backend first, then direct BigDataCloud as client-side fallback ──
+        const resolveLocationName = async (lat: number, lng: number) => {
+          // Try backend first
+          try {
+            const locData = await weatherService.reverseGeocode(lat, lng);
+            if (locData && (locData.city || locData.district)) {
+              setLocationName(`${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`);
+              return;
+            }
+          } catch { /* fall through to client-side fallback */ }
 
-          setWeather(weatherData);
+          // Backend failed (500) — call BigDataCloud directly from browser (free, no key, no CORS issues)
+          try {
+            const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+            const d = await r.json();
+            const city = d.locality || d.city || d.principalSubdivision || null;
+            const district = d.principalSubdivision || '';
+            if (city) {
+              setLocationName(`${city}${district && district !== city ? ', ' + district : ''}`);
+              return;
+            }
+          } catch { /* ignore */ }
 
-          if (locData && (locData.city || locData.district)) {
-            setLocationName(`${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`);
-          } else {
-            setLocationName("Nagpur, MH");
-          }
-          log("[App] Weather data loaded");
-        } catch (e) {
-          console.error("[App] Weather fetch failed", e);
-          setLocationName("Nagpur, MH");
+          // Final fallback: show rounded coordinates
+          setLocationName(`${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E`);
+        };
+
+        if (!locationFetched.current) {
+          locationFetched.current = true;
+          resolveLocationName(lat, lng);
         }
+
+        // ── Weather fetch is separate — failure only clears weather, not location name ──
+        weatherService.getWeather(lat, lng)
+          .then((weatherData) => {
+            setWeather(weatherData);
+            log("[App] Weather data loaded");
+          })
+          .catch((e) => {
+            console.error("[App] Weather fetch failed (non-fatal):", e?.message || e);
+            // Do NOT setLocationName here — reverse geocode already handled it above
+          });
+
       } catch (e: any) {
-        log(`[App] Error: ${e.message}`);
+        log(`[App] Outer init error: ${e.message}`);
         console.error("[App] Init error:", e);
+        // Only show connection error UI for true network failures, never wipe token
         if (e.message === "Timeout" || e.message === "Network Error") {
           setConnectionError(true);
           setLoading(false);
           return;
         }
-
-        localStorage.removeItem('ks_token');
+        // For any other unexpected error, go to landing but keep the token
         setCurrentScreen('landing');
       }
       setLoading(false);
@@ -263,7 +327,12 @@ const AppContent: React.FC = () => {
 
   const navigateTo = (screen: Screen, data?: any) => {
     const protectedScreens: Screen[] = ['map', 'carbon-vault', 'crop-stress', 'landmark', 'soil-carbon', 'traceability', 'field-monitor'];
-    const hasToken = !!localStorage.getItem('ks_token');
+    
+    // Check BOTH localStorage token AND in-memory user state.
+    // On Android/Capacitor WebView, localStorage can sometimes appear empty
+    // on app resume even when the user is authenticated. Checking user state
+    // as a fallback prevents false "please log in" blocks.
+    const hasToken = !!localStorage.getItem('ks_token') || !!user;
 
     if (protectedScreens.includes(screen) && !hasToken) {
       setIsGuestMode(false);
@@ -304,6 +373,12 @@ const AppContent: React.FC = () => {
 
   const handleProfileComplete = (profile: UserProfile) => {
     const completeProfile = { ...profile, language };
+    // Normalize crops so the cache always stores an array
+    if (completeProfile.crops && typeof completeProfile.crops === 'string') {
+      (completeProfile as any).crops = (completeProfile.crops as string).split(',').filter(Boolean);
+    }
+    // Write to local cache so next reload skips re-fetch
+    localStorage.setItem('ks_profile_cache', JSON.stringify(completeProfile));
     setUser(completeProfile);
     navigateTo('home');
   };
@@ -311,6 +386,7 @@ const AppContent: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('ks_token');
     localStorage.removeItem('ks_lang');
+    localStorage.removeItem('ks_profile_cache');
     setUser(null);
     setIsGuestMode(false);
     setCurrentScreen('auth');
@@ -557,7 +633,7 @@ const AppContent: React.FC = () => {
       case 'insurance':
         return <InsuranceScreen navigateTo={navigateTo} t={t} />;
       case 'forecast':
-        return <ForecastScreen navigateTo={navigateTo} t={t} />;
+        return <ForecastScreen navigateTo={navigateTo} t={t} weather={weather} user={user} />;
       case 'live-audio':
         return <LiveAudioScreen navigateTo={navigateTo} language={language} t={t} />;
       case 'carbon-vault':

@@ -1,29 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Screen } from '../types';
 import {
-  ArrowLeft,
-  Search,
-  Layers,
-  MoreVertical,
-  MapPin,
-  Droplets,
-  Thermometer,
-  Wind,
-  Activity,
-  ScanLine,
-  ChevronRight,
-  Plus,
-  Loader2,
-  X,
-  Satellite,
-  AlertTriangle
+  ArrowLeft, Search, Layers, MoreVertical,
+  MapPin, Droplets, Thermometer, Wind,
+  Activity, ScanLine, ChevronRight, Plus,
+  Loader2, X, Satellite, AlertTriangle
 } from 'lucide-react';
-import { MapContainer, TileLayer, Polygon, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { plotService, getUserLocation } from '../src/services/api';
+import { plotService } from '../src/services/api';
+import useGeolocation from '../src/hooks/useGeolocation';
 
-// Fix Leaflet Icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -49,7 +37,7 @@ const RecenterMap = ({ lat, lng, trigger }: { lat: number, lng: number, trigger:
   const map = useMap();
   useEffect(() => {
     map.flyTo([lat, lng], 18, { duration: 1.5 });
-  }, [lat, lng, trigger]); // Trigger causes re-fly
+  }, [lat, lng, trigger]);
   return null;
 };
 
@@ -57,7 +45,7 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
   const [plots, setPlots] = useState<Plot[]>([]);
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [recenterTrigger, setRecenterTrigger] = useState(0); // Add trigger state
+  const [recenterTrigger, setRecenterTrigger] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Analysis State
@@ -65,11 +53,12 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
 
-  useEffect(() => {
-    // 1. Get Location
-    getUserLocation().then(loc => setLocation(loc));
+  const { getCurrentLocation } = useGeolocation();
 
-    // 2. Load Plots
+  useEffect(() => {
+    getCurrentLocation().then(pos => {
+      if (pos) setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    });
     fetchPlots();
   }, []);
 
@@ -106,11 +95,11 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
   const stats = React.useMemo(() => {
     if (!selectedPlot) return [];
     return [
-      { label: 'Plant Health', value: `${(selectedPlot.health_score * 100).toFixed(0)}%`, color: 'text-green-500' },
-      { label: 'Moisture', value: `${selectedPlot.moisture.toFixed(0)}%`, color: 'text-blue-500' },
-      { label: 'Soil', value: `${Math.min(100, selectedPlot.health_score * 100 + 5).toFixed(0)}%`, color: 'text-amber-500' },
-      { label: 'Pest Risk', value: selectedPlot.health_score < 0.6 ? 'High' : (selectedPlot.health_score < 0.8 ? 'Medium' : 'Low'), color: selectedPlot.health_score < 0.8 ? 'text-red-500' : 'text-green-500' },
-    ]
+      { label: 'Plant Health', value: `${((selectedPlot.health_score || 0) * 100).toFixed(0)}%` },
+      { label: 'Moisture', value: `${(selectedPlot.moisture || 0).toFixed(0)}%` },
+      { label: 'Soil Quality', value: `${Math.min(100, (selectedPlot.health_score || 0) * 100 + 5).toFixed(0)}%` },
+      { label: 'Pest Risk', value: (selectedPlot.health_score || 0) < 0.6 ? 'High' : ((selectedPlot.health_score || 0) < 0.8 ? 'Medium' : 'Low') },
+    ];
   }, [selectedPlot]);
 
   const chartData = React.useMemo(() => {
@@ -120,88 +109,89 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
   }, [selectedPlot]);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 relative overflow-hidden font-sans">
-
+    <div className="h-full flex flex-col relative overflow-hidden font-sans" style={{ background: '#F7F9F8', fontFamily: 'Inter, sans-serif' }}>
+      
       {/* 1. Header */}
-      <div className="px-6 pt-12 pb-4 flex justify-between items-center bg-white shadow-sm z-20">
-        <button className="p-2 bg-gray-100 rounded-full text-gray-600">
-          <Search size={20} />
+      <div className="px-5 pt-12 pb-4 flex justify-between items-center bg-white sticky top-0 z-20" style={{ borderBottom: '1px solid #F0F0F0' }}>
+        <button className="p-2 bg-gray-50 rounded-full border border-gray-200 text-gray-600">
+          <Search size={16} style={{ color: '#001A11' }} />
         </button>
-        <h1 className="text-lg font-bold text-gray-900">Your Field</h1>
+        <div className="text-center">
+          <h1 className="text-lg font-bold" style={{ color: '#001A11' }}>Your Fields</h1>
+          <p className="text-[11px] font-semibold" style={{ color: '#00BB78' }}>Farm Management</p>
+        </div>
         <button
-          className="p-2 bg-black text-white rounded-full"
-          onClick={() => navigateTo('landmark')} // Navigate to add plot
+          className="p-2 rounded-full text-white shadow-md active:scale-95 transition-transform"
+          style={{ background: '#00BB78' }}
+          onClick={() => navigateTo('landmark')}
         >
-          <Layers size={20} />
+          <Layers size={16} />
         </button>
       </div>
 
       {/* 2. Scrollable Content */}
-      <div className="flex-1 overflow-y-auto relative no-scrollbar">
-
+      <div className="flex-1 overflow-y-auto relative no-scrollbar pb-24">
+        
         {/* Top Field Cards Carousel */}
-        <div className="mt-4 flex overflow-x-auto gap-4 px-6 pb-4 snap-x snap-mandatory no-scrollbar" style={{ scrollBehavior: 'smooth' }}>
+        <div className="mt-4 flex overflow-x-auto gap-4 px-5 pb-4 snap-x snap-mandatory no-scrollbar" style={{ scrollBehavior: 'smooth' }}>
           {plots.map((plot) => (
             <div
               key={plot.id}
               onClick={() => setSelectedPlot(plot)}
-              className={`min-w-[85%] snap-center p-5 rounded-3xl shadow-sm border relative overflow-hidden transition-all duration-300 ${selectedPlot?.id === plot.id
-                ? 'bg-white border-green-500 ring-2 ring-green-100 transform scale-[1.02]'
-                : 'bg-white/80 border-gray-100 opacity-70 hover:opacity-100'
-                }`}
+              className="min-w-[85%] snap-center p-5 rounded-3xl transition-all duration-300 relative bg-white"
+              style={{
+                border: selectedPlot?.id === plot.id ? '1.5px solid #00BB78' : '1px solid #F0F0F0',
+                boxShadow: selectedPlot?.id === plot.id ? '0 4px 12px rgba(0,187,120,0.1)' : '0 2px 8px rgba(0,0,0,0.02)'
+              }}
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{plot.name}</h2>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 font-bold uppercase">
-                    <span className="flex items-center gap-1"><Activity size={12} /> 12 Task</span>
+                  <h2 className="text-base font-bold" style={{ color: '#001A11' }}>{plot.name}</h2>
+                  <div className="flex items-center gap-3 mt-1 text-[11px] font-bold" style={{ color: '#616B68' }}>
+                    <span className="flex items-center gap-1"><Activity size={12} /> 12 Tasks</span>
                     <span className="flex items-center gap-1"><MapPin size={12} /> {plot.area || 12} ha</span>
                   </div>
                 </div>
                 {plot.health_score > 0.8 && (
-                  <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                    Good Condition
-                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider" style={{ background: '#E8FBF3', color: '#00BB78' }}>
+                    Good
+                  </span>
                 )}
               </div>
 
               {/* Bar Chart Visualization */}
-              <div className="h-16 flex items-end justify-between gap-1 mb-4">
+              <div className="h-12 flex items-end justify-between gap-1 mb-4">
                 {chartData.map((h, i) => (
                   <div
                     key={i}
-                    className={`w-full rounded-t-md ${i === chartData.length - 1 ? 'bg-gradient-to-t from-green-400 to-green-200' : 'bg-gray-100'}`}
-                    style={{ height: `${h}%` }}
+                    className="w-full rounded-t-sm transition-all"
+                    style={{ height: `${h}%`, background: i === chartData.length - 1 ? '#00BB78' : '#EBEBEB' }}
                   />
                 ))}
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
-                <div className={`w-2 h-2 rounded-full animate-pulse ${plot.health_score > 0.8 ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-gray-500">12 days until harvest</span>
+              <div className="flex items-center gap-2 text-xs font-medium" style={{ color: '#616B68' }}>
+                <div className={`w-2 h-2 rounded-full ${plot.health_score > 0.8 ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span>12 days until harvest</span>
               </div>
-
-              {/* Side Action Button */}
-              {selectedPlot?.id === plot.id && (
-                <div className="absolute top-1/2 -translate-y-1/2 right-0 bg-black text-white py-6 px-1 rounded-l-2xl flex flex-col items-center justify-center gap-1 shadow-lg animate-in slide-in-from-right-4">
-                  <ChevronRight size={16} color="white" />
-                </div>
-              )}
             </div>
           ))}
 
           {/* Add New Card Placeholder */}
           <button
             onClick={() => navigateTo('landmark')}
-            className="min-w-[20%] flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-gray-300 text-gray-400 hover:text-green-600 hover:border-green-300 hover:bg-green-50 transition-colors"
+            className="min-w-[25%] flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed bg-white transition-colors"
+            style={{ borderColor: '#EBEBEB', color: '#616B68' }}
           >
-            <Plus size={24} />
-            <span className="text-xs font-bold">Add Field</span>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center mb-1" style={{ background: '#F7F9F8' }}>
+              <Plus size={16} style={{ color: '#00BB78' }} />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Add Field</span>
           </button>
         </div>
 
         {/* 3. Map Section */}
-        <div className="m-6 h-[400px] rounded-[40px] overflow-hidden shadow-xl border-4 border-white relative z-0">
+        <div className="mx-5 mb-6 h-[400px] rounded-3xl overflow-hidden relative shadow-sm" style={{ border: '1px solid #F0F0F0' }}>
           {location && (
             <MapContainer
               center={[location.lat, location.lng]}
@@ -217,109 +207,106 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
                 trigger={recenterTrigger}
               />
 
-              {/* Render Plots */}
-              {plots.map((plot, idx) => (
+              {plots.map((plot) => (
                 <Polygon
                   key={plot.id}
                   positions={plot.coordinates}
                   pathOptions={{
-                    color: idx === 0 ? '#60a5fa' : '#4ade80',  // Blue for first, Green for second (simulated)
-                    fillColor: idx === 0 ? '#3b82f6' : '#22c55e',
-                    fillOpacity: 0.2, // Transparent fill for pattern effect
-                    weight: 2
+                    color: '#00BB78',
+                    fillColor: '#00BB78',
+                    fillOpacity: selectedPlot?.id === plot.id ? 0.4 : 0.1,
+                    weight: selectedPlot?.id === plot.id ? 3 : 1
                   }}
-                  eventHandlers={{
-                    click: () => setSelectedPlot(plot)
-                  }}
+                  eventHandlers={{ click: () => setSelectedPlot(plot) }}
                 />
               ))}
-
-              {/* Pattern Overlay (Simulated via CSS on top of map container? No, hard to align. 
-                        Let's stick to simple polygons for now, pattern is complex in Leaflet without SVG ref)
-                    */}
             </MapContainer>
           )}
 
-          {/* Overlay Controls */}
+          {/* Map Controls */}
           <div className="absolute top-4 left-4 z-[400]">
             <button
-              className="w-10 h-10 bg-[#ccff00] rounded-full flex items-center justify-center shadow-lg text-black hover:scale-110 transition-transform active:scale-95"
+              className="w-10 h-10 rounded-full flex items-center justify-center shadow-md active:scale-95 transition-transform bg-white"
+              style={{ color: '#001A11' }}
               onClick={() => setRecenterTrigger(prev => prev + 1)}
             >
-              <MapPin size={20} />
+              <MapPin size={18} />
             </button>
           </div>
 
-          {/* Bottom Field Stats Card (Overlay) */}
-          <div className="absolute bottom-4 left-4 right-4 bg-white/20 backdrop-blur-md border border-white/30 p-4 rounded-3xl text-white z-[400]">
-            <div className="flex justify-between items-end mb-4">
+          {/* Bottom Stats Card */}
+          <div className="absolute bottom-4 left-4 right-4 bg-white p-4 rounded-2xl shadow-lg z-[400]" style={{ border: '1px solid #F0F0F0' }}>
+            <div className="flex justify-between items-start mb-3">
               <div>
-                <h3 className="text-2xl font-bold">{selectedPlot?.name || 'Your Field'}</h3>
+                <h3 className="text-sm font-bold" style={{ color: '#001A11' }}>{selectedPlot?.name || 'Your Field'}</h3>
+                <p className="text-[10px] font-medium" style={{ color: '#616B68' }}>{selectedPlot?.area ? `${selectedPlot.area} ha` : 'N/A'}</p>
               </div>
-              <span className="text-xs font-medium opacity-80">{selectedPlot?.area ? `${selectedPlot.area} Acres` : 'N/A'}</span>
+              <button className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 text-gray-500 hover:text-green-600 transition-colors">
+                <MoreVertical size={14} />
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-y-1 gap-x-8 text-xs font-medium">
+            <div className="grid grid-cols-2 gap-y-2 gap-x-6">
               {stats.map((s, i) => (
-                <div key={i} className="flex justify-between items-center py-0.5 border-b border-white/10 last:border-0">
-                  <span className="opacity-80">{s.label}</span>
-                  <span className="font-bold">{s.value}</span>
+                <div key={i} className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0">
+                  <span className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>{s.label}</span>
+                  <span className="text-xs font-bold" style={{ color: '#001A11' }}>{s.value}</span>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Floating Scan Button inside the map */}
+          <button
+            className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-[400] text-white transition-transform active:scale-95"
+            style={{ background: '#001A11' }}
+            onClick={handleScan}
+            disabled={isScanning || !selectedPlot}
+          >
+            {isScanning ? <Loader2 size={18} className="animate-spin" /> : <ScanLine size={18} />}
+          </button>
         </div>
 
       </div>
 
-      {/* Floating Scan Button */}
-      <button
-        className={`absolute bottom-24 right-8 w-14 h-14 bg-[#ccff00] rounded-full flex items-center justify-center shadow-2xl z-50 text-black transition-transform ${isScanning ? 'scale-90 opacity-80' : 'animate-bounce-slow'}`}
-        onClick={handleScan}
-        disabled={isScanning || !selectedPlot}
-      >
-        {isScanning ? <Loader2 size={24} className="animate-spin" /> : <ScanLine size={24} />}
-      </button>
-
       {/* Analysis Modal */}
       {showAnalysisModal && analysisResult && (
-        <div className="absolute inset-0 z-[500] bg-black/50 flex items-center justify-center p-6 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-in zoom-in-95 relative overflow-hidden">
+        <div className="absolute inset-0 z-[500] bg-black/50 flex items-end justify-center backdrop-blur-sm">
+          <div className="bg-white w-full rounded-t-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+            <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: '#E0E0E0' }} />
             <button
               onClick={() => setShowAnalysisModal(false)}
-              className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200"
+              className="absolute top-6 right-5 p-2 bg-gray-50 rounded-full text-gray-500 hover:bg-gray-100"
             >
-              <X size={20} />
+              <X size={16} />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                <Activity size={24} className="text-green-600" />
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: '#E8FBF3' }}>
+                <Activity size={20} style={{ color: '#00BB78' }} />
               </div>
               <div>
-                <h3 className="text-xl font-black text-gray-900">Analysis Report</h3>
-                <p className="text-xs text-gray-500 font-bold">{selectedPlot?.name}</p>
+                <h3 className="text-lg font-black" style={{ color: '#001A11' }}>Analysis Report</h3>
+                <p className="text-[11px] font-bold" style={{ color: '#616B68' }}>{selectedPlot?.name}</p>
               </div>
             </div>
 
-            {/* ── Satellite Data Source Transparency Banner ── */}
+            {/* Satellite Data Source Banner */}
             {analysisResult.status === 'earth_engine' ? (
-              <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-green-50 border border-green-200">
-                <Satellite size={14} className="text-green-600 shrink-0" />
+              <div className="flex items-center gap-2 mb-4 px-4 py-3 rounded-2xl" style={{ background: '#E8FBF3', border: '1px solid #A5FFA7' }}>
+                <Satellite size={16} style={{ color: '#00BB78' }} className="shrink-0" />
                 <div>
-                  <p className="text-[11px] font-black text-green-700 uppercase tracking-wide">🟢 Live Satellite Data</p>
-                  <p className="text-[10px] text-green-600 font-medium">Google Earth Engine · Sentinel-2 · SMAP Soil Moisture</p>
+                  <p className="text-[11px] font-black uppercase tracking-wide" style={{ color: '#00BB78' }}>🟢 Live Satellite Data</p>
+                  <p className="text-[10px] font-medium mt-0.5" style={{ color: '#001A11' }}>Google Earth Engine · Sentinel-2 · SMAP Soil Moisture</p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-start gap-2 mb-4 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
-                <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 mb-4 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200">
+                <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-[11px] font-black text-amber-700 uppercase tracking-wide">🟡 Estimated Data</p>
-                  <p className="text-[10px] text-amber-600 font-medium">
-                    {analysisResult.fallback_reason
-                      ? analysisResult.fallback_reason
-                      : 'Satellite imagery unavailable. Values are modelled estimates.'}
+                  <p className="text-[10px] text-amber-600 font-medium mt-0.5">
+                    {analysisResult.fallback_reason || 'Satellite imagery unavailable. Values are modelled estimates.'}
                   </p>
                 </div>
               </div>
@@ -327,27 +314,28 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
 
             <div className="space-y-4">
               {/* Yield Forecast */}
-              <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                <p className="text-[10px] uppercase font-black text-blue-500 mb-1">Predicted Yield</p>
-                <h4 className="text-2xl font-black text-blue-700">{analysisResult.predicted_yield_tons_per_ha} <span className="text-sm">Tons/ha</span></h4>
-                <p className="text-xs text-blue-600 font-medium mt-1">Total: {analysisResult.total_estimated_yield_tons} Tons | Rev: ₹{analysisResult.estimated_revenue_inr?.toLocaleString()}</p>
-                </div>
+              <div className="p-4 rounded-2xl" style={{ background: '#F7F9F8', border: '1px solid #F0F0F0' }}>
+                <p className="text-[10px] uppercase font-black mb-1" style={{ color: '#616B68' }}>Predicted Yield</p>
+                <h4 className="text-2xl font-black" style={{ color: '#001A11' }}>{analysisResult.predicted_yield_tons_per_ha} <span className="text-sm font-semibold" style={{ color: '#616B68' }}>Tons/ha</span></h4>
+                <p className="text-xs font-bold mt-1" style={{ color: '#616B68' }}>Total: {analysisResult.total_estimated_yield_tons} Tons | Rev: ₹{analysisResult.estimated_revenue_inr?.toLocaleString()}</p>
+              </div>
 
-                <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
-                  <p className="text-[10px] uppercase font-black text-emerald-500 mb-1">Carbon Signal</p>
-                  <h4 className="text-2xl font-black text-emerald-700">{analysisResult.estimated_carbon_credits?.toFixed?.(2) ?? '0.00'} <span className="text-sm">ACT</span></h4>
-                  <p className="text-xs text-emerald-700 font-medium mt-1">
-                    Issuable: {analysisResult.issuable_carbon_credits?.toFixed?.(2) ?? '0.00'} | Area: {analysisResult.area_hectares?.toFixed?.(2) ?? '0.00'} ha
-                  </p>
-                </div>
+              {/* Carbon Signal */}
+              <div className="p-4 rounded-2xl" style={{ background: '#E8FBF3', border: '1px solid #A5FFA7' }}>
+                <p className="text-[10px] uppercase font-black mb-1" style={{ color: '#00BB78' }}>Carbon Signal</p>
+                <h4 className="text-2xl font-black" style={{ color: '#001A11' }}>{analysisResult.estimated_carbon_credits?.toFixed?.(2) ?? '0.00'} <span className="text-sm font-semibold" style={{ color: '#00BB78' }}>ACT</span></h4>
+                <p className="text-xs font-bold mt-1" style={{ color: '#00BB78' }}>
+                  Issuable: {analysisResult.issuable_carbon_credits?.toFixed?.(2) ?? '0.00'} | Area: {analysisResult.area_hectares?.toFixed?.(2) ?? '0.00'} ha
+                </p>
+              </div>
 
-                {/* Alerts / ML Models */}
-                <div>
-                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">System Alerts</h4>
+              {/* Alerts */}
+              <div>
+                <h4 className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: '#616B68' }}>System Alerts</h4>
                 <div className="space-y-2">
                   {analysisResult.alerts?.map((alert: string, idx: number) => (
-                    <div key={idx} className={`p-3 rounded-xl border text-sm font-bold flex items-start gap-2 ${alert.includes('ANOMALY') || alert.includes('🔴') ? 'bg-red-50 text-red-700 border-red-100' :
-                      alert.includes('🟠') ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                    <div key={idx} className={`p-3 rounded-xl border text-xs font-bold flex items-start gap-2 ${alert.includes('ANOMALY') || alert.includes('🔴') ? 'bg-red-50 text-red-700 border-red-100' :
+                      alert.includes('🟠') ? 'bg-amber-50 text-amber-700 border-amber-100' :
                         'bg-gray-50 text-gray-700 border-gray-100'
                       }`}>
                       <span>{alert}</span>
@@ -356,15 +344,14 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-2xl flex justify-between">
-                <div className="text-center">
-                  <p className="text-[10px] text-gray-400 uppercase font-black">Health Score</p>
-                  <p className="text-lg font-black text-gray-700">{(analysisResult.ndvi_avg * 100).toFixed(0)}%</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl text-center" style={{ background: '#F7F9F8', border: '1px solid #F0F0F0' }}>
+                  <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Health Score</p>
+                  <p className="text-xl font-black mt-1" style={{ color: '#001A11' }}>{(analysisResult.ndvi_avg * 100).toFixed(0)}%</p>
                 </div>
-                <div className="border-r border-gray-200" />
-                <div className="text-center">
-                  <p className="text-[10px] text-gray-400 uppercase font-black">Moisture</p>
-                  <p className="text-lg font-black text-gray-700">{(analysisResult.soil_moisture).toFixed(0)}%</p>
+                <div className="p-4 rounded-2xl text-center" style={{ background: '#F7F9F8', border: '1px solid #F0F0F0' }}>
+                  <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Moisture</p>
+                  <p className="text-xl font-black mt-1" style={{ color: '#001A11' }}>{(analysisResult.soil_moisture).toFixed(0)}%</p>
                 </div>
               </div>
             </div>

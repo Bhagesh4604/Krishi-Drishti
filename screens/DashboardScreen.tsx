@@ -30,7 +30,10 @@ import {
   Sun,
   Plus,
   Link2,
-  Building2
+  Building2,
+  ChevronRight,
+  BarChart2,
+  Search,
 } from 'lucide-react';
 import { weatherService } from '../src/services/api';
 import WeatherModal from '../components/WeatherModal';
@@ -53,33 +56,50 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   const [userPlots, setUserPlots] = useState<any[]>([]);
   const [isLoadingPlots, setIsLoadingPlots] = useState(true);
   const [plotLocationNames, setPlotLocationNames] = useState<{ [key: number]: string }>({});
+  const hasFetched = React.useRef(false);
+
+  // ── Location picker state ──
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [cityQuery, setCityQuery] = useState('');
+  const [cityResults, setCityResults] = useState<any[]>([]);
+  const [citySearching, setCitySearching] = useState(false);
+  const citySearchTimer = React.useRef<any>(null);
 
   useEffect(() => {
+    // Guard: only fetch once per component lifetime to avoid double-fire
+    // from AnimatePresence remounts or locationName prop changes.
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    const locationFallback = locationName; // snapshot at mount time
+
     const fetchPlots = async () => {
       try {
         const data = await plotService.getPlots();
         setUserPlots(data);
 
-        const locationPromises = data.map(async (plot: any) => {
+        // Sequential geocoding with 250ms throttle to respect Nominatim's 1 req/s limit
+        const locationMap: { [key: number]: string } = {};
+        for (const plot of data) {
           if (plot.coordinates && plot.coordinates.length > 0) {
             const firstCoord = plot.coordinates[0];
             try {
               const locData = await weatherService.reverseGeocode(firstCoord.lat, firstCoord.lng);
               if (locData && (locData.city || locData.district)) {
-                return { id: plot.id, name: `${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}` };
+                locationMap[plot.id] = `${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`;
+              } else {
+                locationMap[plot.id] = locationFallback.split(',')[0] || 'Unknown Location';
               }
             } catch (locErr) {
               console.error(`Failed to reverse geocode plot ${plot.id}:`, locErr);
+              locationMap[plot.id] = locationFallback.split(',')[0] || 'Unknown Location';
             }
+            // 250ms throttle — prevents 429 rate-limiting from Nominatim (1 req/s max)
+            await new Promise(r => setTimeout(r, 250));
+          } else {
+            locationMap[plot.id] = locationFallback.split(',')[0] || 'Unknown Location';
           }
-          return { id: plot.id, name: locationName.split(',')[0] || 'Unknown Location' };
-        });
-
-        const resolvedLocations = await Promise.all(locationPromises);
-        const locationMap: { [key: number]: string } = {};
-        resolvedLocations.forEach(loc => {
-          if (loc) locationMap[loc.id] = loc.name;
-        });
+        }
         setPlotLocationNames(locationMap);
 
       } catch (error) {
@@ -89,7 +109,35 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       }
     };
     fetchPlots();
-  }, [locationName]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── City search debounce ──
+  const handleCitySearch = (q: string) => {
+    setCityQuery(q);
+    clearTimeout(citySearchTimer.current);
+    if (!q.trim()) { setCityResults([]); return; }
+    citySearchTimer.current = setTimeout(async () => {
+      setCitySearching(true);
+      try {
+        const results = await weatherService.searchCity(q);
+        setCityResults(results || []);
+      } catch { setCityResults([]); }
+      finally { setCitySearching(false); }
+    }, 400);
+  };
+
+  const handlePickCity = (city: any) => {
+    const loc = { lat: city.latitude, lng: city.longitude, name: `${city.name}, ${city.country}` };
+    // Persist so it overrides IP location on next load
+    localStorage.setItem('kd_saved_location', JSON.stringify(loc));
+    // Clear session cache so App.tsx re-fetches weather with new coords
+    sessionStorage.removeItem('kd_last_location');
+    setShowLocationPicker(false);
+    setCityQuery('');
+    setCityResults([]);
+    // Reload to apply new location everywhere
+    window.location.reload();
+  };
 
   const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : '--';
 
@@ -135,7 +183,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -151,19 +199,29 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       </div>
 
       {/* 1. Header Section */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
         className="px-6 pt-12 pb-6 flex justify-between items-start relative z-20"
       >
         <div>
-          <h1 className="text-4xl font-light text-gray-800 tracking-tight">Hello, <span className="font-bold text-gray-900">{user?.name?.split(' ')[0] || 'Harris'}</span></h1>
-          <div className="flex items-center gap-1 mt-1 text-gray-600 self-start px-2 py-1 rounded-lg">
-            <MapPin size={16} className="text-gray-500" fill="currentColor" />
-            <span className="text-sm font-medium tracking-wide">{locationName.split(',')[0]}</span>
-          </div>
+          <h1 className="text-4xl font-light text-gray-800 tracking-tight">Hello, <span className="font-bold text-gray-900">{user?.name?.split(' ')[0] || 'Farmer'}</span></h1>
+          <button
+            onClick={() => setShowLocationPicker(true)}
+            className="flex flex-col mt-1 self-start px-2 py-1.5 rounded-xl hover:bg-amber-50 active:scale-95 transition-all border border-transparent hover:border-amber-200 group"
+          >
+            <div className="flex items-center gap-1">
+              <MapPin size={14} className="text-emerald-500" fill="currentColor" />
+              <span className="text-sm font-semibold text-gray-800 tracking-wide">{locationName.split(',')[0]}</span>
+              <span className="text-[10px] text-gray-400 font-bold">▼</span>
+            </div>
+            <span className="text-[10px] text-amber-500 font-semibold ml-4 group-hover:text-amber-600">
+              Wrong location? Tap to set →
+            </span>
+          </button>
         </div>
+
 
         <div className="flex items-center gap-3 relative">
           <motion.button
@@ -245,7 +303,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       </motion.div>
 
       {/* 2. Weather Section */}
-      <motion.div 
+      <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="show"
@@ -255,8 +313,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           <div>
             <div className="flex items-start gap-2">
               <span className="text-7xl font-medium text-gray-900 tracking-tighter">{currentTemp}°</span>
-              <motion.div 
-                animate={{ rotate: 360 }} 
+              <motion.div
+                animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
               >
                 <Sun size={32} className="text-yellow-400 fill-yellow-400 mt-2" />
@@ -324,7 +382,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       </motion.div>
 
       {/* Carbon Wallet Integration */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 20 }}
@@ -335,10 +393,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => navigateTo('landmark')}
-          className="w-full mt-4 bg-white border-2 border-green-600 border-dashed rounded-2xl p-4 flex items-center justify-center gap-2 shadow-sm"
+          className="w-full mt-4 bg-white border-2 border-dashed rounded-2xl p-4 flex items-center justify-center gap-2 shadow-sm"
+          style={{ borderColor: '#00BB78' }}
         >
-          <MapPin size={20} className="text-green-700" />
-          <span className="font-bold text-green-800">Locate My Farm Boundary</span>
+          <MapPin size={20} style={{ color: '#00BB78' }} />
+          <span className="font-bold" style={{ color: '#001A11' }}>Locate My Farm Boundary</span>
         </motion.button>
       </motion.div>
 
@@ -390,175 +449,332 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         </div>
       </motion.div>
 
-      {/* 4. Services Grid */}
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="px-6 mt-8 relative z-10 w-full"
-      >
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Services</h2>
-        <div className="grid grid-cols-4 gap-4">
+      {/* ═══════════════════════════════════════════════
+          SERVICES
+      ═══════════════════════════════════════════════ */}
+      <div className="px-5 mt-4 mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold" style={{ color: '#001A11' }}>Services</h2>
+          <span className="text-[11px] font-semibold" style={{ color: '#00BB78' }}>9 tools</span>
+        </div>
+
+        {/* ── ROW 1: Two featured large cards ── */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigateTo('market' as Screen)}
+            className="flex flex-col justify-between p-4 rounded-3xl text-left"
+            style={{ background: '#001A11', minHeight: 130 }}
+          >
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(0,187,120,0.15)' }}>
+              <TrendingUp size={20} style={{ color: '#00BB78' }} />
+            </div>
+            <div className="mt-6">
+              <p className="text-[13px] font-bold text-white leading-tight">Market Prices</p>
+              <p className="text-[10px] mt-0.5" style={{ color: '#A5FFA7' }}>Live mandi rates</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigateTo('vision' as Screen)}
+            className="flex flex-col justify-between p-4 rounded-3xl text-left"
+            style={{ background: '#00BB78', minHeight: 130 }}
+          >
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
+              <ScanLine size={20} className="text-white" />
+            </div>
+            <div className="mt-6">
+              <p className="text-[13px] font-bold text-white leading-tight">Crop Scanner</p>
+              <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>AI disease detection</p>
+            </div>
+          </motion.button>
+        </div>
+
+        {/* ── ROW 2: 2×2 grid ── */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
           {[
-            { icon: <TrendingUp size={28} strokeWidth={1.5} />, label: 'Market', bg: 'bg-gradient-to-br from-blue-400 to-blue-600', shadow: 'shadow-blue-500/40', text: 'text-white', screen: 'market' },
-            { icon: <ScanLine size={28} strokeWidth={1.5} />, label: 'Scanner', bg: 'bg-gradient-to-br from-green-400 to-green-600', shadow: 'shadow-green-500/40', text: 'text-white', screen: 'vision' },
-            { icon: <BookOpen size={28} strokeWidth={1.5} />, label: 'Schemes', bg: 'bg-gradient-to-br from-orange-400 to-orange-600', shadow: 'shadow-orange-500/40', text: 'text-white', screen: 'scheme-setu' },
-            { icon: <Umbrella size={28} strokeWidth={1.5} />, label: 'Insurance', bg: 'bg-gradient-to-br from-indigo-400 to-indigo-600', shadow: 'shadow-indigo-500/40', text: 'text-white', screen: 'insurance' },
-            { icon: <Activity size={28} strokeWidth={1.5} />, label: 'Soil SOC', bg: 'bg-gradient-to-br from-violet-400 to-violet-600', shadow: 'shadow-violet-500/40', text: 'text-white', screen: 'soil-carbon' },
-            { icon: <Sprout size={28} strokeWidth={1.5} />, label: 'Carbon', bg: 'bg-gradient-to-br from-emerald-400 to-emerald-600', shadow: 'shadow-emerald-500/40', text: 'text-white', screen: 'carbon-vault' },
-            { icon: <Zap size={28} strokeWidth={1.5} />, label: 'Forecast', bg: 'bg-gradient-to-br from-yellow-300 to-amber-500', shadow: 'shadow-amber-500/40', text: 'text-white', screen: 'forecast' },
-            { icon: <Radio size={28} strokeWidth={1.5} />, label: 'Acoustic', bg: 'bg-gradient-to-br from-rose-400 to-rose-600', shadow: 'shadow-rose-500/40', text: 'text-white', screen: 'acoustic-scanner' },
-            { icon: <Link2 size={28} strokeWidth={1.5} />, label: 'Trace', bg: 'bg-gradient-to-br from-teal-400 to-cyan-600', shadow: 'shadow-teal-500/40', text: 'text-white', screen: 'traceability' },
-          ].map((item, idx) => (
+            { icon: <BookOpen size={16} strokeWidth={2} />, label: 'Govt Schemes', desc: 'Subsidies & loans', screen: 'scheme-setu', iconColor: '#001A11', bg: '#F5FAF7' },
+            { icon: <Umbrella size={16} strokeWidth={2} />, label: 'Crop Insurance', desc: 'Protect your yield', screen: 'insurance', iconColor: '#001A11', bg: '#F5FAF7' },
+            { icon: <Activity size={16} strokeWidth={2} />, label: 'Soil Carbon', desc: 'SOC modeling', screen: 'soil-carbon', iconColor: '#00BB78', bg: '#E8FBF3' },
+            { icon: <Sprout size={16} strokeWidth={2} />, label: 'Carbon Vault', desc: 'Credit management', screen: 'carbon-vault', iconColor: '#00BB78', bg: '#E8FBF3' },
+          ].map((s, i) => (
             <motion.button
-              key={idx}
-              variants={itemVariants}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => navigateTo(item.screen as Screen)}
-              className="flex flex-col items-center gap-2 group"
+              key={i}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigateTo(s.screen as Screen)}
+              className="flex flex-col gap-3 p-3.5 rounded-2xl text-left"
+              style={{ background: s.bg, border: '1px solid #EFEFEF' }}
             >
-              <div className={`w-[60px] h-[60px] rounded-[1.2rem] flex items-center justify-center shadow-lg border border-white/80 ${item.bg} ${item.shadow} ${item.text} relative overflow-hidden`}>
-                <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"></div>
-                {item.icon}
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white" style={{ color: s.iconColor }}>
+                {s.icon}
               </div>
-              <span className="text-[10px] font-semibold text-gray-600 transition-colors uppercase tracking-wider">{item.label}</span>
+              <div>
+                <p className="text-[12px] font-bold leading-tight" style={{ color: '#001A11' }}>{s.label}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: '#616B68' }}>{s.desc}</p>
+              </div>
             </motion.button>
           ))}
         </div>
-      </motion.div>
 
-      {/* 3. Commodities & Food */}
-      {crops.length > 0 && (
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-50px" }}
-        className="px-6 mt-10 relative z-10 w-full overflow-hidden"
-      >
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Commodities & Food</h2>
-        <div className="flex gap-5 overflow-x-auto no-scrollbar pb-4 pr-6">
-          {crops.map((crop, idx) => (
-            <motion.div 
-              key={idx} 
-              variants={itemVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex flex-col items-center gap-3 flex-shrink-0 cursor-pointer group"
+        {/* ── ROW 3: Compact list ── */}
+        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #F0F0F0' }}>
+          {[
+            { icon: <Zap size={15} strokeWidth={2} />, label: 'Weather Forecast', desc: '7-day prediction', screen: 'forecast' },
+            { icon: <Radio size={15} strokeWidth={2} />, label: 'Acoustic Scan', desc: 'Bioacoustic monitor', screen: 'acoustic-scanner' },
+            { icon: <Link2 size={15} strokeWidth={2} />, label: 'Traceability', desc: 'Supply chain QR', screen: 'traceability' },
+          ].map((s, i) => (
+            <motion.button
+              key={i}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigateTo(s.screen as Screen)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-white text-left"
+              style={{ borderBottom: i < 2 ? '1px solid #F8F8F8' : 'none' }}
             >
-              <div className="w-[72px] h-[72px] rounded-full overflow-hidden shadow-lg border-2 border-white relative">
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all z-10"></div>
-                <img
-                  src={getCropImage(crop)}
-                  alt={crop}
-                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                  loading="lazy"
-                />
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#F5F5F5', color: '#616B68' }}>
+                {s.icon}
               </div>
-              <span className="text-sm font-semibold text-gray-700 tracking-wide">{crop}</span>
-            </motion.div>
+              <div className="flex-1">
+                <p className="text-[13px] font-semibold" style={{ color: '#001A11' }}>{s.label}</p>
+                <p className="text-[11px]" style={{ color: '#616B68' }}>{s.desc}</p>
+              </div>
+              <ChevronRight size={14} style={{ color: '#A5FFA7', flexShrink: 0 }} />
+            </motion.button>
           ))}
         </div>
-      </motion.div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════
+          COMMODITIES & FOOD
+      ═══════════════════════════════════════════════ */}
+      {crops.length > 0 && (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-50px" }}
+          className="px-6 mt-4 relative z-10 w-full overflow-hidden"
+        >
+          <h2 className="text-base font-bold text-gray-900 mb-4">Commodities &amp; Food</h2>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 pr-6 snap-x">
+            {crops.map((crop, idx) => (
+              <motion.div
+                key={idx}
+                variants={itemVariants}
+                whileHover={{ y: -3 }}
+                whileTap={{ scale: 0.95 }}
+                className="snap-start flex flex-col gap-2 flex-shrink-0 cursor-pointer group"
+              >
+                <div className="w-[68px] h-[68px] rounded-full overflow-hidden shadow-md border-2 border-white relative">
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all z-10"></div>
+                  <img
+                    src={getCropImage(crop)}
+                    alt={crop}
+                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                </div>
+                <span className="text-xs font-semibold text-gray-700 text-center">{crop}</span>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       )}
 
-      {/* 4. My Fields Cards Carousel */}
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-50px" }}
-        className="mt-6 relative z-10 pb-6 overflow-hidden w-full"
-      >
-        <h2 className="text-lg font-bold text-gray-900 mb-4 px-6">My Fields</h2>
-        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-6 snap-x snap-mandatory">
+      {/* ═══════════════════════════════════════════════
+          MY FIELDS
+      ═══════════════════════════════════════════════ */}
+      <div className="mt-6 px-5 pb-10" style={{ fontFamily: 'Inter, sans-serif' }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold" style={{ color: '#001A11' }}>My Fields</h2>
+          <button
+            onClick={() => navigateTo('landmark')}
+            className="flex items-center gap-1 text-xs font-semibold"
+            style={{ color: '#00BB78' }}
+          >
+            <Plus size={13} strokeWidth={2.5} /> Add
+          </button>
+        </div>
 
-          {isLoadingPlots && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-w-[85%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden flex items-center justify-center h-64">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
-                <span className="text-orange-600 font-bold text-sm">Loading Fields...</span>
-              </div>
-            </motion.div>
-          )}
+        {isLoadingPlots && (
+          <div className="flex items-center gap-3 p-5 bg-gray-50 border border-gray-100 rounded-2xl">
+            <div className="w-5 h-5 border-2 border-gray-200 border-t-[#00BB78] rounded-full animate-spin flex-shrink-0" />
+            <span className="text-sm font-medium" style={{ color: '#616B68' }}>Loading your plots…</span>
+          </div>
+        )}
 
-          {!isLoadingPlots && userPlots.length === 0 && (
-            <motion.div variants={itemVariants} className="min-w-[85%] snap-center bg-[#FFF8F0] rounded-[2.5rem] p-2 border border-orange-50 shadow-sm relative overflow-hidden">
-              <div className="px-4 pt-4 pb-2 flex justify-between items-start mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
-                    <img src="https://images.unsplash.com/photo-1592982537447-6f23349c258d?w=400" className="w-full h-full object-cover grayscale opacity-50" alt="Empty Field" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">No Fields Added</h3>
-                  </div>
-                </div>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} onClick={() => navigateTo('landmark')} className="bg-green-100 px-4 py-2 rounded-full flex items-center gap-2">
-                  <Plus size={16} className="text-green-700" />
-                  <span className="text-xs font-bold text-green-800">Add</span>
-                </motion.button>
-              </div>
-              <motion.div whileTap={{ scale: 0.98 }} className="relative h-48 rounded-[2rem] overflow-hidden group cursor-pointer" onClick={() => navigateTo('map')}>
-                <img src="https://images.unsplash.com/photo-1592982537447-6f23349c258d?w=800" className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale" alt="Main Field" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
-                  <p className="bg-white/90 text-gray-800 font-bold px-4 py-2 rounded-xl shadow-lg border border-white">Tap to locate your farm</p>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
+        {!isLoadingPlots && userPlots.length === 0 && (
+          <button
+            onClick={() => navigateTo('map')}
+            className="w-full flex items-center gap-4 p-4 rounded-2xl active:scale-95 transition-transform"
+            style={{ background: '#F7FFFE', border: '1.5px dashed #00BB78' }}
+          >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: '#E8FBF3' }}>
+              <MapPin size={20} style={{ color: '#00BB78' }} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold" style={{ color: '#001A11' }}>No fields added yet</p>
+              <p className="text-xs mt-0.5" style={{ color: '#616B68' }}>Tap to locate your farm on the map</p>
+            </div>
+            <ChevronRight size={16} style={{ color: '#A5FFA7', marginLeft: 'auto', flexShrink: 0 }} />
+          </button>
+        )}
 
-          {!isLoadingPlots && userPlots.map((plot) => (
-            <motion.div key={plot.id} variants={itemVariants} className="min-w-[85%] sm:min-w-[70%] snap-center glass rounded-[2.5rem] p-3 shadow-md border border-white/40 relative overflow-hidden flex-shrink-0 flex flex-col gap-3 group">
-              <div className="px-3 pt-2 flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
-                    <img src={getFieldImage(plot.id)} className="w-full h-full object-cover" alt="Field" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 truncate max-w-[120px]">{plot.name}</h3>
-                    <div className="flex items-center gap-1 text-gray-500 text-xs font-medium">
-                      <MapPin size={12} /> {plotLocationNames[plot.id] || "Locating..."}
+        {!isLoadingPlots && userPlots.length > 0 && (
+          <div className="space-y-3">
+            {userPlots.map((plot) => (
+              <div key={plot.id} className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #F0F0F0', boxShadow: '0 2px 8px rgba(0,187,120,0.06)' }}>
+                {/* Field image */}
+                <div className="relative h-36 w-full">
+                  <img
+                    src={getFieldImage(plot.id)}
+                    alt={plot.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-3 left-4 right-4 flex justify-between items-end">
+                    <div>
+                      <h3 className="text-sm font-bold text-white">{plot.name}</h3>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <MapPin size={10} style={{ color: '#A5FFA7' }} />
+                        <span className="text-[10px] text-gray-300">{plotLocationNames[plot.id] || 'Locating…'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,187,120,0.25)', backdropFilter: 'blur(8px)' }}>
+                      <Leaf size={11} style={{ color: '#A5FFA7' }} />
+                      <span className="text-xs font-bold text-white">{plot.area} ha</span>
                     </div>
                   </div>
                 </div>
-                <div className="glass-dark px-3 py-2 rounded-full flex items-center gap-1 shrink-0 shadow-lg">
-                  <Sprout size={16} className="text-emerald-400" fill="currentColor" />
-                  <span className="text-sm font-bold text-white">{plot.area} ha</span>
+
+                {/* Action row */}
+                <div className="grid grid-cols-3" style={{ borderTop: '1px solid #F0F0F0' }}>
+                  {[
+                    { icon: <MapPin size={15} style={{ color: '#00BB78' }} />, label: 'Map', action: () => navigateTo('map') },
+                    { icon: <BarChart2 size={15} style={{ color: '#00BB78' }} />, label: 'Satellite', action: () => navigateTo('field-monitor', { plotId: plot.id }) },
+                    { icon: <TrendingUp size={15} style={{ color: '#00BB78' }} />, label: 'Yield', action: () => navigateTo('forecast') },
+                  ].map((btn, i) => (
+                    <button
+                      key={i}
+                      onClick={btn.action}
+                      className="flex flex-col items-center gap-1.5 py-3 transition-colors"
+                      style={{ borderRight: i < 2 ? '1px solid #F0F0F0' : 'none' }}
+                    >
+                      {btn.icon}
+                      <span className="text-[10px] font-semibold" style={{ color: '#616B68' }}>{btn.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Location Picker Modal ── */}
+      <AnimatePresence>
+        {showLocationPicker && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200]"
+              onClick={() => { setShowLocationPicker(false); setCityQuery(''); setCityResults([]); }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 60, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 60, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl z-[201] p-5 shadow-2xl"
+              style={{ maxHeight: '80vh' }}
+            >
+              {/* Handle */}
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: '#E8FBF3' }}>
+                  <MapPin size={20} style={{ color: '#00BB78' }} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold" style={{ color: '#001A11' }}>Set Your Location</h2>
+                  <p className="text-xs" style={{ color: '#616B68' }}>Search for your city or district</p>
                 </div>
               </div>
 
-              <motion.div whileTap={{ scale: 0.98 }} className="relative h-40 rounded-[2rem] overflow-hidden cursor-pointer w-full" onClick={() => navigateTo('map')}>
-                <img src={getFieldImage(plot.id)} className="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-700" alt={plot.name} />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </motion.div>
+              {/* Search input */}
+              <div className="relative mb-3">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#616B68' }} />
+                <input
+                  autoFocus
+                  type="text"
+                  value={cityQuery}
+                  onChange={e => handleCitySearch(e.target.value)}
+                  placeholder="e.g. Nagpur, Pune, Hubli..."
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-2xl text-sm font-medium focus:outline-none transition-all"
+                  style={{ border: '1.5px solid #E0E0E0', fontFamily: 'Inter, sans-serif' }}
+                />
+                {citySearching && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid #A5FFA7', borderTopColor: '#00BB78' }} />
+                  </div>
+                )}
+              </div>
 
-              <div className="flex justify-between items-center glass rounded-[1.5rem] p-2 shadow-sm w-full mt-1 border border-white/50">
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('map'); }}>
-                  <div className="w-10 h-10 rounded-full bg-blue-50/80 flex items-center justify-center group-hover:bg-blue-100 transition-colors border border-blue-100">
-                    <MapPin size={18} className="text-blue-600" />
+              {/* Results */}
+              <div className="overflow-y-auto" style={{ maxHeight: '45vh' }}>
+                {cityResults.length > 0 ? (
+                  <div className="space-y-1">
+                    {cityResults.map((city, i) => (
+                      <motion.button
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        onClick={() => handlePickCity(city)}
+                        className="w-full flex items-center gap-3 p-3 rounded-2xl transition-colors text-left"
+                        style={{ '--hover-bg': '#E8FBF3' } as any}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#E8FBF3')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#F5F5F5' }}>
+                          <MapPin size={14} style={{ color: '#616B68' }} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: '#001A11' }}>{city.name}</p>
+                          <p className="text-xs" style={{ color: '#616B68' }}>{city.country} · {city.latitude?.toFixed(2)}°N, {city.longitude?.toFixed(2)}°E</p>
+                        </div>
+                        <ChevronRight size={14} style={{ color: '#A5FFA7', marginLeft: 'auto', flexShrink: 0 }} />
+                      </motion.button>
+                    ))}
                   </div>
-                  <span className="text-[10px] font-bold text-gray-700">Map</span>
-                </motion.button>
-                <div className="w-px h-8 bg-gray-200/50" />
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('field-monitor', { plotId: plot.id }); }}>
-                  <div className="w-10 h-10 rounded-full bg-emerald-50/80 flex items-center justify-center group-hover:bg-emerald-100 transition-colors border border-emerald-100">
-                    <Activity size={18} className="text-emerald-600" />
+                ) : cityQuery && !citySearching ? (
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                      <MapPin size={22} className="text-gray-400" />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-700">No results for "{cityQuery}"</p>
+                    <p className="text-xs text-gray-400 mt-1">Try a different spelling or nearby city</p>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-700">Satellite</span>
-                </motion.button>
-                <div className="w-px h-8 bg-gray-200/50" />
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }} className="flex-1 flex flex-col items-center gap-1 group py-1" onClick={(e) => { e.stopPropagation(); navigateTo('forecast'); }}>
-                  <div className="w-10 h-10 rounded-full bg-amber-50/80 flex items-center justify-center group-hover:bg-amber-100 transition-colors border border-amber-100">
-                    <TrendingUp size={18} className="text-amber-600" />
+                ) : !cityQuery ? (
+                  <div className="text-center py-6">
+                    <p className="text-xs text-gray-400 font-medium">Start typing to search cities</p>
+                    {localStorage.getItem('kd_saved_location') && (
+                      <button
+                        onClick={() => { localStorage.removeItem('kd_saved_location'); sessionStorage.removeItem('kd_last_location'); window.location.reload(); }}
+                        className="mt-3 text-xs text-red-500 font-semibold underline"
+                      >
+                        Reset to auto-detect
+                      </button>
+                    )}
                   </div>
-                  <span className="text-[10px] font-bold text-gray-700">Yield</span>
-                </motion.button>
+                ) : null}
               </div>
             </motion.div>
-          ))}
-        </div>
-      </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

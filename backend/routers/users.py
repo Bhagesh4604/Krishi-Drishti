@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List, Optional
 from ..database import get_db
 from ..models import User
@@ -20,17 +20,27 @@ class UserProfileUpdate(BaseModel):
 class UserProfileResponse(BaseModel):
     id: int
     phone: str
-    name: Optional[str]
-    district: Optional[str]
-    land_size: float
-    category: str
-    farming_type: str
-    trust_score: int
-    crops: Optional[str] # Returning as string for now, or could parse to list
-    language: Optional[str]
+    name: Optional[str] = None
+    district: Optional[str] = None
+    land_size: float = 0.0
+    category: str = "General"
+    farming_type: str = "Mixed"
+    trust_score: int = 0
+    crops: Optional[List[str]] = None  # Always return as list
+    language: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+    @field_validator('crops', mode='before')
+    @classmethod
+    def parse_crops(cls, v):
+        """Convert comma-string stored in DB into a proper list."""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [c.strip() for c in v.split(',') if c.strip()]
+        return v
 
 @router.get("/me", response_model=UserProfileResponse)
 async def read_users_me(current_user: User = Depends(get_current_user)):

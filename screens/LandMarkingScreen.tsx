@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Polygon, Polyline, useMapEvents, useMap } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import { getUserLocation, plotService } from '../src/services/api';
+import { plotService } from '../src/services/api';
+import useGeolocation from '../src/hooks/useGeolocation';
 import {
     ArrowLeft,
     MapPin,
@@ -144,6 +145,9 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
     const [loading, setLoading] = useState(false);
     const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
     const [mapType, setMapType] = useState<'satellite' | 'street'>('satellite');
+    const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+    const [gpsStatus, setGpsStatus] = useState<'acquiring' | 'good' | 'poor' | 'denied'>('acquiring');
+    const [initialLocationSet, setInitialLocationSet] = useState(false);
 
     // Ownership Details State
     const [showSaveModal, setShowSaveModal] = useState(false);
@@ -152,10 +156,23 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [manualArea, setManualArea] = useState('');
 
-    const watchId = useRef<number | null>(null);
+    const { startTracking, stopTracking, getCurrentLocation } = useGeolocation();
 
     useEffect(() => {
-        getUserLocation().then((loc) => setCurrentLocation([loc.lat, loc.lng]));
+        setGpsStatus('acquiring');
+        
+        getCurrentLocation().then((pos) => {
+            if (pos) {
+                setCurrentLocation([pos.coords.latitude, pos.coords.longitude]);
+                setInitialLocationSet(true);
+                setGpsAccuracy(Math.round(pos.coords.accuracy));
+                setGpsStatus(pos.coords.accuracy <= 20 ? 'good' : 'poor');
+            } else {
+                setGpsStatus('denied');
+            }
+        });
+        
+        return () => { stopTracking(); };
     }, []);
 
     const handleMapClick = (e: any) => {
@@ -176,26 +193,21 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
 
     const toggleTracking = () => {
         if (isTracking) {
-            if (watchId.current !== null) {
-                navigator.geolocation.clearWatch(watchId.current);
-                watchId.current = null;
-            }
+            stopTracking();
             setIsTracking(false);
+            // Convert walked path into boundary markers
             setMarkers([...pathCoordinates]);
         } else {
             setPathCoordinates([]);
             setIsTracking(true);
-            if (navigator.geolocation) {
-                watchId.current = navigator.geolocation.watchPosition(
-                    (position) => {
-                        const newCoord: [number, number] = [position.coords.latitude, position.coords.longitude];
-                        setPathCoordinates(prev => [...prev, newCoord]);
-                        setCurrentLocation(newCoord);
-                    },
-                    (error) => console.error(error),
-                    { enableHighAccuracy: true }
-                );
-            }
+            
+            startTracking((position) => {
+                const newCoord: [number, number] = [position.coords.latitude, position.coords.longitude];
+                setGpsAccuracy(Math.round(position.coords.accuracy));
+                setGpsStatus(position.coords.accuracy <= 20 ? 'good' : 'poor');
+                setPathCoordinates(prev => [...prev, newCoord]);
+                setCurrentLocation(newCoord);
+            });
         }
     };
 
@@ -320,9 +332,19 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                             <h2 className="text-base font-black bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent">
                                 Mark Your Land
                             </h2>
-                            <p className="text-[10px] text-gray-500 font-semibold flex items-center gap-1">
-                                <Sparkles className="w-3 h-3 text-amber-500" />
-                                AI-powered boundary mapping
+                            <p className="text-[10px] font-semibold flex items-center gap-1.5 mt-0.5">
+                                {gpsStatus === 'acquiring' && (
+                                    <><span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block" /><span className="text-amber-600">Acquiring GPS…</span></>
+                                )}
+                                {gpsStatus === 'good' && (
+                                    <><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /><span className="text-green-600">GPS ±{gpsAccuracy}m — Ready</span></>
+                                )}
+                                {gpsStatus === 'poor' && (
+                                    <><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /><span className="text-amber-600">Weak GPS ±{gpsAccuracy}m — Move outdoors</span></>
+                                )}
+                                {gpsStatus === 'denied' && (
+                                    <><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /><span className="text-red-600">GPS denied — Enable in settings</span></>
+                                )}
                             </p>
                         </div>
                     </div>
@@ -365,7 +387,10 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                     />
 
                     <MapEvents onMapClick={handleMapClick} />
-                    {currentLocation && <RecenterMap lat={currentLocation[0]} lng={currentLocation[1]} />}
+                    {/* Only recenter map on initial location load, NOT during walk tracking */}
+                    {currentLocation && !isTracking && initialLocationSet && (
+                        <RecenterMap lat={currentLocation[0]} lng={currentLocation[1]} />
+                    )}
 
                     {markers.map((pos, idx) => (
                         <Marker
@@ -388,7 +413,7 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                         />
                     )}
 
-                    {pathCoordinates.length > 0 && (
+                    {pathCoordinates.length > 1 && (
                         <Polyline
                             positions={pathCoordinates}
                             pathOptions={{

@@ -1,90 +1,216 @@
-
 import React from 'react';
-import { Screen } from '../types';
-import { ArrowLeft, TrendingUp, TrendingDown, Clock, Info, ChevronRight, BarChart3, Target } from 'lucide-react';
-import { COLORS } from '../constants';
+import { Screen, UserProfile } from '../types';
+import { ArrowLeft, CloudRain, Wind, Droplets, Sun, Thermometer, AlertCircle, Clock } from 'lucide-react';
+
+const C = { primary: '#00BB78', dark: '#001A11', gray: '#616B68', mint: '#A5FFA7', bg: '#E8FBF3' };
 
 interface ForecastScreenProps {
   navigateTo: (screen: Screen) => void;
   t: any;
+  weather?: any;
+  user?: UserProfile | null;
 }
 
-const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, t }) => {
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const getWeatherIcon = (code: number) => {
+  if (code === 0) return <Sun size={18} className="text-yellow-500" />;
+  if (code <= 3) return <Sun size={18} className="text-yellow-400" />;
+  if (code <= 67) return <CloudRain size={18} className="text-blue-500" />;
+  return <CloudRain size={18} className="text-gray-500" />;
+};
+
+const getWeatherLabel = (code: number) => {
+  if (code === 0) return 'Clear';
+  if (code <= 3) return 'Partly Cloudy';
+  if (code <= 48) return 'Fog';
+  if (code <= 67) return 'Rain';
+  if (code <= 77) return 'Snow';
+  if (code <= 82) return 'Showers';
+  return 'Storm';
+};
+
+const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, t, weather, user }) => {
+  // Extract real 7-day forecast from Open-Meteo weather data
+  const daily = weather?.daily;
+  const hasForecast = daily?.time && daily.time.length > 0;
+
+  const crops = Array.isArray(user?.crops) && user!.crops.length > 0
+    ? user!.crops
+    : null;
+
   return (
-    <div className="p-6 bg-[#F8FAF8] min-h-full pb-32">
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => navigateTo('home')} className="text-gray-400 p-1">
-          <ArrowLeft size={24} />
+    <div className="bg-white min-h-full pb-28" style={{ fontFamily: 'Inter, sans-serif' }}>
+
+      {/* ─── HEADER ─── */}
+      <div className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-white z-10" style={{ borderBottom: '1px solid #F0F0F0' }}>
+        <button
+          onClick={() => navigateTo('home')}
+          className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-transform"
+          style={{ background: '#F5F5F5', border: '1px solid #EBEBEB' }}
+        >
+          <ArrowLeft size={16} style={{ color: C.dark }} />
         </button>
         <div>
-          <h2 className="text-2xl font-black text-gray-900 leading-none">Geo-Prophet</h2>
-          <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1">Price Forecasting AI</p>
+          <h1 className="text-lg font-bold" style={{ color: C.dark }}>7-Day Weather Forecast</h1>
+          <p className="text-xs font-semibold" style={{ color: C.primary }}>
+            Real data via Open-Meteo
+          </p>
         </div>
       </div>
 
-      {/* Main Forecast Insight */}
-      <div className="bg-white rounded-[2.5rem] p-7 shadow-xl shadow-gray-200/40 border border-gray-100 mb-8 overflow-hidden relative">
-         <div className="flex justify-between items-center mb-6">
-            <h3 className="text-base font-black text-gray-900">7-Day Wheat Price Trend</h3>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-full">
-               <TrendingUp size={12} className="text-green-600" />
-               <span className="text-[10px] font-black text-green-700">Rise Expected</span>
-            </div>
-         </div>
+      <div className="px-5 pt-5 space-y-4">
 
-         <div className="flex items-end gap-3 h-40 mb-6">
-            {[35, 45, 42, 55, 65, 75, 85].map((h, i) => (
-               <div key={i} className="flex-1 flex flex-col items-center group">
-                  <div className="w-full bg-gray-50 rounded-t-xl group-hover:bg-amber-100 transition-all relative overflow-hidden" style={{ height: `${h}%` }}>
-                     <div className={`absolute inset-0 bg-amber-500 opacity-20 ${i === 6 ? 'opacity-60' : ''}`}></div>
+        {/* ─── 7-DAY WEATHER CARDS ─── */}
+        {hasForecast ? (
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Weekly Outlook</p>
+            <div className="space-y-2">
+              {daily.time.slice(0, 7).map((date: string, i: number) => {
+                const dayName = WEEKDAYS[new Date(date).getDay()];
+                const maxTemp = Math.round(daily.temperature_2m_max?.[i] ?? '--');
+                const minTemp = Math.round(daily.temperature_2m_min?.[i] ?? '--');
+                const rain = daily.precipitation_sum?.[i]?.toFixed(1) ?? '0';
+                const code = daily.weathercode?.[i] ?? 0;
+                const windSpeed = Math.round(daily.windspeed_10m_max?.[i] ?? 0);
+                const isToday = i === 0;
+
+                return (
+                  <div
+                    key={date}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                    style={{
+                      background: isToday ? C.bg : '#FAFAFA',
+                      border: `1px solid ${isToday ? C.mint : '#F0F0F0'}`
+                    }}
+                  >
+                    <div className="w-10 text-center">
+                      <p className="text-xs font-bold" style={{ color: isToday ? C.primary : C.gray }}>
+                        {isToday ? 'Today' : dayName}
+                      </p>
+                      <p className="text-[10px] text-gray-400">{date.slice(5)}</p>
+                    </div>
+
+                    <div className="w-8 flex justify-center">
+                      {getWeatherIcon(code)}
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-gray-700">{getWeatherLabel(code)}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-blue-500 flex items-center gap-0.5">
+                          <Droplets size={9} /> {rain}mm
+                        </span>
+                        <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                          <Wind size={9} /> {windSpeed}km/h
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-sm font-bold" style={{ color: C.dark }}>{maxTemp}°</p>
+                      <p className="text-xs text-gray-400">{minTemp}°</p>
+                    </div>
                   </div>
-                  <span className="text-[8px] font-black text-gray-400 mt-2">D{i+1}</span>
-               </div>
-            ))}
-         </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center py-10 gap-3 rounded-2xl" style={{ background: '#FAFAFA', border: '1px solid #F0F0F0' }}>
+            <Clock size={32} className="text-gray-300" />
+            <p className="text-sm font-semibold text-gray-500">Loading weather data...</p>
+            <p className="text-xs text-gray-400">Allow location access for accurate forecast</p>
+          </div>
+        )}
 
-         <div className="flex justify-between items-center pt-6 border-t border-gray-50">
+        {/* ─── FARMING ADVISORY BASED ON WEATHER ─── */}
+        {hasForecast && (() => {
+          const totalRain = daily.precipitation_sum?.slice(0, 7).reduce((a: number, b: number) => a + b, 0) ?? 0;
+          const maxWind = Math.max(...(daily.windspeed_10m_max?.slice(0, 7) ?? [0]));
+          const avgMax = (daily.temperature_2m_max?.slice(0, 7).reduce((a: number, b: number) => a + b, 0) ?? 0) / 7;
+
+          const advisories: { icon: React.ReactNode; title: string; desc: string; color: string }[] = [];
+
+          if (totalRain > 20) {
+            advisories.push({
+              icon: <CloudRain size={16} className="text-blue-600" />,
+              title: 'Heavy Rain Expected',
+              desc: `${totalRain.toFixed(0)}mm total this week. Delay any spraying or harvesting if possible.`,
+              color: 'bg-blue-50 border-blue-100',
+            });
+          }
+          if (maxWind > 40) {
+            advisories.push({
+              icon: <Wind size={16} className="text-gray-600" />,
+              title: 'High Wind Alert',
+              desc: `Winds up to ${Math.round(maxWind)} km/h. Secure any nets or poly-house structures.`,
+              color: 'bg-gray-50 border-gray-200',
+            });
+          }
+          if (avgMax > 38) {
+            advisories.push({
+              icon: <Thermometer size={16} className="text-red-500" />,
+              title: 'Heat Stress Risk',
+              desc: `Average high of ${Math.round(avgMax)}°C. Irrigate early morning or late evening to reduce crop stress.`,
+              color: 'bg-red-50 border-red-100',
+            });
+          }
+          if (totalRain < 2 && avgMax > 30) {
+            advisories.push({
+              icon: <Droplets size={16} className="text-orange-500" />,
+              title: 'Dry Week Ahead',
+              desc: 'Less than 2mm rain expected. Ensure irrigation is scheduled for your plots.',
+              color: 'bg-orange-50 border-orange-100',
+            });
+          }
+
+          if (advisories.length === 0) return (
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-green-50 border border-green-100">
+              <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                <Sun size={16} className="text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-green-900">Good Week for Farming</p>
+                <p className="text-xs text-green-700 mt-0.5">No extreme weather events expected. Ideal conditions for field work.</p>
+              </div>
+            </div>
+          );
+
+          return (
             <div>
-               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Predicted Price</p>
-               <h4 className="text-2xl font-black text-gray-900">₹2,450 <span className="text-xs text-green-500">/qtl</span></h4>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Farming Advisories</p>
+              <div className="space-y-3">
+                {advisories.map((a, i) => (
+                  <div key={i} className={`flex items-start gap-3 p-4 rounded-2xl border ${a.color}`}>
+                    <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                      {a.icon}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{a.title}</p>
+                      <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{a.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button className="bg-green-700 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100">
-               Sell Next Week
-            </button>
-         </div>
-      </div>
+          );
+        })()}
 
-      {/* Yield Estimator */}
-      <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 px-2">Satellite Yield Predictor</h3>
-      <div className="bg-gray-900 rounded-[2.5rem] p-6 text-white shadow-2xl shadow-green-900/10 mb-8 flex items-center justify-between">
-         <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-green-400">
-               <Target size={24} />
-            </div>
-            <div>
-               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Est. Harvest Yield</p>
-               <h4 className="text-xl font-black">2.4 Tons <span className="text-[10px] text-green-400">+15% YoY</span></h4>
-            </div>
-         </div>
-         <ChevronRight size={20} className="text-white/20" />
-      </div>
-
-      <div className="space-y-4">
-         <div className="bg-white p-5 rounded-3xl border border-gray-100 flex items-center gap-4 shadow-sm">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-               <BarChart3 size={24} />
-            </div>
-            <div className="flex-1">
-               <h4 className="text-sm font-black text-gray-900">Local Supply Gap</h4>
-               <p className="text-[10px] text-gray-400 font-bold">Inflow to Nagpur Mandi is down 10% this week.</p>
-            </div>
-         </div>
-         <div className="bg-blue-600 p-5 rounded-3xl text-white flex items-center gap-4 shadow-lg shadow-blue-100">
-            <Info size={24} />
-            <p className="text-xs font-black leading-tight flex-1">
-               Geo-Prophet recommends holding Lemons. Predicted shortage in the northern belt will spike prices in 10 days.
+        {/* ─── PRICE FORECAST — HONEST PLACEHOLDER ─── */}
+        <div className="flex items-start gap-3 p-4 rounded-2xl border border-gray-200 bg-gray-50">
+          <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
+            <AlertCircle size={16} className="text-gray-400" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-700">Mandi Price Forecast</p>
+            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+              Live Agmarknet price API integration is in progress. Once connected, you'll see real-time mandi prices for{' '}
+              {crops ? crops.join(', ') : 'your crops'} here.
             </p>
-         </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

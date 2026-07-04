@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Screen, UserProfile, Scheme } from '../types';
 import {
@@ -7,20 +6,19 @@ import {
   ChevronRight,
   Landmark,
   CheckCircle2,
-  FileText,
   Zap,
-  Info,
   X,
   Target,
   BrainCircuit,
   Loader2,
   ExternalLink,
   ShieldCheck,
-  TrendingUp,
-  Cpu
+  Cpu,
 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 import { schemesService } from '../src/services/api';
+
+const C = { primary: '#00BB78', dark: '#001A11', gray: '#616B68', mint: '#A5FFA7', bg: '#E8FBF3' };
 
 interface SchemeSetuScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -28,34 +26,32 @@ interface SchemeSetuScreenProps {
   t: any;
 }
 
-
-
 const SchemeSetuScreen: React.FC<SchemeSetuScreenProps> = ({ navigateTo, user, t }) => {
   const [selectedScheme, setSelectedScheme] = useState<Scheme | null>(null);
-  const [schemes, setSchemes] = useState<Scheme[]>([]); // Use state for schemes
+  const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [explainingId, setExplainingId] = useState<string | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState<'idle' | 'success'>('idle');
 
   useEffect(() => {
     const loadSchemes = async () => {
       try {
         const data = await schemesService.getSchemes();
-        // Map backend response to UI model
         const mapped = data.map((s: any) => ({
           id: s.id.toString(),
           name: s.title,
           department: s.department || 'Govt of India',
           matchScore: s.match_score || (80 + parseInt(s.id?.toString() || '0') % 20),
-
           benefits: s.benefits || s.description,
           requirements: s.eligibility ? [s.eligibility] : ['Citizenship'],
           description: s.description,
-          link: s.link || '#'
+          link: s.link || '#',
         }));
         setSchemes(mapped);
       } catch (e) {
-        console.error("Failed to load schemes", e);
+        console.error('Failed to load schemes', e);
       }
     };
     loadSchemes();
@@ -71,23 +67,15 @@ const SchemeSetuScreen: React.FC<SchemeSetuScreenProps> = ({ navigateTo, user, t
       const prompt = `Act as a Government Benefit Expert. Analyze why this farmer is a match for the scheme "${scheme.name}". 
       Farmer Profile: ${user?.land_size} acres, Location: ${user?.district}, Category: ${user?.category}, Farming Type: ${user?.farming_type}, Crops: ${cropsStr}.
       Scheme Benefits: ${scheme.benefits}.
-      Provide a concise, empathetic explanation in 3 bullet points. Final response must be in ${t.welcome === 'Kisan-Sarathi' ? 'English' : 'Hindi'}.`;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt
-      });
-      setExplanation(response.text || "You match based on your land size and crop choice.");
+      Provide a concise, empathetic explanation in 3 bullet points.`;
+      const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: prompt });
+      setExplanation(response.text || 'You match based on your land size and crop choice.');
     } catch (err) {
-      console.error(err);
-      setExplanation("Unable to generate AI breakdown right now.");
+      setExplanation('Unable to generate AI breakdown right now.');
     } finally {
       setLoading(false);
     }
   };
-
-  const [isApplying, setIsApplying] = useState(false);
-  const [applicationStatus, setApplicationStatus] = useState<'idle' | 'success'>('idle');
 
   const handleAutoFill = async () => {
     if (!selectedScheme) return;
@@ -96,191 +84,204 @@ const SchemeSetuScreen: React.FC<SchemeSetuScreenProps> = ({ navigateTo, user, t
       await schemesService.applyScheme(selectedScheme.id, selectedScheme.name);
       setApplicationStatus('success');
     } catch (error) {
-      console.error("Failed to apply:", error);
-      // Optional: set error state
+      console.error('Failed to apply:', error);
     } finally {
       setIsApplying(false);
-      // Reset after 3 seconds
-      setTimeout(() => {
-        setApplicationStatus('idle');
-      }, 3000);
+      setTimeout(() => setApplicationStatus('idle'), 3000);
     }
   };
 
   return (
-    <div className="h-full bg-[#F8FAF8] flex flex-col relative overflow-hidden">
-      {/* Header */}
-      <div className="bg-white p-6 pb-8 shadow-sm border-b border-gray-100 sticky top-0 z-20">
-        <div className="flex items-center gap-4 mb-6">
-          <button onClick={() => navigateTo('home')} className="p-2 -ml-2 text-gray-400">
-            <ArrowLeft size={24} />
-          </button>
-          <div>
-            <h2 className="text-2xl font-black text-gray-900 leading-none">{t.scheme_setu}</h2>
-            <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1">{t.matcher_tag}</p>
-          </div>
-        </div>
+    <div className="bg-white min-h-full flex flex-col" style={{ fontFamily: 'Inter, sans-serif' }}>
 
-        {/* Profile Match Gauge */}
-        <div className="bg-indigo-900 rounded-[2.5rem] p-6 text-white shadow-2xl shadow-indigo-200 relative overflow-hidden">
-          <div className="flex justify-between items-center relative z-10">
-            <div className="flex flex-col items-center justify-center p-3 bg-white/10 backdrop-blur-md rounded-[1.5rem] border border-white/20">
-              <p className="text-[8px] font-black text-indigo-200 uppercase tracking-widest mb-1">{t.match_index}</p>
-              <h4 className="text-3xl font-black">94%</h4>
-            </div>
-            <div className="text-right flex-1 ml-6">
-              <h5 className="text-xs font-black uppercase tracking-wider mb-2">Live Recommendation Profile</h5>
-              <div className="flex flex-wrap gap-1 justify-end">
-                <span className="text-[8px] font-bold px-2 py-1 bg-white/10 rounded-lg">{user?.category}</span>
-                <span className="text-[8px] font-bold px-2 py-1 bg-white/10 rounded-lg">{user?.land_size} Acres</span>
-                <span className="text-[8px] font-bold px-2 py-1 bg-white/10 rounded-lg">{user?.farming_type}</span>
-              </div>
-            </div>
-          </div>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+      {/* ─── HEADER ─── */}
+      <div className="px-5 pt-12 pb-4 flex items-center gap-3 sticky top-0 bg-white z-20" style={{ borderBottom: '1px solid #F0F0F0' }}>
+        <button
+          onClick={() => navigateTo('home')}
+          className="w-8 h-8 flex items-center justify-center rounded-full active:scale-95 transition-transform flex-shrink-0"
+          style={{ background: '#F5F5F5', border: '1px solid #EBEBEB' }}
+        >
+          <ArrowLeft size={16} style={{ color: C.dark }} />
+        </button>
+        <div>
+          <h1 className="text-lg font-bold" style={{ color: C.dark }}>{t.scheme_setu || 'Scheme Setu'}</h1>
+          <p className="text-xs font-semibold" style={{ color: C.primary }}>{t.matcher_tag || 'AI Policy Matcher'}</p>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-24 no-scrollbar">
-        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] px-2">{t.eligible_schemes}</h3>
+      {/* ─── MATCH PROFILE CARD ─── */}
+      <div className="mx-5 mt-4 mb-4 rounded-2xl p-4 flex items-center gap-4" style={{ background: C.dark }}>
+        <div className="flex-shrink-0 text-center">
+          <p className="text-[10px] font-medium mb-0.5" style={{ color: C.mint }}>Match</p>
+          <span className="text-3xl font-bold text-white">94%</span>
+        </div>
+        <div className="w-px h-10 bg-white/10" />
+        <div className="flex-1">
+          <p className="text-xs font-semibold text-white">Your Profile</p>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {[user?.category, `${user?.land_size || '--'} Ac`, user?.farming_type].filter(Boolean).map((tag, i) => (
+              <span key={i} className="text-[10px] font-medium text-gray-300 bg-white/10 px-2 py-0.5 rounded-full">{tag}</span>
+            ))}
+          </div>
+        </div>
+      </div>
 
-        {schemes.map((scheme, i) => (
-          <div
-            key={scheme.id}
-            className="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden group animate-in slide-in-from-bottom duration-500"
-            style={{ animationDelay: `${i * 150}ms` }}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center">
-                  <Landmark size={18} />
+      {/* ─── SCHEME LIST ─── */}
+      <div className="flex-1 overflow-y-auto px-5 pb-24 no-scrollbar">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
+          {t.eligible_schemes || 'Eligible Schemes'}
+        </p>
+
+        <div className="space-y-3">
+          {schemes.map((scheme) => (
+            <div
+              key={scheme.id}
+              className="bg-white rounded-2xl overflow-hidden"
+              style={{ border: '1px solid #F0F0F0', boxShadow: '0 1px 4px rgba(0,187,120,0.05)' }}
+            >
+              {/* Top section */}
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: C.bg }}>
+                      <Landmark size={15} style={{ color: C.primary }} />
+                    </div>
+                    <span className="text-[11px] font-medium truncate" style={{ color: C.gray }}>{scheme.department}</span>
+                  </div>
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-full flex-shrink-0" style={{ background: C.bg, border: `1px solid ${C.mint}` }}>
+                    <Cpu size={10} style={{ color: C.primary }} />
+                    <span className="text-[10px] font-bold" style={{ color: C.primary }}>{scheme.matchScore}%</span>
+                  </div>
                 </div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider truncate max-w-[150px]">{scheme.department}</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                <Cpu size={12} className="text-green-600" />
-                <span className="text-[10px] font-black text-green-700">{scheme.matchScore}% Match</span>
-              </div>
-            </div>
 
-            <h4 className="text-lg font-black text-gray-900 mb-2 leading-tight">{scheme.name}</h4>
-            <p className="text-[11px] font-bold text-indigo-700 mb-4">{scheme.benefits}</p>
+                <h4 className="text-sm font-bold leading-snug" style={{ color: C.dark }}>{scheme.name}</h4>
+                <p className="text-xs font-medium mt-1 leading-relaxed" style={{ color: C.primary }}>{scheme.benefits}</p>
+              </div>
 
-            <div className="space-y-4">
-              <div className="flex gap-2">
+              {/* AI explanation */}
+              {explainingId === scheme.id && (
+                <div className="mx-4 mb-3 bg-indigo-900 rounded-xl p-4 relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles size={12} className="text-amber-400" />
+                      <span className="text-[10px] font-bold text-white uppercase tracking-wider">AI Breakdown</span>
+                    </div>
+                    <button onClick={() => setExplainingId(null)}>
+                      <X size={13} className="text-white/40" />
+                    </button>
+                  </div>
+                  {loading ? (
+                    <div className="flex items-center gap-2 py-2">
+                      <Loader2 size={14} className="animate-spin text-indigo-300" />
+                      <span className="text-xs text-indigo-300">Analyzing…</span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-indigo-100 leading-relaxed whitespace-pre-wrap">{explanation}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Action row */}
+              <div className="flex items-center gap-2 px-4 pb-4">
                 <button
                   onClick={() => setSelectedScheme(scheme)}
-                  className="flex-1 py-4 bg-gray-900 text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-white rounded-xl text-xs font-semibold active:scale-95 transition-transform"
+                  style={{ background: C.dark }}
                 >
-                  Details <ChevronRight size={14} />
+                  Details <ChevronRight size={13} />
                 </button>
                 <button
                   onClick={() => fetchExplanation(scheme)}
-                  className="w-14 py-4 bg-indigo-50 text-indigo-700 rounded-[1.5rem] flex items-center justify-center border border-indigo-100 active:scale-90 transition-all"
+                  className="w-11 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform"
+                  style={{ background: C.bg, border: `1px solid ${C.mint}` }}
                 >
-                  <BrainCircuit size={20} />
+                  <BrainCircuit size={16} style={{ color: C.primary }} />
                 </button>
               </div>
-
-              {explainingId === scheme.id && (
-                <div className="bg-indigo-900 rounded-3xl p-5 text-white animate-in zoom-in duration-300 relative overflow-hidden">
-                  <div className="flex justify-between items-center mb-3">
-                    <h5 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                      <Sparkles size={14} className="text-amber-400" /> AI Eligibility Breakdown
-                    </h5>
-                    <button onClick={() => setExplainingId(null)} className="text-white/40"><X size={14} /></button>
-                  </div>
-                  {loading ? (
-                    <div className="flex items-center gap-3 py-4">
-                      <Loader2 size={18} className="animate-spin text-indigo-400" />
-                      <span className="text-[10px] font-black text-indigo-200 uppercase">Analyzing Policy Vectors...</span>
-                    </div>
-                  ) : (
-                    <p className="text-xs font-bold leading-relaxed italic text-indigo-50 whitespace-pre-wrap">
-                      {explanation}
-                    </p>
-                  )}
-                  <div className="absolute bottom-0 right-0 w-20 h-20 bg-indigo-400/10 rounded-full blur-2xl"></div>
-                </div>
-              )}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Detail Modal */}
+      {/* ─── DETAIL MODAL ─── */}
       {selectedScheme && (
-        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-end justify-center p-0 animate-in fade-in duration-300">
-          <div className="w-full max-w-md mx-auto bg-white rounded-t-[3.5rem] max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-300 shadow-2xl relative">
-            <div className="sticky top-0 bg-white p-6 pb-4 flex justify-between items-center border-b border-gray-50 z-10">
+        <div className="fixed inset-0 z-[110] bg-black/50 flex items-end justify-center">
+          <div className="w-full max-w-md bg-white rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <div>
-                <h3 className="text-xl font-black text-gray-900 leading-tight pr-4">{selectedScheme.name}</h3>
-                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-1">Application Hub</p>
+                <h3 className="text-base font-bold text-gray-900 pr-4 leading-snug">{selectedScheme.name}</h3>
+                <p className="text-xs text-indigo-600 font-semibold mt-0.5">Application Hub</p>
               </div>
-              <button onClick={() => setSelectedScheme(null)} className="p-3 bg-gray-50 rounded-2xl text-gray-400 hover:bg-gray-100 transition-colors"><X size={20} /></button>
+              <button
+                onClick={() => setSelectedScheme(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:scale-95 transition-transform"
+              >
+                <X size={15} className="text-gray-500" />
+              </button>
             </div>
 
-            <div className="p-6 space-y-6 pb-20">
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 pb-6">
+              {/* Description */}
               <div>
-                <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">About the Scheme</h5>
-                <p className="text-sm font-medium text-gray-700 leading-relaxed">{selectedScheme.description}</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">About</p>
+                <p className="text-sm text-gray-600 leading-relaxed">{selectedScheme.description}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-indigo-50 p-5 rounded-3xl border border-indigo-100">
-                  <Target size={24} className="text-indigo-700 mb-3" />
-                  <h6 className="text-xs font-black text-gray-900 uppercase">Match Level</h6>
-                  <p className="text-2xl font-black text-indigo-800">{selectedScheme.matchScore}%</p>
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                  <Target size={18} className="text-indigo-600 mb-2" />
+                  <p className="text-[10px] text-gray-500 font-medium uppercase">Match Level</p>
+                  <p className="text-xl font-bold text-indigo-800 mt-0.5">{selectedScheme.matchScore}%</p>
                 </div>
-                <div className="bg-green-50 p-5 rounded-3xl border border-green-100">
-                  <ShieldCheck size={24} className="text-green-700 mb-3" />
-                  <h6 className="text-xs font-black text-gray-900 uppercase">Status</h6>
-                  <p className="text-sm font-black text-green-800 uppercase">Pre-Approved</p>
+                <div className="p-4 bg-green-50 border border-green-100 rounded-2xl">
+                  <ShieldCheck size={18} className="text-green-600 mb-2" />
+                  <p className="text-[10px] text-gray-500 font-medium uppercase">Status</p>
+                  <p className="text-sm font-bold text-green-700 mt-0.5">Pre-Approved</p>
                 </div>
               </div>
 
+              {/* Requirements */}
               <div>
-                <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Required Documents</h5>
-                <div className="space-y-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Required Documents</p>
+                <div className="space-y-2">
                   {selectedScheme.requirements.map((req, i) => (
-                    <div key={i} className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                      <CheckCircle2 size={18} className="text-green-600" />
-                      <span className="text-sm font-bold text-gray-700">{req}</span>
+                    <div key={i} className="flex items-center gap-3 p-3.5 bg-gray-50 border border-gray-100 rounded-xl">
+                      <CheckCircle2 size={16} className="text-green-500 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 font-medium">{req}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="pt-4 space-y-3">
+              {/* CTAs */}
+              <div className="space-y-2.5 pt-2">
                 <button
                   onClick={handleAutoFill}
                   disabled={isApplying || applicationStatus === 'success'}
-                  className={`w-full py-5 rounded-[2rem] font-black text-sm shadow-2xl transition-all flex items-center justify-center gap-3 ${applicationStatus === 'success'
-                    ? 'bg-green-100 text-green-700 shadow-none'
-                    : 'bg-green-700 text-white shadow-green-100 active:scale-95'
-                    }`}
+                  className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+                  style={{
+                    background: applicationStatus === 'success' ? C.bg : C.primary,
+                    color: applicationStatus === 'success' ? C.primary : '#fff',
+                    border: applicationStatus === 'success' ? `1px solid ${C.mint}` : 'none',
+                  }}
                 >
                   {isApplying ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      Processing Application...
-                    </>
+                    <><Loader2 size={16} className="animate-spin" /> Processing…</>
                   ) : applicationStatus === 'success' ? (
-                    <>
-                      <CheckCircle2 size={18} />
-                      Application Pre-filled & Sent!
-                    </>
+                    <><CheckCircle2 size={16} /> Application Sent!</>
                   ) : (
-                    <>
-                      <Sparkles size={18} /> {t.auto_fill}
-                    </>
+                    <><Sparkles size={16} /> {t.auto_fill || 'Auto-fill Application'}</>
                   )}
                 </button>
+
                 <a
                   href={selectedScheme.link}
                   target="_blank"
                   rel="noopener"
-                  className="w-full py-4 border-2 border-gray-100 text-gray-900 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  style={{ border: `1.5px solid #E0E0E0`, color: C.dark }}
                 >
                   Official Portal <ExternalLink size={14} />
                 </a>

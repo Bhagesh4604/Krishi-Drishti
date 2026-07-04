@@ -1,36 +1,131 @@
 import axios from 'axios';
 import { UserProfile, Listing, ChatMessage } from '../../types';
+import { Geolocation } from '@capacitor/geolocation';
+
+// Cache last-known position in sessionStorage for quick re-use
+const LOCATION_CACHE_KEY = 'kd_last_location';
 
 export const getUserLocation = async (): Promise<{ lat: number; lng: number }> => {
-  return new Promise(async (resolve) => {
-    const fallback = { lat: 21.1458, lng: 79.0882 }; // Nagpur
-    const fetchIpLocation = async () => {
-      try {
-        const res = await fetch('https://ipapi.co/json/');
-        const data = await res.json();
-        if (data.latitude && data.longitude) {
-          resolve({ lat: data.latitude, lng: data.longitude });
-        } else {
-          resolve(fallback);
-        }
-      } catch {
-        resolve(fallback);
-      }
-    };
+  const FALLBACK = { lat: 21.1458, lng: 79.0882 }; // Nagpur, MH
 
-    if (navigator.geolocation && window.isSecureContext !== false) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        async (err) => {
-          console.warn("Geolocation failed on device:", err.message);
-          fetchIpLocation();
-        },
-        { timeout: 10000 }
-      );
-    } else {
-      fetchIpLocation();
+  // ── IP-based geo fallback — CORS-safe providers only ──
+  const fetchIpLocation = async (): Promise<{ lat: number; lng: number }> => {
+    // Provider 1: ipinfo.io — no rate-limit issues, returns "loc": "lat,lng"
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch('https://ipinfo.io/json', { signal: controller.signal });
+      clearTimeout(timer);
+      const data = await res.json();
+      if (data.loc) {
+        const [lat, lng] = data.loc.split(',').map(Number);
+        console.log('[Location] IP (ipinfo.io) success:', lat, lng);
+        return { lat, lng };
+      }
+    } catch { console.warn('[Location] ipinfo.io failed'); }
+
+    // Provider 2: geojs.io — free, no API key, CORS-enabled
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { signal: controller.signal });
+      clearTimeout(timer);
+      const data = await res.json();
+      if (data.latitude && data.longitude) {
+        console.log('[Location] IP (geojs.io) success:', data.latitude, data.longitude);
+        return { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
+      }
+    } catch { console.warn('[Location] geojs.io failed'); }
+
+    console.warn('[Location] All IP providers failed, using Nagpur fallback');
+    return FALLBACK;
+  };
+
+  // ── If user manually pinned a city via the dashboard picker, honour it ──
+  try {
+    const saved = localStorage.getItem('kd_saved_location');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed?.lat && parsed?.lng) {
+        console.log('[Location] Using user-pinned city:', parsed);
+        return { lat: parsed.lat, lng: parsed.lng };
+      }
     }
-  });
+  } catch { /* ignore */ }
+
+  // ── Try Capacitor GPS ONLY on real Android/iOS native ──
+  const isNativeApp = typeof (window as any).Capacitor !== 'undefined' &&
+    (window as any).Capacitor?.isNativePlatform?.() === true;
+
+  if (isNativeApp) {
+    try {
+      let perm: any;
+      try { perm = await Geolocation.checkPermissions(); } catch { /* not in Capacitor app */ }
+
+      if (perm?.location === 'granted' || perm?.location === 'prompt') {
+        if (perm.location === 'prompt') {
+          try { perm = await Geolocation.requestPermissions(); } catch { /* ignore */ }
+        }
+        if (perm?.location === 'granted') {
+          console.log('[Location] Trying Capacitor GPS (native)...');
+          const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          console.log('[Location] ✅ Capacitor GPS success:', loc);
+          return loc;
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Location] Capacitor GPS failed:', err?.message || err);
+    }
+  }
+
+  // ── Try Browser navigator.geolocation for ALL web (Desktop + Mobile) ──
+  const supportsGeo = typeof navigator !== 'undefined' && 'geolocation' in navigator;
+  const isSecure = typeof window !== 'undefined' && window.isSecureContext !== false;
+
+  if (supportsGeo && isSecure) {
+    // High accuracy (GPS hardware / highly accurate Chrome location services)
+    const highAccResult = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      console.log('[Location] Trying Browser high-accuracy GPS...');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log('[Location] ✅ Browser high-accuracy GPS:', pos.coords.latitude, pos.coords.longitude, '±', pos.coords.accuracy, 'm');
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => {
+          console.warn(`[Location] Browser high-accuracy GPS error (code ${err.code}): ${err.message}`);
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    });
+
+    if (highAccResult) return highAccResult;
+
+    // Low accuracy fallback (Standard browser location)
+    const lowAccResult = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      console.log('[Location] Trying Browser low-accuracy GPS...');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log('[Location] ✅ Browser low-accuracy GPS:', pos.coords.latitude, pos.coords.longitude, '±', pos.coords.accuracy, 'm');
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => {
+          console.warn(`[Location] Browser low-accuracy GPS error (code ${err.code}): ${err.message}`);
+          resolve(null);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      );
+    });
+
+    if (lowAccResult) return lowAccResult;
+  } else {
+    console.warn('[Location] Browser geolocation not available. isSecureContext:', isSecure, 'supportsGeo:', supportsGeo);
+  }
+
+  // ── Final fallback: IP geolocation ──
+  console.log('[Location] All GPS methods failed — falling back to IP geolocation');
+  return fetchIpLocation();
 };
 
 const API_BASE_URL = '/api';
@@ -273,82 +368,119 @@ export const communityService = {
   }
 };
 
+let mockPlots: any[] = [
+  { id: 1, name: 'Main Farm Plot', area: 12.5, crop_type: 'Wheat', coordinates: [] },
+  { id: 2, name: 'North Field', area: 5.2, crop_type: 'Cotton', coordinates: [] },
+  { id: 3, name: 'East Plot', area: 8.0, crop_type: 'Soybean', coordinates: [] },
+  { id: 4, name: 'South Garden', area: 2.1, crop_type: 'Vegetables', coordinates: [] }
+];
+
 export const plotService = {
   getPlots: async () => {
-    const response = await api.get('/plots/');
-    return response.data;
+    return [...mockPlots];
   },
   createPlot: async (plot: { name: string, coordinates: { lat: number, lng: number }[], area: number, crop_type?: string }) => {
-    const response = await api.post('/plots/', plot);
-    return response.data;
+    const newPlot = { id: Math.floor(Math.random() * 1000), ...plot };
+    mockPlots.push(newPlot);
+    return newPlot;
   },
   getCarbonAnalysis: async (plotId: number) => {
-    const response = await api.get(`/plots/${plotId}/carbon`);
-    return response.data;
+    return { carbon_score: 85, predicted_yield: 4200 };
   },
   forecastYield: async (plotId: number) => {
-    const response = await api.get(`/plots/${plotId}/yield-forecast`);
-    return response.data;
+    return { forecast: 4500, unit: 'kg' };
   },
   startAnalysis: async (plotId: number) => {
-    // Triggers Celery GEE task, returns job_id
-    const response = await api.get(`/plots/${plotId}/analyze`);
-    return response.data;
+    return { job_id: 'mock-job-123' };
   },
   pollJob: async (jobId: string) => {
-    const response = await api.get(`/jobs/${jobId}`);
-    return response.data;
+    return { status: 'completed', result: 'Mock analysis completed successfully.' };
   }
 };
 
+let mockProjects: any[] = [
+  { id: 101, plot_id: 1, plot_name: 'Main Farm Plot', methodology: 'Cover-Crop', aggregator_name: 'Verra Core', status: 'Enrolled', projected_credits: 45.5, available_credits: 0, locked_credits: 0, verified_credits: 0 }
+];
+
+let mockWallet = { balance: 0 };
+let mockAggregators = [
+  { name: 'Verra Core', role: 'Global Standard', settlement_days: 14, fee_percentage: 5, farmer_share_percentage: 95, contact: 'partner@verra.org' },
+  { name: 'Puro Earth', role: 'Biochar Specialist', settlement_days: 7, fee_percentage: 8, farmer_share_percentage: 92, contact: 'onboarding@puro.earth' }
+];
+
 export const carbonService = {
   getProjects: async () => {
-    const response = await api.get('/carbon/projects');
-    return response.data;
+    return [...mockProjects];
   },
   getSchemes: async () => {
-    const response = await api.get('/carbon/schemes');
-    return response.data;
+    return [];
   },
   monitorPlot: async (plotId: number, methodology: string = 'Cover-Crop') => {
-    const response = await api.get(`/carbon/plots/${plotId}/monitor`, { params: { methodology } });
-    return response.data;
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return {
+      analysis: {
+        carbon: {
+          gross_credits: 52.4,
+          issuable_credits: 41.9,
+          buffer_pool: 10.5
+        },
+        monitoring: {
+          current_ndvi: 0.65,
+          ndvi_change: 0.12,
+          soil_moisture: 32.5
+        }
+      }
+    };
   },
   enrollPlot: async (plotId: number, methodology: string) => {
-    const response = await api.post('/carbon/enroll', { plot_id: plotId, methodology });
-    return response.data;
-  },
-  uploadEvidence: async (projectId: number, data: { description: string, geo_lat: number, geo_lng: number, file?: File }) => {
-    const formData = new FormData();
-    formData.append('description', data.description);
-    formData.append('geo_lat', data.geo_lat.toString());
-    formData.append('geo_lng', data.geo_lng.toString());
-    if (data.file) {
-      formData.append('file', data.file);
-    } else {
-      const dummyBlob = new Blob(['dummy'], { type: 'text/plain' });
-      formData.append('file', dummyBlob, 'dummy.txt');
-    }
-    const response = await api.post(`/carbon/${projectId}/evidence`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    await new Promise(resolve => setTimeout(resolve, 800));
+    mockProjects.push({
+      id: Math.floor(Math.random() * 1000),
+      plot_id: plotId,
+      plot_name: 'Newly Enrolled Plot',
+      methodology,
+      aggregator_name: 'Verra Core',
+      status: 'Enrolled',
+      projected_credits: 41.9,
+      available_credits: 0,
+      locked_credits: 0,
+      verified_credits: 0
     });
-    return response.data;
+    return { success: true };
+  },
+  uploadEvidence: async (projectId: number, data: any) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const project = mockProjects.find(p => p.id === projectId);
+    if (project) {
+      project.status = 'Evidence_Pending';
+    }
+    return { success: true };
   },
   verifyProject: async (projectId: number) => {
-    const response = await api.post(`/carbon/${projectId}/verify`);
-    return response.data;
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const project = mockProjects.find(p => p.id === projectId);
+    if (project) {
+      project.status = 'Verified';
+      project.verified_credits = project.projected_credits;
+      project.available_credits = project.projected_credits;
+      mockWallet.balance += project.projected_credits;
+    }
+    return { message: 'Audit successful! ACT Credits issued.' };
   },
   getWallet: async () => {
-    const response = await api.get('/carbon/wallet');
-    return response.data;
+    return mockWallet;
   },
   getAggregators: async () => {
-    const response = await api.get('/carbon/aggregators');
-    return response.data;
+    return mockAggregators;
   },
   claimPayout: async (projectId: number, claimCredits: number) => {
-    const response = await api.post(`/carbon/projects/${projectId}/claim`, { claim_credits: claimCredits });
-    return response.data;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const project = mockProjects.find(p => p.id === projectId);
+    if (project) {
+      project.available_credits -= claimCredits;
+      mockWallet.balance -= claimCredits;
+    }
+    return { message: 'Payout initiated successfully!', farmer_payout_inr: claimCredits * 2500 };
   }
 };
 
@@ -411,27 +543,47 @@ export const systemService = {
   }
 };
 
+let mockTokens: any[] = [];
+
 export const traceabilityService = {
   getMyTokens: async () => {
-    const response = await api.get('/trace/tokens');
-    return response.data;
+    return [...mockTokens];
   },
   mintToken: async (payload: any) => {
-    const response = await api.post('/trace/mint', payload);
-    return response.data;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const newToken = {
+      id: `TRC-${Math.floor(Math.random() * 10000)}`,
+      status: 'Minted',
+      ...payload,
+      carbon_footprint_kg_co2e: payload.yield_kg * 0.21,
+      mint_date: new Date().toISOString()
+    };
+    mockTokens.push(newToken);
+    return newToken;
   },
   transferToken: async (tokenId: string, payload: { buyer_name: string; buyer_entity: string; notes?: string }) => {
-    const response = await api.post(`/trace/transfer/${tokenId}`, payload);
-    return response.data;
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const token = mockTokens.find(t => t.id === tokenId);
+    if (token) {
+      token.status = 'Transferred';
+      token.buyer = payload.buyer_entity;
+    }
+    return { success: true };
   },
   verifyToken: async (tokenId: string) => {
-    // Public endpoint — no auth needed, but the api instance will include token if present
-    const response = await api.get(`/trace/verify/${tokenId}`);
-    return response.data;
+    try {
+      const response = await api.get(`/trace/verify/${tokenId}`);
+      return response.data;
+    } catch (e) {
+      console.warn("Backend verify failed, using mock", e);
+      const token = mockTokens.find(t => t.id === tokenId || t.token_id === tokenId);
+      if (!token) throw new Error("Token not found");
+      return token;
+    }
   },
   deleteToken: async (tokenId: string) => {
-    const response = await api.delete(`/trace/tokens/${tokenId}`);
-    return response.data;
+    mockTokens = mockTokens.filter(t => t.id !== tokenId);
+    return { success: true };
   }
 };
 
