@@ -236,11 +236,22 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
     };
 
     const handleSaveClick = () => {
-        if (markers.length < 3) {
-            alert("Please mark at least 3 points to define a field.");
+        let activePoints = markers;
+        
+        // If they are still walking, automatically stop and use the walked path
+        if (mode === 'walk' && isTracking) {
+            activePoints = pathCoordinates;
+            stopTracking();
+            setIsTracking(false);
+            setMarkers([...pathCoordinates]);
+        }
+
+        if (activePoints.length < 3) {
+            alert("Please walk or mark at least 3 distinct points to define a field boundary.");
             return;
         }
-        const calculatedSqM = calculateArea(markers);
+        
+        const calculatedSqM = calculateArea(activePoints);
         const calculatedAcres = calculatedSqM * 0.000247105;
         setManualArea(calculatedAcres.toFixed(2));
         setShowSaveModal(true);
@@ -353,12 +364,12 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                         whileTap={{ scale: 0.95 }}
                         whileHover={{ scale: 1.05 }}
                         onClick={handleSaveClick}
-                        disabled={markers.length < 3}
+                        disabled={(mode === 'walk' && isTracking) ? pathCoordinates.length < 3 : markers.length < 3}
                         className="relative bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2.5 rounded-xl font-black text-xs shadow-lg shadow-green-500/30 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 overflow-hidden"
                     >
                         <Shield className="w-3.5 h-3.5" />
                         <span>VERIFY & SAVE</span>
-                        {markers.length >= 3 && (
+                        {((mode === 'walk' && isTracking) ? pathCoordinates.length >= 3 : markers.length >= 3) && (
                             <motion.div
                                 animate={{ x: ['-100%', '200%'] }}
                                 transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}

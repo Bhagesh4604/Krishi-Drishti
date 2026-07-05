@@ -68,14 +68,19 @@ export const getUserLocation = async (): Promise<{ lat: number; lng: number }> =
         }
         if (perm?.location === 'granted') {
           console.log('[Location] Trying Capacitor GPS (native)...');
-          const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
-          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          console.log('[Location] ✅ Capacitor GPS success:', loc);
-          return loc;
+          try {
+            // Give it 15 seconds for a true GPS lock
+            const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+            return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          } catch (highAccErr) {
+            console.warn('[Location] Capacitor High Accuracy failed, trying native low accuracy (Cell/WiFi)...');
+            const lowPos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+            return { lat: lowPos.coords.latitude, lng: lowPos.coords.longitude };
+          }
         }
       }
     } catch (err: any) {
-      console.warn('[Location] Capacitor GPS failed:', err?.message || err);
+      console.warn('[Location] All native Capacitor GPS methods failed:', err?.message || err);
     }
   }
 
@@ -128,7 +133,13 @@ export const getUserLocation = async (): Promise<{ lat: number; lng: number }> =
   return fetchIpLocation();
 };
 
-const API_BASE_URL = '/api';
+const isNativeForApi = typeof (window as any).Capacitor !== 'undefined' &&
+  (window as any).Capacitor?.isNativePlatform?.() === true;
+
+// When running in the Android Emulator, 10.0.2.2 points to the laptop's localhost.
+// (If testing on a physical phone, you must use the laptop's actual IP like 192.168.x.x 
+// AND run the backend with --host 0.0.0.0)
+const API_BASE_URL = isNativeForApi ? 'http://10.0.2.2:8000/api' : '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
