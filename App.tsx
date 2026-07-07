@@ -633,7 +633,7 @@ const AppContent: React.FC = () => {
       case 'insurance':
         return <InsuranceScreen navigateTo={navigateTo} t={t} />;
       case 'forecast':
-        return <ForecastScreen navigateTo={navigateTo} t={t} weather={weather} user={user} />;
+        return <ForecastScreen navigateTo={navigateTo} t={t} weather={weather} user={user} locationName={locationName} />;
       case 'live-audio':
         return <LiveAudioScreen navigateTo={navigateTo} language={language} t={t} />;
       case 'carbon-vault':
