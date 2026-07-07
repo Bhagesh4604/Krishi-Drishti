@@ -111,12 +111,28 @@ const AppContent: React.FC = () => {
   const [connectionError, setConnectionError] = useState(false);
   const [weather, setWeather] = useState<any>(null);
   const [locationName, setLocationName] = useState<string>("Locating...");
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const locationFetched = useRef(false);
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const [traceVerifyId, setTraceVerifyId] = useState<string | undefined>(undefined);
   const [screenData, setScreenData] = useState<any>(null);
 
   // Admin fast-path handled above at state init time
+
+  // ── Weather re-fetch whenever accurate GPS coords arrive ──────────────────
+  useEffect(() => {
+    if (!userCoords) return;
+    console.log('[App] Re-fetching weather for coords:', userCoords.lat, userCoords.lng);
+    weatherService.getWeather(userCoords.lat, userCoords.lng)
+      .then(wd => setWeather(wd))
+      .catch(e => console.error('[App] Weather refresh failed:', e?.message));
+    // Also auto-refresh every 5 minutes
+    const iv = setInterval(() => {
+      weatherService.getWeather(userCoords.lat, userCoords.lng)
+        .then(wd => setWeather(wd)).catch(() => {});
+    }, 5 * 60 * 1000);
+    return () => clearInterval(iv);
+  }, [userCoords]);
 
   // ── QR deep-link: ?verify=KD-HTK-YYYY-NNNNN ──
   useEffect(() => {
@@ -233,6 +249,9 @@ const AppContent: React.FC = () => {
         const lat = location?.lat || 21.1458;
         const lng = location?.lng || 79.0882;
 
+        // Save coords so the weather re-fetch effect picks them up
+        setUserCoords({ lat, lng });
+
         // ── Reverse geocode: try backend first, then direct BigDataCloud as client-side fallback ──
         const resolveLocationName = async (lat: number, lng: number) => {
           // Try backend first
@@ -265,16 +284,12 @@ const AppContent: React.FC = () => {
           resolveLocationName(lat, lng);
         }
 
-        // ── Weather fetch is separate — failure only clears weather, not location name ──
+        // Weather is now fetched reactively in the useEffect below
+        // (kept as one-shot fallback if GPS arrives before the effect)
         weatherService.getWeather(lat, lng)
-          .then((weatherData) => {
-            setWeather(weatherData);
-            log("[App] Weather data loaded");
-          })
-          .catch((e) => {
-            console.error("[App] Weather fetch failed (non-fatal):", e?.message || e);
-            // Do NOT setLocationName here — reverse geocode already handled it above
-          });
+          .then((wd) => { setWeather(wd); log("[App] Initial weather loaded"); })
+          .catch((e) => console.error("[App] Weather fetch failed:", e?.message || e));
+
 
       } catch (e: any) {
         log(`[App] Outer init error: ${e.message}`);
