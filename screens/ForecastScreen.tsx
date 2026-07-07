@@ -38,18 +38,19 @@ const getHourEmoji = (code: number) => {
   return '🌡️';
 };
 
-// ─── Theme gradient for background ──────────────────────────────────────────
+// ─── Theme gradient for background (matches Apple Weather sky colors) ─────────
 const getThemeBg = (theme: string) => {
   switch (theme) {
-    case 'clear-day':     return 'linear-gradient(180deg, #1a4a8a 0%, #2563b0 40%, #3b82d0 100%)';
+    // Apple clear day: bright sky blue from top to slightly lighter bottom
+    case 'clear-day':     return 'linear-gradient(180deg, #1565c0 0%, #1e88e5 25%, #42a5f5 55%, #64b5f6 80%, #90caf9 100%)';
     case 'clear-night':   return 'linear-gradient(180deg, #020817 0%, #0d1b3e 40%, #1a2b5e 100%)';
-    case 'partly-cloudy': return 'linear-gradient(180deg, #1e3a6e 0%, #2d4f8a 40%, #3d6aaa 100%)';
-    case 'cloudy':        return 'linear-gradient(180deg, #1b243b 0%, #293652 40%, #3a4b6b 100%)';
+    case 'partly-cloudy': return 'linear-gradient(180deg, #1976d2 0%, #2196f3 30%, #42a5f5 65%, #64b5f6 100%)';
+    case 'cloudy':        return 'linear-gradient(180deg, #37474f 0%, #455a64 40%, #546e7a 70%, #607d8b 100%)';
     case 'rain':          return 'linear-gradient(180deg, #1a2026 0%, #2c3540 50%, #44515f 100%)';
     case 'thunder':       return 'linear-gradient(180deg, #0a0e14 0%, #141c28 40%, #1e2a3c 100%)';
-    case 'snow':          return 'linear-gradient(180deg, #2c3e5a 0%, #3d526e 40%, #536882 100%)';
-    case 'fog':           return 'linear-gradient(180deg, #3a4050 0%, #4e5568 40%, #616880 100%)';
-    default:              return 'linear-gradient(180deg, #1b243b 0%, #293652 40%, #3a4b6b 100%)';
+    case 'snow':          return 'linear-gradient(180deg, #5c7a99 0%, #6e8fad 40%, #8aaabb 100%)';
+    case 'fog':           return 'linear-gradient(180deg, #6b7280 0%, #7d8a96 40%, #90979f 100%)';
+    default:              return 'linear-gradient(180deg, #37474f 0%, #455a64 40%, #546e7a 100%)';
   }
 };
 
@@ -233,21 +234,21 @@ const WeatherCanvas: React.FC<{ theme: string }> = ({ theme }) => {
   );
 };
 
-// ─── Dark blue glass panel (matching reference HTML exactly) ────────────────
-const Glass: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> =
-  ({ children, className='', style={} }) => (
+// ─── Light translucent glass panel (matches Apple Weather exactly) ───────────
+const Glass: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties; theme?: string }> =
+  ({ children, className='', style={}, theme='cloudy' }) => {
+  // Apple Weather uses lighter glass for bright skies, darker for rain/night
+  const isBright = ['clear-day','clear-night','partly-cloudy'].includes(theme);
+  return (
   <div className={`rounded-3xl overflow-hidden ${className}`} style={{
-    background: 'rgba(28, 38, 65, 0.45)',
-    backdropFilter: 'blur(25px)',
-    WebkitBackdropFilter: 'blur(25px)',
-    borderTop: '1px solid rgba(255,255,255,0.15)',
-    borderLeft: '1px solid rgba(255,255,255,0.10)',
-    borderBottom: '1px solid rgba(0,0,0,0.30)',
-    borderRight: '1px solid rgba(0,0,0,0.30)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.20)',
+    background: isBright ? 'rgba(100,160,220,0.22)' : 'rgba(28,38,65,0.40)',
+    backdropFilter: 'blur(20px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+    border: '1px solid rgba(255,255,255,0.22)',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
     ...style
   }}>{children}</div>
-);
+);};
 
 // ─── Section header row ────────────────────────────────────────────────────
 const SectionHeader: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
@@ -259,7 +260,7 @@ const SectionHeader: React.FC<{ icon: React.ReactNode; label: string }> = ({ ico
   </div>
 );
 
-// ─── Temperature range bar ────────────────────────────────────────────────
+// ─── Temperature range bar (Apple warm amber style) ────────────────────────
 const TempBar: React.FC<{
   low: number; high: number; globalMin: number; globalMax: number; current?: number | null;
 }> = ({ low, high, globalMin, globalMax, current }) => {
@@ -269,18 +270,19 @@ const TempBar: React.FC<{
   const dotLeft = current != null && high > low
     ? ((current - low) / (high - low)) * 100 : null;
   return (
-    <div className="flex-1 mx-3 relative" style={{ height:6, borderRadius:999, background:'rgba(0,0,0,0.30)' }}>
+    <div className="flex-1 mx-3 relative" style={{ height:5, borderRadius:999, background:'rgba(255,255,255,0.18)' }}>
       <div style={{
         position:'absolute', height:'100%', borderRadius:999,
         left:`${left}%`, width:`${width}%`,
-        background:'linear-gradient(90deg,#4facfe 0%,#00f2fe 50%,#f093fb 100%)'
+        // Apple Weather uses a warm amber/orange gradient on the bar
+        background:'linear-gradient(90deg, #f7a135 0%, #f5c518 50%, #f97316 100%)'
       }}>
         {dotLeft != null && (
           <div style={{
             position:'absolute', top:'50%', transform:'translate(-50%,-50%)',
             left:`${Math.min(Math.max(dotLeft,4),96)}%`,
             width:10, height:10, borderRadius:'50%', background:'white',
-            boxShadow:'0 0 5px rgba(0,0,0,0.5)', zIndex:2
+            boxShadow:'0 0 5px rgba(0,0,0,0.4)', zIndex:2
           }}/>
         )}
       </div>
@@ -486,7 +488,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
 
           {/* ════ HOURLY ════ */}
           {has && (
-            <Glass>
+            <Glass theme={cond.theme}>
               <div style={{ padding:'14px 16px', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
                 <p style={{ fontSize:15, fontWeight:500, color:'white', lineHeight:1.4, margin:0 }}>{getSummary()}</p>
               </div>
@@ -516,7 +518,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
 
           {/* ════ 10-DAY ════ */}
           {has && daily?.time && (
-            <Glass>
+            <Glass theme={cond.theme}>
               <SectionHeader icon={<span style={{fontSize:13}}>📅</span>} label="10-Day Forecast"/>
               <div style={{ padding:'4px 16px' }}>
                 {daily.time.slice(0,10).map((date:string,i:number)=>{
@@ -546,7 +548,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
 
           {/* ════ WIND ════ */}
           {has && (
-            <Glass>
+            <Glass theme={cond.theme}>
               <SectionHeader icon={<Wind size={12}/>} label="Wind"/>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px' }}>
                 <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -568,7 +570,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
           {/* ════ UV + SUNSET ════ */}
           {has && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <Glass>
+              <Glass theme={cond.theme}>
                 <div style={{ padding:'14px' }}>
                   <SectionHeader icon={<Sun size={11}/>} label="UV Index"/>
                   <div style={{ padding:'10px 0 4px' }}>
@@ -586,7 +588,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
                 </div>
               </Glass>
               {daily?.sunset?.[0] && (
-                <Glass>
+                <Glass theme={cond.theme}>
                   <div style={{ padding:'14px' }}>
                     <SectionHeader icon={<Sun size={11}/>} label="Sunset"/>
                     <div style={{ padding:'10px 0 4px' }}>
@@ -607,7 +609,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
           {/* ════ PRECIPITATION + VISIBILITY ════ */}
           {has && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <Glass>
+              <Glass theme={cond.theme}>
                 <div style={{ padding:'14px' }}>
                   <SectionHeader icon={<Droplets size={11}/>} label="Precipitation"/>
                   <p style={{ fontSize:34, fontWeight:200, color:'white', margin:'10px 0 2px' }}>{precip.toFixed(1)}<span style={{fontSize:16,fontWeight:400}}> mm</span></p>
@@ -616,7 +618,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
                   </p>
                 </div>
               </Glass>
-              <Glass>
+              <Glass theme={cond.theme}>
                 <div style={{ padding:'14px' }}>
                   <SectionHeader icon={<Eye size={11}/>} label="Visibility"/>
                   <p style={{ fontSize:34, fontWeight:200, color:'white', margin:'10px 0 2px' }}>{visKm}<span style={{fontSize:16,fontWeight:400}}> km</span></p>
@@ -631,14 +633,14 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
           {/* ════ HUMIDITY + PRESSURE ════ */}
           {has && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <Glass>
+              <Glass theme={cond.theme}>
                 <div style={{ padding:'14px' }}>
                   <SectionHeader icon={<Droplets size={11}/>} label="Humidity"/>
                   <p style={{ fontSize:34, fontWeight:200, color:'white', margin:'10px 0 0' }}>{humidity}%</p>
                   <p style={{ fontSize:11, color:'rgba(255,255,255,0.55)', marginTop:28 }}>Dew point {dewPoint}°.</p>
                 </div>
               </Glass>
-              <Glass>
+              <Glass theme={cond.theme}>
                 <div style={{ padding:'14px' }}>
                   <SectionHeader icon={<Gauge size={11}/>} label="Pressure"/>
                   <div style={{ marginTop:10 }}><PressureGauge hPa={Number(pressure)}/></div>
@@ -650,7 +652,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
           {/* ════ FEELS LIKE + AVERAGES ════ */}
           {has && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <Glass>
+              <Glass theme={cond.theme}>
                 <div style={{ padding:'14px' }}>
                   <SectionHeader icon={<Thermometer size={11}/>} label="Feels Like"/>
                   <p style={{ fontSize:34, fontWeight:200, color:'white', margin:'10px 0 0' }}>{feelsLike}°</p>
@@ -659,7 +661,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
                   </p>
                 </div>
               </Glass>
-              <Glass>
+              <Glass theme={cond.theme}>
                 <div style={{ padding:'14px' }}>
                   <SectionHeader icon={<span style={{fontSize:11}}>📊</span>} label="Averages"/>
                   {(()=>{
@@ -684,7 +686,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
 
           {/* ════ AIR QUALITY ════ */}
           {has && (
-            <Glass>
+            <Glass theme={cond.theme}>
               <SectionHeader icon={<span style={{fontSize:11}}>🌫️</span>} label="Air Quality"/>
               <div style={{ padding:'14px' }}>
                 {aqi ? (
@@ -717,7 +719,7 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
 
           {/* ════ FARMING ADVISORY ════ */}
           {has && (
-            <Glass>
+            <Glass theme={cond.theme}>
               <SectionHeader icon={<span style={{fontSize:11}}>🌾</span>} label="Farming Advisory"/>
               <div style={{ padding:'14px', display:'flex', flexDirection:'column', gap:12 }}>
                 {(()=>{
