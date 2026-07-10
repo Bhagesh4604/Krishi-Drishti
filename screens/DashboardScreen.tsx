@@ -34,6 +34,7 @@ import {
   ChevronRight,
   BarChart2,
   Search,
+  Grid3x3,
 } from 'lucide-react';
 import { weatherService } from '../src/services/api';
 import WeatherModal from '../components/WeatherModal';
@@ -521,6 +522,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #F0F0F0' }}>
           {[
             { icon: <Zap size={15} strokeWidth={2} />, label: 'Weather Forecast', desc: '7-day prediction', screen: 'forecast' },
+            { icon: <Droplets size={15} strokeWidth={2} />, label: 'Smart Irrigation', desc: 'Water optimization', screen: 'smart-irrigation' },
+            { icon: <Grid3x3 size={15} strokeWidth={2} />, label: 'Digital Twin', desc: '2D farm layout', screen: 'digital-twin' },
             { icon: <Radio size={15} strokeWidth={2} />, label: 'Acoustic Scan', desc: 'Bioacoustic monitor', screen: 'acoustic-scanner' },
             { icon: <Link2 size={15} strokeWidth={2} />, label: 'Traceability', desc: 'Supply chain QR', screen: 'traceability' },
           ].map((s, i) => (

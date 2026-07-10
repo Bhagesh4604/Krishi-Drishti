@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import json
 
 from ..database import get_db
-from ..models import CarbonProject, CarbonEvidence, CarbonTransaction, Plot, User, FarmerOperationLog
+from ..models import CarbonProject, CarbonEvidence, CarbonTransaction, Plot, User, FarmerOperationLog, CarbonCreditToken
 from ..dependencies import get_current_user
 from ..services.earth_engine import earth_engine_service
 from ..services.additionality_service import is_additional
@@ -447,7 +447,7 @@ async def upload_evidence(
     description: str = Form(...),
     geo_lat: float = Form(...),
     geo_lng: float = Form(...),
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -464,7 +464,7 @@ async def upload_evidence(
         raise HTTPException(status_code=404, detail="Project not found")
 
     image_url = None
-    if cloudinary_ready():
+    if file and cloudinary_ready():
         content = await file.read()
         try:
             result = upload_evidence_photo(
@@ -624,3 +624,26 @@ async def trigger_verification(
         "verification_cost_usd": project.verification_cost_usd,
         "message": f"Verification Complete - {int(project.buffer_pool_percentage)}% locked in buffer pool until {project.vesting_end_date.year if project.vesting_end_date else 'N/A'}" if success else "Verification Failed - Evidence unclear"
     }
+
+@router.get("/my-tokens")
+async def get_my_tokens(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all minted carbon credit tokens for the current user.
+    """
+    tokens = db.query(CarbonCreditToken).filter(CarbonCreditToken.user_id == current_user.id).all()
+    
+    return [
+        {
+            "id": token.id,
+            "token_id": token.token_id,
+            "project_id": token.project_id,
+            "amount": token.amount,
+            "token_hash": token.token_hash,
+            "status": token.status,
+            "created_at": token.created_at.isoformat() if token.created_at else None,
+        }
+        for token in tokens
+    ]

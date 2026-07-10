@@ -43,12 +43,17 @@ import FieldMonitorScreen from './screens/FieldMonitorScreen';
 import CorporateDashboardScreen from './screens/CorporateDashboardScreen';
 import CropCycleScreen from './screens/CropCycleScreen';
 import FarmerMarketplaceScreen from './screens/FarmerMarketplaceScreen';
+import SmartIrrigationScreen from './screens/SmartIrrigationScreen';
+import DigitalTwinScreen from './screens/DigitalTwinScreen';
+import { LanguageProvider } from './src/context/LanguageContext';
 
 const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
+    <LanguageProvider>
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
+    </LanguageProvider>
   );
 };
 
@@ -675,6 +680,10 @@ const AppContent: React.FC = () => {
         return <CropCycleScreen navigateTo={navigateTo} screenData={screenData} t={t} />;
       case 'marketplace':
         return <FarmerMarketplaceScreen navigateTo={navigateTo} t={t} />;
+      case 'smart-irrigation':
+        return <SmartIrrigationScreen navigateTo={navigateTo} />;
+      case 'digital-twin':
+        return <DigitalTwinScreen navigateTo={navigateTo} />;
       default:
         return (
           <AuthScreen
@@ -690,7 +699,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result', 'acoustic-scanner', 'traceability', 'trace-verify', 'field-monitor', 'corporate-dashboard', 'crop-cycle'].includes(currentScreen);
+  const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result', 'acoustic-scanner', 'traceability', 'trace-verify', 'field-monitor', 'corporate-dashboard', 'crop-cycle', 'smart-irrigation', 'digital-twin'].includes(currentScreen);
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden text-gray-900 bg-white" style={{ transform: 'translate(0)' }}>

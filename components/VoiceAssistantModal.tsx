@@ -190,7 +190,7 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
                     speechConfig: {
                         voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
                     },
-                    systemInstruction: `You are Kisan-Sarathi, an expert AI Agricultural Scientist. 
+                    systemInstruction: `You are Krishi Drishti AI, an expert AI Agricultural Scientist. 
           Language: ${currentLangLabel}.
           Provide concise, practical farming advice.`
                 }
@@ -245,8 +245,8 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
             {/* Header */}
             <div className="flex justify-between items-center p-6">
                 <div className="flex items-center gap-2">
-                    <Sparkles className="text-teal-400" size={20} />
-                    <span className="text-sm font-bold tracking-widest uppercase text-teal-400">Kisan-Sarathi AI</span>
+                    <Sparkles size={16} className="text-teal-400" />
+                    <span className="text-sm font-bold tracking-widest uppercase text-teal-400">Krishi Drishti AI</span>
                 </div>
 
                 <div className="flex gap-4 items-center">

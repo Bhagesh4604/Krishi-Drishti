@@ -265,6 +265,22 @@ class CarbonTransaction(Base):
     project = relationship("CarbonProject")
     user = relationship("User")
 
+class CarbonCreditToken(Base):
+    __tablename__ = "carbon_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token_id = Column(String, unique=True, index=True) # e.g. KD-C-2026-00001
+    project_id = Column(Integer, ForeignKey("carbon_projects.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    amount = Column(Float)
+    token_hash = Column(String) # SHA-256 for immutability
+    sequence_number = Column(Integer)
+    status = Column(String, default="Minted") # Minted, Transferred, Retired
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("CarbonProject")
+    user = relationship("User")
+
 
 User.plots = relationship("Plot", back_populates="user")
 

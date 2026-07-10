@@ -219,7 +219,7 @@ const LiveAudioScreen: React.FC<LiveAudioScreenProps> = ({ navigateTo, language,
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          systemInstruction: `You are Kisan-Sarathi, an expert AI Agricultural Scientist and Empathetic Companion. 
+          systemInstruction: `You are Krishi Drishti AI, an expert AI Agricultural Scientist and Empathetic Companion. 
           Language: ${currentLangLabel}.
           
           CRISIS SHIELD PROTOCOL (Active):

@@ -46,10 +46,10 @@ class StressAnalysisRequest(BaseModel):
     crop_type: str
     sensor_data: dict = {}
 
-@limiter.limit("10/minute")
 @router.post("/analyze/stress")
+@limiter.limit("10/minute")
 async def analyze_stress(
-    _req: Request,
+    http_request: Request,
     request: StressAnalysisRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -144,7 +144,7 @@ async def analyze_stress(
         },
         "thermal_data": {
             "water_stress_index": final_stress, # Mapping overall stress to water stress loosely for MVP
-            "canopy_temperature": f"{sat_data.get('temperature', 25)}Ã‚Â°C"
+            "canopy_temperature": f"{sat_data.get('temperature', 25)}Â°C"
         },
         "hyperspectral_data": {
             "fungal_risk": "High" if final_stress == "High" else "Low" # Simplification for MVP
@@ -169,36 +169,18 @@ class SocTrainingPoint(BaseModel):
 class SocTrainingRequest(BaseModel):
     points: list[SocTrainingPoint]
 
-@limiter.limit("5/minute")
 @router.post("/train-soc")
-async def train_soc_calibration(
-    _req: Request,
-    request: SocTrainingRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Accepts ground-truthed SOC data points, fetches real bioclimatic data from
-    Open-Meteo, trains a Multiple Linear Regression model for this specific farm.
-    """
-    if len(request.points) < 2:
-        return {"error": "At least 2 unique physical data points are required to train the model."}
-
-    bioclimatic_array = []
-    soc_array = []
-    total_moisture = 0
-    total_et = 0
-
-    for point in request.points:
-        climate_data = get_bioclimatic_data(point.lat, point.lng)
+        
         moisture = climate_data.get("soil_moisture", 25.0)
         et = climate_data.get("evapotranspiration", 4.0)
+        
         bioclimatic_array.append([moisture, et])
         soc_array.append(point.soc_value)
+        
         total_moisture += moisture
         total_et += et
-
+        
     print(f"Training SOC Model. X (Bioclimatic): {bioclimatic_array}, y (SOC): {soc_array}")
-
     
     # 2. Train Multiple Linear Regression Model (Scikit-Learn)
     try:
@@ -269,10 +251,10 @@ async def train_soc_calibration(
 class ChatRequest(BaseModel):
     message: str
 
-@limiter.limit("20/minute")
 @router.post("/chat")
+@limiter.limit("20/minute")
 async def ai_chat(
-    _req: Request,
+    http_request: Request,
     request: ChatRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -283,7 +265,7 @@ async def ai_chat(
         history = db.query(ChatMessage).filter(ChatMessage.user_id == current_user.id).order_by(ChatMessage.timestamp.desc()).limit(5).all()
         history.reverse()
         
-        # 2. RAG Retrieval Ã¢â‚¬â€ search the real corpus (688KB agriculture knowledge base)
+        # 2. RAG Retrieval â€” search the real corpus (688KB agriculture knowledge base)
         rag_context = ""
         try:
             engine = get_rag_engine()
@@ -291,7 +273,7 @@ async def ai_chat(
             if rag_results:
                 rag_context = "\n--- Verified Agricultural Knowledge Base References ---\n"
                 for res in rag_results:
-                    rag_context += f"Ã¢â‚¬Â¢ {res['content']}\n"
+                    rag_context += f"â€¢ {res['content']}\n"
                 rag_context += "--- End of References ---\n"
         except Exception as rag_err:
             print(f"[AI Chat] RAG retrieval failed: {rag_err}")
@@ -314,16 +296,16 @@ FARMER PROFILE:
 - Category: {current_user.category or 'General'}
 - Land: {current_user.land_size or 'Unknown'} acres
 
-KNOWLEDGE BASE (use these facts to ground your answer Ã¢â‚¬â€ do NOT ignore them):
+KNOWLEDGE BASE (use these facts to ground your answer â€” do NOT ignore them):
 {rag_context}
 
 INSTRUCTIONS:
 1. Answer specifically for the farmer's crops and district.
-2. Give actionable, practical advice Ã¢â‚¬â€ not generic text.
+2. Give actionable, practical advice â€” not generic text.
 3. Cite specific numbers (kg/ha, dosage, timing) when relevant.
 4. If the knowledge base has relevant data, ALWAYS use it.
 5. Respond ENTIRELY in {user_lang_name}. Do not mix languages.
-6. Keep answers concise Ã¢â‚¬â€ 3Ã¢â‚¬â€œ5 sentences max unless a detailed list is needed.
+6. Keep answers concise â€” 3â€“5 sentences max unless a detailed list is needed.
 """
         
         chat_history = "\n".join([f"{msg.role}: {msg.text}" for msg in history])
@@ -369,10 +351,10 @@ def _generate_chat_response(prompt):
     return response.text
 
 
-@limiter.limit("10/minute")
 @router.post("/diagnose")
+@limiter.limit("10/minute")
 async def diagnose_crop(
-    request: Request,
+    http_request: Request,
     file: UploadFile = File(...),
     mode: str = Form("diagnosis"),
     current_user: User = Depends(get_current_user)

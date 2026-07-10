@@ -1,23 +1,50 @@
-fastapi
-uvicorn
-sqlalchemy
-pydantic
-pydantic-settings
-python-jose[cryptography]
-passlib[bcrypt]
-python-multipart
-google-generativeai
-python-dotenv
-httpx
-pytest
-Pillow
-earthengine-api
-requests
-scikit-learn
-numpy
-apscheduler
-faiss-cpu
-rank-bm25
-pdfplumber
+# Krishi-Drishti Backend — Pinned Requirements
+# Generated: 2026-07-09
+# To update: run `pip install -U <package>` then `pip freeze > requirements.txt`
+#
+# ── Core Web Framework ──────────────────────────────────────────────────────
+fastapi==0.133.0
+uvicorn==0.41.0
+python-multipart==0.0.22
+
+# ── Database ────────────────────────────────────────────────────────────────
+sqlalchemy==2.0.47
+alembic==1.18.5
+
+# ── Data Validation ─────────────────────────────────────────────────────────
+pydantic==2.12.5
+pydantic-settings==2.13.1
+
+# ── Auth / Security ─────────────────────────────────────────────────────────
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+
+# ── AI / ML ─────────────────────────────────────────────────────────────────
+google-generativeai==0.8.6
+scikit-learn==1.8.0
+numpy==2.4.2
+faiss-cpu==1.13.2
+rank-bm25==0.2.2
+
+# ── Geospatial ──────────────────────────────────────────────────────────────
+earthengine-api==1.7.15
+
+# ── HTTP / Networking ───────────────────────────────────────────────────────
+httpx==0.28.1
+requests==2.32.5
+
+# ── Task Queue ──────────────────────────────────────────────────────────────
 celery[redis]==5.3.6
 redis==5.0.3
+apscheduler==3.11.2
+
+# ── Rate Limiting ───────────────────────────────────────────────────────────
+slowapi==0.1.10
+
+# ── Utilities ───────────────────────────────────────────────────────────────
+python-dotenv==1.2.1
+Pillow==12.1.1
+pdfplumber==0.11.9
+
+# ── Testing ─────────────────────────────────────────────────────────────────
+pytest==9.0.2

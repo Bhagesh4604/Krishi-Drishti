@@ -5,11 +5,16 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from .database import engine, Base, SessionLocal
-from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance, admin, jobs, traceability, corporate, crop_cycles, sse_analysis
+from fastapi.responses import RedirectResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from .database import SessionLocal
+from .routers import auth, users, market, ai, finance, weather, news, schemes, community, plots, carbon, contracts, insurance, admin, jobs, traceability, corporate, crop_cycles, sse_analysis, translate, irrigation
 from .celery_app import is_redis_available, configure_eager_fallback
+from .rate_limiter import limiter
+from .logger import scheduler_logger, api_logger
 from apscheduler.schedulers.background import BackgroundScheduler
 from .models import Plot, PlotHistory, DiseaseRiskAlert
 from .ml_models.anomaly_detector import detect_anomalies
@@ -17,15 +22,26 @@ from .ml_models.disease_forecaster import evaluate_disease_risk
 from .services.weather_fetcher import get_recent_weather
 import json
 
-# Create DB Tables
-Base.metadata.create_all(bind=engine)
+# NOTE: Database schema is managed by Alembic.
+# Run `alembic upgrade head` to apply migrations.
+# Do NOT use Base.metadata.create_all() in production.
 
 app = FastAPI(title="Krishi-Drishti API", version="1.0.0")
 
-# CORS Middleware
+# ── Rate Limiter ──────────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ── CORS Middleware ───────────────────────────────────────────────────────────
+# Read allowed origins from env; defaults to local dev servers only.
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,http://localhost:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development, allow all
+    allow_origins=[origin.strip() for origin in CORS_ORIGINS],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,6 +66,8 @@ app.include_router(traceability.router)
 app.include_router(corporate.router)
 app.include_router(crop_cycles.router)
 app.include_router(sse_analysis.router)
+app.include_router(translate.router)
+app.include_router(irrigation.router)
 
 @app.get("/")
 def read_root():
@@ -62,37 +80,13 @@ def health_check():
 
 @app.get("/admin", include_in_schema=False)
 def serve_admin_dashboard():
-    from fastapi.responses import HTMLResponse
-    html = """<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Krishi-Drishti Admin</title>
-  <style>
-    body { background: #0d0d0d; color: #fff; display: flex; align-items: center;
-           justify-content: center; height: 100vh; margin: 0;
-           font-family: 'Segoe UI', sans-serif; flex-direction: column; gap: 12px; }
-    .spinner { width: 40px; height: 40px; border: 3px solid #333;
-               border-top-color: #22c55e; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    p { color: #888; font-size: 14px; margin: 0; }
-    code { color: #22c55e; }
-  </style>
-</head>
-<body>
-  <div class="spinner"></div>
-  <p>Redirecting to Admin Console...</p>
-  <p><code>localhost:3001</code></p>
-  <script>
-    setTimeout(() => window.location.replace("http://localhost:3001"), 500);
-  </script>
-</body>
-</html>"""
-    return HTMLResponse(html)
+    """Redirect to the admin dashboard frontend."""
+    admin_url = os.getenv("ADMIN_URL", "http://localhost:3001")
+    return RedirectResponse(url=admin_url)
 
 # --- Periodic Tasks ---
 def run_weekly_anomaly_detection():
-    print("Running Weekly Anomaly Detection...")
+    scheduler_logger.info("Starting weekly anomaly detection...")
     db = SessionLocal()
     try:
         all_plots = db.query(Plot).all()
@@ -106,14 +100,14 @@ def run_weekly_anomaly_detection():
                         record.is_anomaly = anomalies[i]
         
         db.commit()
-        print("Weekly Anomaly Detection Completed.")
+        scheduler_logger.info("Weekly anomaly detection completed successfully.")
     except Exception as e:
-        print(f"Periodic Anomaly Detection Error: {e}")
+        scheduler_logger.exception("Weekly anomaly detection failed: %s", e)
     finally:
         db.close()
 
 def run_daily_disease_forecasting():
-    print("Running Daily Disease Spread Forecasting...")
+    scheduler_logger.info("Starting daily disease spread forecasting...")
     db = SessionLocal()
     try:
         plots = db.query(Plot).all()
@@ -123,12 +117,16 @@ def run_daily_disease_forecasting():
              try:
                  coords = json.loads(plot.coordinates)
                  lat, lng = coords[0]['lat'], coords[0]['lng']
-             except:
+             except Exception:
+                 scheduler_logger.warning("Skipping plot '%s' — invalid coordinates.", plot.name)
                  continue
              
              # Fetch REAL weather history from Open-Meteo for this plot's location
              recent_weather = get_recent_weather(lat, lng, days=5)
-             print(f"[Disease Forecast] Plot '{plot.name}': got {len(recent_weather)} days of real weather for ({lat:.2f}, {lng:.2f})")
+             scheduler_logger.info(
+                 "Plot '%s': fetched %d days of weather for (%.2f, %.2f)",
+                 plot.name, len(recent_weather), lat, lng
+             )
              
              # Run Epidemiology ML model
              alerts = evaluate_disease_risk(recent_weather, plot.crop_type)
@@ -148,9 +146,9 @@ def run_daily_disease_forecasting():
                  db.add(new_alert)
                  
         db.commit()
-        print("Daily Disease Forecasting Completed.")
+        scheduler_logger.info("Daily disease forecasting completed successfully.")
     except Exception as e:
-        print(f"Periodic Disease Forecasting Error: {e}")
+        scheduler_logger.exception("Daily disease forecasting failed: %s", e)
     finally:
         db.close()
 
@@ -159,8 +157,8 @@ def run_daily_disease_forecasting():
 def startup_event():
     # --- Celery / Redis ---
     if is_redis_available():
-        print("[Startup] Redis reachable — Celery async mode active. Start a worker with:")
-        print("  celery -A backend.celery_app worker --loglevel=info --pool=solo")
+        api_logger.info("Redis reachable — Celery async mode active.")
+        api_logger.info("  Start a worker with: celery -A backend.celery_app worker --loglevel=info --pool=solo")
     else:
         configure_eager_fallback()
 
@@ -169,4 +167,4 @@ def startup_event():
     scheduler.add_job(run_weekly_anomaly_detection, 'interval', days=7)
     scheduler.add_job(run_daily_disease_forecasting, 'interval', days=1)
     scheduler.start()
-
+    api_logger.info("Background ML scheduler started (anomaly: 7d, disease: 1d).")

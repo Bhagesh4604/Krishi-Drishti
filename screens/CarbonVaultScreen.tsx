@@ -21,6 +21,7 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
    const [projects, setProjects] = useState<any[]>([]);
    const [plots, setPlots] = useState<any[]>([]);
    const [activeTab, setActiveTab] = useState('projects');
+   const [tokens, setTokens] = useState<any[]>([]);
 
    const [showEnrollModal, setShowEnrollModal] = useState(false);
    const [selectedPlotId, setSelectedPlotId] = useState<number | null>(null);
@@ -31,6 +32,7 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
    const [showEvidenceModal, setShowEvidenceModal] = useState(false);
    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
    const [evidenceDesc, setEvidenceDesc] = useState('');
+   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
    const [walletInfo, setWalletInfo] = useState<any | null>(null);
    const [aggregators, setAggregators] = useState<any[]>([]);
    const [claimLoading, setClaimLoading] = useState(false);
@@ -53,7 +55,7 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
          try {
             const preview = await carbonService.monitorPlot(selectedPlotId, selectedMethodology);
             if (!cancelled) {
-               setMonitoringPreview(preview.analysis);
+               setMonitoringPreview(preview.analysis || preview);
             }
          } catch (error) {
             console.error(error);
@@ -77,16 +79,19 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
    const loadData = async () => {
       setLoading(true);
       try {
-         const [myPlots, myProjects, wallet, aggregatorData] = await Promise.all([
+         const [myPlots, myProjects, wallet, aggregatorData, myTokens] = await Promise.all([
             plotService.getPlots(),
             carbonService.getProjects(),
             carbonService.getWallet(),
             carbonService.getAggregators(),
+            carbonService.getMyTokens(),
          ]);
          setPlots(myPlots);
          setProjects(myProjects);
          setWalletInfo(wallet);
          setAggregators(aggregatorData);
+         setTokens(myTokens);
+
       } catch (error) {
          console.error(error);
       } finally {
@@ -119,13 +124,18 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
 
       try {
          const position = await getUserLocation();
-         await carbonService.uploadEvidence(selectedProjectId, {
-            description: evidenceDesc,
-            geo_lat: position.lat,
-            geo_lng: position.lng
-         });
+         const formData = new FormData();
+         formData.append('description', evidenceDesc || "Evidence photo uploaded via mobile");
+         formData.append('geo_lat', position.lat.toString());
+         formData.append('geo_lng', position.lng.toString());
+         if (evidenceFile) {
+            formData.append('file', evidenceFile);
+         }
+
+         await carbonService.uploadEvidence(selectedProjectId, formData);
          setShowEvidenceModal(false);
          setEvidenceDesc('');
+         setEvidenceFile(null);
          alert('Evidence submitted for verification.');
          await loadData();
       } catch (error: any) {
@@ -143,6 +153,20 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
       } catch (error) {
          console.error(error);
          alert('Verification failed');
+      }
+   };
+
+   const handleUnenroll = async (projectId: number) => {
+      const confirm = window.confirm("Are you sure you want to unenroll this plot? This will cancel the carbon project.");
+      if (!confirm) return;
+      try {
+         const response = await carbonService.unenrollPlot(projectId);
+         alert(response.message || "Project unenrolled successfully.");
+         await loadData();
+      } catch (error: any) {
+         console.error(error);
+         const detail = error?.response?.data?.detail || 'Failed to unenroll plot.';
+         alert(`Error: ${detail}`);
       }
    };
 
@@ -183,6 +207,9 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
    const totalAvailableCredits = projects.reduce((acc, curr) => acc + (curr.available_credits || 0), 0);
    const totalLockedCredits = projects.reduce((acc, curr) => acc + (curr.locked_credits || 0), 0);
    const totalPotentialCredits = projects.reduce((acc, curr) => acc + (curr.projected_credits || 0), 0);
+   
+   const formatCredits = (num: number) => Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
+
    const selectedPlot = plots.find(plot => plot.id === selectedPlotId);
    return (
       <div className="h-full flex flex-col overflow-hidden relative" style={{ background: '#F7F9F8', fontFamily: 'Inter, sans-serif' }}>
@@ -204,24 +231,26 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
 
          {/* ── HERO STATS CARD ── */}
          <div className="mx-5 mt-4 rounded-3xl p-5 relative overflow-hidden" style={{ background: '#001A11' }}>
-            <div className="flex justify-between items-start">
-               <div>
+            <div className="flex justify-between items-start gap-4">
+               <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#616B68' }}>Total Potential</p>
-                  <h3 className="text-4xl font-black text-white mt-0.5">{totalPotentialCredits.toFixed(1)}<span className="text-lg ml-1" style={{ color: '#A5FFA7' }}>ACT</span></h3>
+                  <h3 className="text-3xl font-black text-white mt-0.5 truncate" title={`${totalPotentialCredits.toFixed(1)} ACT`}>
+                     {formatCredits(totalPotentialCredits)}<span className="text-sm ml-1" style={{ color: '#A5FFA7' }}>ACT</span>
+                  </h3>
                </div>
-               <div className="text-right">
+               <div className="text-right flex-shrink-0">
                   <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#616B68' }}>Verified</p>
-                  <p className="text-xl font-black mt-0.5" style={{ color: '#00BB78' }}>{totalVerifiedCredits.toFixed(1)} ACT</p>
+                  <p className="text-xl font-black mt-0.5" style={{ color: '#00BB78' }}>{formatCredits(totalVerifiedCredits)} ACT</p>
                </div>
             </div>
             <div className="mt-4 pt-4 flex gap-6" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-               <div>
+               <div className="min-w-0 flex-1">
                   <p className="text-[10px]" style={{ color: '#616B68' }}>Available</p>
-                  <p className="text-sm font-bold text-white">{totalAvailableCredits.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-white truncate" title={totalAvailableCredits.toFixed(2)}>{formatCredits(totalAvailableCredits)}</p>
                </div>
-               <div>
+               <div className="min-w-0 flex-1">
                   <p className="text-[10px]" style={{ color: '#616B68' }}>Buffer Pool</p>
-                  <p className="text-sm font-bold text-white">{totalLockedCredits.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-white truncate" title={totalLockedCredits.toFixed(2)}>{formatCredits(totalLockedCredits)}</p>
                </div>
             </div>
             <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full" style={{ background: 'rgba(0,187,120,0.08)' }} />
@@ -242,6 +271,13 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                style={{ background: activeTab === 'wallet' ? '#fff' : 'transparent', color: activeTab === 'wallet' ? '#001A11' : '#616B68', boxShadow: activeTab === 'wallet' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}
             >
                Wallet ({totalVerifiedCredits.toFixed(1)})
+            </button>
+            <button
+               onClick={() => setActiveTab('tokens')}
+               className="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all"
+               style={{ background: activeTab === 'tokens' ? '#fff' : 'transparent', color: activeTab === 'tokens' ? '#001A11' : '#616B68', boxShadow: activeTab === 'tokens' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}
+            >
+               Tokens
             </button>
          </div>
 
@@ -323,6 +359,13 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                                     <Link2 size={13} /> 🌾 Mint Harvest Token
                                  </button>
                               )}
+                              {project.status !== 'Issued' && (
+                                 <button onClick={() => handleUnenroll(project.id)}
+                                    className="w-full py-2.5 rounded-xl text-xs font-bold"
+                                    style={{ color: '#D32F2F', background: '#FFEBEE' }}>
+                                    Cancel Project
+                                 </button>
+                              )}
                            </div>
                         </div>
                      </div>
@@ -356,7 +399,7 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                      </>
                   )}
                </>
-            ) : (
+            ) : activeTab === 'wallet' ? (
                <>
                   {/* Wallet Tab */}
                   <div className="rounded-3xl p-5" style={{ background: '#001A11' }}>
@@ -403,6 +446,37 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                      </>
                   )}
                </>
+            ) : (
+               <>
+                  <p className="text-[11px] font-black uppercase tracking-widest pt-2" style={{ color: '#616B68' }}>Cryptographic Tokens</p>
+                  {tokens.length === 0 ? (
+                     <div className="py-8 flex flex-col items-center text-center rounded-2xl mt-2" style={{ background: '#F0F0F0' }}>
+                        <ShieldCheck size={24} style={{ color: '#001A11' }} className="mb-2" />
+                        <p className="text-sm font-semibold" style={{ color: '#001A11' }}>No tokens minted yet</p>
+                        <p className="text-xs mt-0.5" style={{ color: '#616B68' }}>Claim your available credits to mint immutable tokens</p>
+                     </div>
+                  ) : (
+                     <div className="space-y-3 mt-2">
+                        {tokens.map((token: any) => (
+                           <div key={token.token_id} className="bg-white rounded-2xl p-4" style={{ border: '1px solid #F0F0F0', boxShadow: '0 2px 8px rgba(0,187,120,0.05)' }}>
+                              <div className="flex justify-between items-start">
+                                 <div className="flex items-center gap-2">
+                                    <ShieldCheck size={16} style={{ color: '#00BB78' }} />
+                                    <h4 className="font-black text-sm" style={{ color: '#001A11' }}>{token.token_id}</h4>
+                                 </div>
+                                 <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: '#E8FBF3', color: '#00BB78' }}>
+                                    {token.status}
+                                 </span>
+                              </div>
+                              <p className="text-xs mt-2" style={{ color: '#616B68' }}>Amount: <strong style={{ color: '#001A11' }}>{token.amount} ACT</strong></p>
+                              <div className="mt-3 p-2 rounded-lg break-all text-[9px] font-mono leading-tight" style={{ background: '#F5F5F5', color: '#888' }}>
+                                 {token.token_hash}
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  )}
+               </>
             )}
          </div>
 
@@ -441,13 +515,17 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                      ) : monitoringPreview ? (
                         <div className="space-y-3">
                            <div className="grid grid-cols-2 gap-3">
-                              <div className="p-4 rounded-2xl" style={{ background: '#E8FBF3', border: '1px solid #A5FFA7' }}>
+                              <div className="p-4 rounded-2xl min-w-0" style={{ background: '#E8FBF3', border: '1px solid #A5FFA7' }}>
                                  <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Estimated Credits</p>
-                                 <h4 className="text-2xl font-black" style={{ color: '#00BB78' }}>{monitoringPreview.carbon.gross_credits.toFixed(2)}</h4>
+                                 <h4 className="text-xl font-black truncate" style={{ color: '#00BB78' }} title={monitoringPreview.carbon.gross_credits.toFixed(2)}>
+                                    {formatCredits(monitoringPreview.carbon.gross_credits)}
+                                 </h4>
                               </div>
-                              <div className="p-4 rounded-2xl" style={{ background: '#F7F9F8', border: '1px solid #EBEBEB' }}>
+                              <div className="p-4 rounded-2xl min-w-0" style={{ background: '#F7F9F8', border: '1px solid #EBEBEB' }}>
                                  <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Issuable</p>
-                                 <h4 className="text-2xl font-black" style={{ color: '#001A11' }}>{monitoringPreview.carbon.issuable_credits.toFixed(2)}</h4>
+                                 <h4 className="text-xl font-black truncate" style={{ color: '#001A11' }} title={monitoringPreview.carbon.issuable_credits.toFixed(2)}>
+                                    {formatCredits(monitoringPreview.carbon.issuable_credits)}
+                                 </h4>
                               </div>
                            </div>
                            <div className="grid grid-cols-3 gap-2">
@@ -513,10 +591,21 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                            onChange={(event) => setEvidenceDesc(event.target.value)}
                         />
                      </div>
-                     <div className="rounded-xl p-6 flex flex-col items-center justify-center gap-2" style={{ border: '1.5px dashed #A5FFA7' }}>
-                        <Upload size={22} style={{ color: '#00BB78' }} />
-                        <span className="text-xs font-bold" style={{ color: '#616B68' }}>Use mobile flow to attach geotagged photo</span>
-                     </div>
+                     <label className="rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors hover:bg-green-50" style={{ border: '1.5px dashed #A5FFA7' }}>
+                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setEvidenceFile(e.target.files?.[0] || null)} />
+                        {evidenceFile ? (
+                           <>
+                              <CheckCircle2 size={22} style={{ color: '#00BB78' }} />
+                              <span className="text-xs font-bold truncate max-w-full px-4" style={{ color: '#001A11' }}>{evidenceFile.name}</span>
+                              <span className="text-[10px]" style={{ color: '#616B68' }}>Tap to change photo</span>
+                           </>
+                        ) : (
+                           <>
+                              <Upload size={22} style={{ color: '#00BB78' }} />
+                              <span className="text-xs font-bold" style={{ color: '#616B68' }}>Tap to attach geotagged photo</span>
+                           </>
+                        )}
+                     </label>
                   </div>
 
                   <div className="flex gap-3">

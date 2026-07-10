@@ -96,6 +96,18 @@ def _persist_history(
             }),
         )
         db.add(log)
+        
+        from ..models import CarbonProject
+        # Also update any active CarbonProject analyzing this plot
+        project = db.query(CarbonProject).filter(
+            CarbonProject.plot_id == plot_id,
+            CarbonProject.status == "Analyzing"
+        ).first()
+        if project:
+            gross_credits = analysis.get("carbon", {}).get("gross_credits", 0)
+            project.projected_sequestration = gross_credits
+            project.status = "Enrolled"
+            
         db.commit()
     except Exception as exc:
         db.rollback()
@@ -159,7 +171,7 @@ def run_gee_analysis(
 
     except SoftTimeLimitExceeded:
         # GEE took > 60 seconds — return simulation so UI gets something
-        return earth_engine_service._build_simulation(
+        analysis = earth_engine_service._build_simulation(
             plot_name=plot_name,
             crop_type=crop_type,
             methodology=methodology,
@@ -168,6 +180,9 @@ def run_gee_analysis(
             computed_area_hectares=declared_area or 0.0,
             reason="Analysis timed out after 60 seconds. Returning simulated data.",
         )
+        if plot_id and user_id:
+            _persist_history(plot_id=plot_id, user_id=user_id, analysis=analysis, health_score=analysis["health_score"], moisture=analysis["moisture"])
+        return analysis
 
     except Exception as exc:
         try:
@@ -175,7 +190,7 @@ def run_gee_analysis(
             raise self.retry(exc=exc)
         except self.MaxRetriesExceededError:
             # All retries exhausted — return simulation as graceful degradation
-            return earth_engine_service._build_simulation(
+            analysis = earth_engine_service._build_simulation(
                 plot_name=plot_name,
                 crop_type=crop_type,
                 methodology=methodology,
@@ -184,3 +199,6 @@ def run_gee_analysis(
                 computed_area_hectares=declared_area or 0.0,
                 reason=f"GEE analysis failed after retries: {str(exc)}",
             )
+            if plot_id and user_id:
+                _persist_history(plot_id=plot_id, user_id=user_id, analysis=analysis, health_score=analysis["health_score"], moisture=analysis["moisture"])
+            return analysis

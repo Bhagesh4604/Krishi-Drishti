@@ -17,7 +17,7 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -26,7 +26,9 @@ from ..database import get_db
 from ..dependencies import get_current_user
 from ..models import User, Plot
 
-router = APIRouter(prefix="/api/v1", tags=["sse_analysis"])
+router = APIRouter(prefix="/api/sse_analysis", tags=["sse_analysis"])
+
+from ..rate_limiter import limiter
 
 # In-memory task store (use Redis in production)
 _task_results: Dict[str, Any] = {}
@@ -74,8 +76,10 @@ def _run_gee_analysis_sync(task_id: str, plot_id: int, plot_coords: str, crop_ty
         _task_results[task_id] = {"task_id": task_id, "status": "ERROR", "detail": str(e)}
 
 
+@limiter.limit("5/minute")
 @router.post("/analyze-plot")
 async def start_analysis(
+    request: Request,
     body: AnalyzeRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),

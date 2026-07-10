@@ -139,7 +139,7 @@ const isNativeForApi = typeof (window as any).Capacitor !== 'undefined' &&
 // When running in the Android Emulator, 10.0.2.2 points to the laptop's localhost.
 // (If testing on a physical phone, you must use the laptop's actual IP like 192.168.x.x 
 // AND run the backend with --host 0.0.0.0)
-const API_BASE_URL = isNativeForApi ? 'http://10.0.2.2:8000/api' : '/api';
+const API_BASE_URL = isNativeForApi ? 'http://localhost:8000/api' : '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -379,33 +379,31 @@ export const communityService = {
   }
 };
 
-let mockPlots: any[] = [
-  { id: 1, name: 'Main Farm Plot', area: 12.5, crop_type: 'Wheat', coordinates: [] },
-  { id: 2, name: 'North Field', area: 5.2, crop_type: 'Cotton', coordinates: [] },
-  { id: 3, name: 'East Plot', area: 8.0, crop_type: 'Soybean', coordinates: [] },
-  { id: 4, name: 'South Garden', area: 2.1, crop_type: 'Vegetables', coordinates: [] }
-];
-
 export const plotService = {
   getPlots: async () => {
-    return [...mockPlots];
+    const response = await api.get('/plots/');
+    return response.data;
   },
   createPlot: async (plot: { name: string, coordinates: { lat: number, lng: number }[], area: number, crop_type?: string }) => {
-    const newPlot = { id: Math.floor(Math.random() * 1000), ...plot };
-    mockPlots.push(newPlot);
-    return newPlot;
+    const response = await api.post('/plots/', plot);
+    return response.data;
   },
   getCarbonAnalysis: async (plotId: number) => {
+    // Real endpoint implementation to be added
     return { carbon_score: 85, predicted_yield: 4200 };
   },
   forecastYield: async (plotId: number) => {
+    // Real endpoint implementation to be added
     return { forecast: 4500, unit: 'kg' };
   },
   startAnalysis: async (plotId: number) => {
-    return { job_id: 'mock-job-123' };
+    // Call the real SSE analysis endpoint
+    const response = await api.post('/sse_analysis/analyze-plot', { plot_id: plotId });
+    return response.data;
   },
   pollJob: async (jobId: string) => {
-    return { status: 'completed', result: 'Mock analysis completed successfully.' };
+    const response = await api.get(`/sse_analysis/task-status/${jobId}`);
+    return response.data;
   }
 };
 
@@ -421,77 +419,76 @@ let mockAggregators = [
 
 export const carbonService = {
   getProjects: async () => {
-    return [...mockProjects];
+    const response = await api.get('/carbon/projects');
+    return response.data;
   },
   getSchemes: async () => {
-    return [];
+    const response = await api.get('/carbon/schemes');
+    return response.data;
   },
   monitorPlot: async (plotId: number, methodology: string = 'Cover-Crop') => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return {
-      analysis: {
-        carbon: {
-          gross_credits: 52.4,
-          issuable_credits: 41.9,
-          buffer_pool: 10.5
-        },
-        monitoring: {
-          current_ndvi: 0.65,
-          ndvi_change: 0.12,
-          soil_moisture: 32.5
-        }
+    const response = await api.get(`/carbon/plots/${plotId}/monitor?methodology=${methodology}`);
+    const jobId = response.data.job_id;
+    if (!jobId) return response.data;
+
+    // Poll for async job completion
+    while (true) {
+      const jobResponse = await api.get(`/jobs/${jobId}`);
+      if (jobResponse.data.status === 'success') {
+        return { analysis: jobResponse.data.result };
       }
-    };
+      if (jobResponse.data.status === 'failed') {
+        throw new Error(jobResponse.data.error || 'Monitoring failed');
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
   },
   enrollPlot: async (plotId: number, methodology: string) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    mockProjects.push({
-      id: Math.floor(Math.random() * 1000),
-      plot_id: plotId,
-      plot_name: 'Newly Enrolled Plot',
-      methodology,
-      aggregator_name: 'Verra Core',
-      status: 'Enrolled',
-      projected_credits: 41.9,
-      available_credits: 0,
-      locked_credits: 0,
-      verified_credits: 0
-    });
-    return { success: true };
+    const response = await api.post('/carbon/enroll', { plot_id: plotId, methodology });
+    const jobId = response.data.gee_job_id;
+    if (!jobId) return response.data;
+
+    // Poll for async job completion before returning
+    while (true) {
+      const jobResponse = await api.get(`/jobs/${jobId}`);
+      if (jobResponse.data.status === 'success') {
+        return response.data;
+      }
+      if (jobResponse.data.status === 'failed') {
+        throw new Error(jobResponse.data.error || 'Enrollment processing failed');
+      }
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  },
+  unenrollPlot: async (projectId: number) => {
+    const response = await api.delete(`/carbon/projects/${projectId}`);
+    return response.data;
   },
   uploadEvidence: async (projectId: number, data: any) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const project = mockProjects.find(p => p.id === projectId);
-    if (project) {
-      project.status = 'Evidence_Pending';
-    }
-    return { success: true };
+    const response = await api.post(`/carbon/${projectId}/evidence`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
   },
   verifyProject: async (projectId: number) => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const project = mockProjects.find(p => p.id === projectId);
-    if (project) {
-      project.status = 'Verified';
-      project.verified_credits = project.projected_credits;
-      project.available_credits = project.projected_credits;
-      mockWallet.balance += project.projected_credits;
-    }
-    return { message: 'Audit successful! ACT Credits issued.' };
+    const response = await api.post(`/carbon/${projectId}/verify`);
+    return response.data;
   },
   getWallet: async () => {
-    return mockWallet;
+    const response = await api.get('/carbon/wallet');
+    return response.data;
   },
   getAggregators: async () => {
-    return mockAggregators;
+    const response = await api.get('/carbon/aggregators');
+    return response.data;
   },
   claimPayout: async (projectId: number, claimCredits: number) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const project = mockProjects.find(p => p.id === projectId);
-    if (project) {
-      project.available_credits -= claimCredits;
-      mockWallet.balance -= claimCredits;
-    }
-    return { message: 'Payout initiated successfully!', farmer_payout_inr: claimCredits * 2500 };
+    const response = await api.post(`/carbon/projects/${projectId}/claim`, { claim_credits: claimCredits });
+    return response.data;
+  },
+  getMyTokens: async () => {
+    const response = await api.get('/carbon/my-tokens');
+    return response.data;
   }
 };
 
