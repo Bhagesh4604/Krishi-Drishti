@@ -1,14 +1,10 @@
-# Secrets — never commit
-backend/.env
-.env.local
-
-# Runtime uploads (large binaries)
-backend/uploads/
-
-# IDE / tool junk
-*.code-search
 node_modules/
 dist/
-.vite/
-
+backend/.env
+.env
+*.log
+__pycache__/
+backend/uploads/
+*.code-search
+.DS_Store
 patches/

@@ -3,6 +3,12 @@
    Neumorphic depth · glassmorphism · aurora ambience · 3D tilt
 ═══════════════════════════════════════════════════════════════ */
 
+/* Tailwind is compiled locally (was loaded from cdn.tailwindcss.com,
+   which blocked startup with a ~400KB JIT script). Do not re-add the CDN. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   font-family: 'Outfit', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
 

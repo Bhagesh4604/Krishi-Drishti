@@ -12,40 +12,59 @@ import {
   WifiOff,
   RefreshCw
 } from 'lucide-react';
+// ── CRITICAL screens: bundled eagerly so the first paint is instant ──
 import AuthScreen from './screens/AuthScreen';
-import ProfileScreen from './screens/ProfileScreen';
 import DashboardScreen from './screens/DashboardScreen';
-import ChatScreen from './screens/ChatScreen';
-import VisionScreen from './screens/VisionScreen';
-import VisionResultScreen from './screens/VisionResultScreen';
-import FarmMapScreen from './screens/FarmMapScreen';
-import MarketScreen from './screens/MarketScreen';
-import MarketDetailScreen from './screens/MarketDetailScreen';
-import InsuranceScreen from './screens/InsuranceScreen';
-import ForecastScreen from './screens/ForecastScreen';
-import LiveAudioScreen from './screens/LiveAudioScreen';
-import CarbonVaultScreen from './screens/CarbonVaultScreen';
-import SchemeSetuScreen from './screens/SchemeSetuScreen';
-import CropStressScreen from './screens/CropStressScreen';
-import LandMarkingScreen from './screens/LandMarkingScreen';
-import VoiceAssistantModal from './components/VoiceAssistantModal';
-import AcousticScannerScreen from './screens/AcousticScannerScreen';
-import SoilCarbonModelScreen from './screens/SoilCarbonModelScreen';
 import SplashScreen from './screens/SplashScreen';
-import TraceabilityScreen from './screens/TraceabilityScreen';
-import TraceabilityVerifyScreen from './screens/TraceabilityVerifyScreen';
 import BottomNav from './components/BottomNav';
+import LandingScreen from './screens/LandingScreen';
 import { userService, weatherService, getUserLocation } from './src/services/api';
 import { translations } from './translations';
-import LandingScreen from './screens/LandingScreen';
-import AgritechDashboardNew from './screens/AgritechDashboardNew';
-import FieldMonitorScreen from './screens/FieldMonitorScreen';
-import CorporateDashboardScreen from './screens/CorporateDashboardScreen';
-import CropCycleScreen from './screens/CropCycleScreen';
-import FarmerMarketplaceScreen from './screens/FarmerMarketplaceScreen';
-import SmartIrrigationScreen from './screens/SmartIrrigationScreen';
-import DigitalTwinScreen from './screens/DigitalTwinScreen';
 import { LanguageProvider } from './src/context/LanguageContext';
+
+// ── All other screens: code-split via React.lazy so the initial JS bundle
+//    stays small. Each screen (and its heavy deps — leaflet maps, three.js
+//    globes, @google/genai live audio, QR codes) is only downloaded when the
+//    user actually navigates to it. Vite emits them as async chunks. ──
+const lazy = <T extends React.ComponentType<any>>(factory: () => Promise<{ default: T }>) =>
+  React.lazy(factory as unknown as () => Promise<{ default: T }>);
+
+const ProfileScreen = lazy(() => import('./screens/ProfileScreen'));
+const ChatScreen = lazy(() => import('./screens/ChatScreen'));
+const VisionScreen = lazy(() => import('./screens/VisionScreen'));
+const VisionResultScreen = lazy(() => import('./screens/VisionResultScreen'));
+const FarmMapScreen = lazy(() => import('./screens/FarmMapScreen'));
+const MarketScreen = lazy(() => import('./screens/MarketScreen'));
+const MarketDetailScreen = lazy(() => import('./screens/MarketDetailScreen'));
+const InsuranceScreen = lazy(() => import('./screens/InsuranceScreen'));
+const ForecastScreen = lazy(() => import('./screens/ForecastScreen'));
+const LiveAudioScreen = lazy(() => import('./screens/LiveAudioScreen'));
+const CarbonVaultScreen = lazy(() => import('./screens/CarbonVaultScreen'));
+const SchemeSetuScreen = lazy(() => import('./screens/SchemeSetuScreen'));
+const CropStressScreen = lazy(() => import('./screens/CropStressScreen'));
+const LandMarkingScreen = lazy(() => import('./screens/LandMarkingScreen'));
+const VoiceAssistantModal = lazy(() => import('./components/VoiceAssistantModal'));
+const AcousticScannerScreen = lazy(() => import('./screens/AcousticScannerScreen'));
+const SoilCarbonModelScreen = lazy(() => import('./screens/SoilCarbonModelScreen'));
+const TraceabilityScreen = lazy(() => import('./screens/TraceabilityScreen'));
+const TraceabilityVerifyScreen = lazy(() => import('./screens/TraceabilityVerifyScreen'));
+const AgritechDashboardNew = lazy(() => import('./screens/AgritechDashboardNew'));
+const FieldMonitorScreen = lazy(() => import('./screens/FieldMonitorScreen'));
+const CorporateDashboardScreen = lazy(() => import('./screens/CorporateDashboardScreen'));
+const CropCycleScreen = lazy(() => import('./screens/CropCycleScreen'));
+const FarmerMarketplaceScreen = lazy(() => import('./screens/FarmerMarketplaceScreen'));
+const SmartIrrigationScreen = lazy(() => import('./screens/SmartIrrigationScreen'));
+const DigitalTwinScreen = lazy(() => import('./screens/DigitalTwinScreen'));
+
+/** Lightweight spinner shown while a lazily-loaded screen chunk downloads */
+const ScreenFallback: React.FC = () => (
+  <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-10 h-10 rounded-full border-4 border-green-200 border-t-green-600 animate-spin" />
+      <span className="text-xs font-bold text-green-800/60 uppercase tracking-widest">Loading…</span>
+    </div>
+  </div>
+);
 
 const App: React.FC = () => {
   return (
@@ -181,15 +200,49 @@ const AppContent: React.FC = () => {
       const token = localStorage.getItem('ks_token');
       log(`[App] Token found: ${!!token}`);
 
+      // ── INSTANT STARTUP: restore cached profile synchronously so the UI
+      // renders immediately without waiting on GPS/network. Fresh data is
+      // re-synced in the background afterwards. ──
+      let restoredFromCache = false;
+      if (token) {
+        const cachedRaw = localStorage.getItem('ks_profile_cache');
+        if (cachedRaw) {
+          try {
+            const cached = JSON.parse(cachedRaw);
+            if (cached.crops && typeof cached.crops === 'string') {
+              cached.crops = cached.crops.split(',').filter(Boolean);
+            }
+            setUser(cached);
+            setCurrentScreen(cached.name ? 'home' : 'profile');
+            if (cached.language) setLanguage(cached.language);
+            setLoading(false); // show app NOW — no spinner while network wakes up
+            restoredFromCache = true;
+            log("[App] Instant render from local cache (background sync will refresh)");
+          } catch {
+            // Corrupt cache — fall through to normal flow
+          }
+        }
+      } else {
+        // No token at all: go straight to auth without a spinner
+        log("[App] No token, go to Auth");
+        setCurrentScreen('auth');
+        setLoading(false);
+        restoredFromCache = true;
+      }
+
       try {
-        const location = await getUserLocation();
+        // GPS can be slow — cap it at 4s so it never blocks startup
+        const location = await Promise.race([
+          getUserLocation(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+        ]).catch(() => null);
 
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Timeout")), 60000)
         );
         timeoutPromise.catch(() => { });
 
-      if (token) {
+      if (token && !restoredFromCache) {
           log("[App] Fetching profile...");
           try {
             const profile = await Promise.race([
@@ -245,9 +298,28 @@ const AppContent: React.FC = () => {
               }
             }
           }
-        } else {
-          log("[App] No token, go to Auth");
-          setCurrentScreen('auth');
+        } else if (token && restoredFromCache) {
+          // Already showing cached UI — silently refresh profile in background
+          userService.getProfile()
+            .then((profile: UserProfile) => {
+              if (profile.crops && typeof profile.crops === 'string') {
+                (profile as any).crops = (profile.crops as string).split(',').filter(Boolean);
+              }
+              if (location) profile.location = location;
+              localStorage.setItem('ks_profile_cache', JSON.stringify(profile));
+              setUser(profile);
+              log("[App] Background profile sync complete");
+            })
+            .catch((e: any) => {
+              log(`[App] Background profile sync failed: ${e?.message || e}`);
+              // Only force logout on explicit 401 — never on network errors
+              if (e?.response?.status === 401) {
+                localStorage.removeItem('ks_token');
+                localStorage.removeItem('ks_profile_cache');
+                setUser(null);
+                setCurrentScreen('auth');
+              }
+            });
         }
 
         console.log("[App] Fetching weather/location...");
@@ -741,7 +813,9 @@ const AppContent: React.FC = () => {
             className="h-full"
             style={{ transformStyle: 'preserve-3d' }}
           >
-            {renderScreen()}
+            <React.Suspense fallback={<ScreenFallback />}>
+              {renderScreen()}
+            </React.Suspense>
           </motion.div>
         </AnimatePresence>
       </main>
@@ -882,16 +956,20 @@ const AppContent: React.FC = () => {
         </>
       )}
 
-      {/* Global Voice Assistant Modal */}
-      <VoiceAssistantModal
-        isOpen={isVoiceActive}
-        onClose={() => setIsVoiceActive(false)}
-        language={language}
-        onSwitchToText={() => {
-          setIsVoiceActive(false);
-          setCurrentScreen('chat');
-        }}
-      />
+      {/* Global Voice Assistant Modal (lazy: pulls in @google/genai only when opened) */}
+      {isVoiceActive && (
+        <React.Suspense fallback={null}>
+          <VoiceAssistantModal
+            isOpen={isVoiceActive}
+            onClose={() => setIsVoiceActive(false)}
+            language={language}
+            onSwitchToText={() => {
+              setIsVoiceActive(false);
+              setCurrentScreen('chat');
+            }}
+          />
+        </React.Suspense>
+      )}
 
       {showNav && (
         <BottomNav currentScreen={currentScreen} onNavigate={navigateTo} />

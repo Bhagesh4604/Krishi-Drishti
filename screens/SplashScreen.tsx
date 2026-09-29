@@ -11,8 +11,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
     useEffect(() => {
         const timer = setTimeout(() => {
             setFadeOut(true);
-            setTimeout(onFinish, 500);
-        }, 2500);
+            setTimeout(onFinish, 400);
+        }, 1200); // was 2500ms — startup felt sluggish; 1.2s is enough to brand
 
         return () => clearTimeout(timer);
     }, [onFinish]);

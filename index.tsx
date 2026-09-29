@@ -13,3 +13,12 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <App />
 );
+
+// Fade out the pre-hydration boot splash as soon as React mounts
+requestAnimationFrame(() => {
+  const splash = document.getElementById('boot-splash');
+  if (splash) {
+    splash.classList.add('done');
+    setTimeout(() => splash.remove(), 500);
+  }
+});
