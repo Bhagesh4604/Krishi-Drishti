@@ -40,6 +40,7 @@ import { weatherService } from '../src/services/api';
 import WeatherModal from '../components/WeatherModal';
 import CarbonWalletCard from '../components/CarbonWalletCard';
 import { plotService } from '../src/services/api';
+import Tilt3D from '../components/Tilt3D';
 
 interface DashboardScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -188,14 +189,28 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-full pb-0 font-sans text-gray-800 relative bg-white"
+      className="min-h-full pb-0 font-sans text-gray-800 relative"
+      style={{ background: 'linear-gradient(180deg, #f4fbf6 0%, #ffffff 32%, #ffffff 100%)' }}
     >
 
-      {/* Dynamic Animated Background Mesh */}
-      <div className="absolute top-0 left-0 w-full h-[600px] z-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float"></div>
-        <div className="absolute top-0 -right-4 w-72 h-72 bg-amber-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-teal-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float" style={{ animationDelay: '4s' }}></div>
+      {/* Dynamic Animated Background Mesh — aurora depth field */}
+      <div className="absolute top-0 left-0 w-full h-[620px] z-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-300/50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float"></div>
+        <div className="absolute top-10 -right-10 w-80 h-80 bg-amber-300/45 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-teal-300/45 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float" style={{ animationDelay: '4s' }}></div>
+        {/* floating 3D orbs */}
+        <motion.div
+          animate={{ y: [0, -18, 0], x: [0, 8, 0] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute top-40 right-10 w-16 h-16 rounded-full opacity-60"
+          style={{ background: 'radial-gradient(circle at 30% 30%, #6ee7b7, #059669 70%, #065f46)', boxShadow: '0 14px 28px rgba(5,150,105,0.35), inset 0 2px 6px rgba(255,255,255,0.6)' }}
+        />
+        <motion.div
+          animate={{ y: [0, 14, 0], x: [0, -10, 0] }}
+          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
+          className="absolute top-72 left-6 w-10 h-10 rounded-full opacity-50"
+          style={{ background: 'radial-gradient(circle at 30% 30%, #fde68a, #f59e0b 70%, #b45309)', boxShadow: '0 12px 24px rgba(245,158,11,0.35), inset 0 2px 5px rgba(255,255,255,0.6)' }}
+        />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/10 via-white/50 to-transparent"></div>
       </div>
 
@@ -330,55 +345,26 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           </div>
         </motion.div>
 
-        {/* 2x2 Grid Pills */}
-        <div className="grid grid-cols-2 gap-4 relative z-10">
-          <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default">
-            <div className="w-10 h-10 rounded-full bg-emerald-50/80 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
-              <Thermometer size={18} />
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Soil temp</p>
-              <p className="text-lg font-bold text-gray-900">
-                {weather?.current?.soil_temperature_0cm !== undefined ? `+${Math.round(weather.current.soil_temperature_0cm)} C` : '-- C'}
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default">
-            <div className="w-10 h-10 rounded-full bg-blue-50/80 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
-              <Droplets size={18} fill="currentColor" />
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Humidity</p>
-              <p className="text-lg font-bold text-gray-900">
-                {weather?.current?.relative_humidity_2m ?? '--'}%
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default">
-            <div className="w-10 h-10 rounded-full bg-amber-50/80 flex items-center justify-center text-amber-600 shadow-sm border border-amber-100">
-              <Wind size={18} />
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Wind</p>
-              <p className="text-lg font-bold text-gray-900">
-                {weather?.current?.wind_speed_10m ?? '--'} m/s
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default">
-            <div className="w-10 h-10 rounded-full bg-indigo-50/80 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
-              <CloudRain size={18} fill="currentColor" />
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Precipitation</p>
-              <p className="text-lg font-bold text-gray-900">
-                {weather?.current?.precipitation ?? '--'} mm
-              </p>
-            </div>
-          </motion.div>
+        <div className="grid grid-cols-2 gap-4 relative z-10" style={{ perspective: '900px' }}>
+          {[
+            { label: 'Soil temp', value: weather?.current?.soil_temperature_0cm !== undefined ? `+${Math.round(weather.current.soil_temperature_0cm)} C` : '-- C', icon: <Thermometer size={18} />, chipBg: 'linear-gradient(140deg,#a7f3d0,#34d399)', chipColor: '#047857' },
+            { label: 'Humidity', value: `${weather?.current?.relative_humidity_2m ?? '--'}%`, icon: <Droplets size={18} fill="currentColor" />, chipBg: 'linear-gradient(140deg,#bfdbfe,#60a5fa)', chipColor: '#1d4ed8' },
+            { label: 'Wind', value: `${weather?.current?.wind_speed_10m ?? '--'} m/s`, icon: <Wind size={18} />, chipBg: 'linear-gradient(140deg,#fde68a,#fbbf24)', chipColor: '#b45309' },
+            { label: 'Precipitation', value: `${weather?.current?.precipitation ?? '--'} mm`, icon: <CloudRain size={18} fill="currentColor" />, chipBg: 'linear-gradient(140deg,#c7d2fe,#818cf8)', chipColor: '#4338ca' },
+          ].map((pill, i) => (
+            <Tilt3D key={i} maxTilt={9} className="rounded-[2rem]">
+              <div variants={itemVariants} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default h-full">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-md border border-white/70 icon-chip-3d"
+                  style={{ background: pill.chipBg, color: pill.chipColor }}>
+                  {pill.icon}
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{pill.label}</p>
+                  <p className="text-lg font-bold text-gray-900">{pill.value}</p>
+                </div>
+              </div>
+            </Tilt3D>
+          ))}
         </div>
       </motion.div>
 
@@ -391,13 +377,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       >
         <CarbonWalletCard />
         <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.96 }}
           onClick={() => navigateTo('landmark')}
-          className="w-full mt-4 bg-white border-2 border-dashed rounded-2xl p-4 flex items-center justify-center gap-2 shadow-sm"
-          style={{ borderColor: '#00BB78' }}
+          className="shine relative w-full mt-4 rounded-2xl p-4 flex items-center justify-center gap-2 overflow-hidden"
+          style={{
+            background: 'linear-gradient(150deg, rgba(232,251,243,0.9), rgba(255,255,255,0.85))',
+            border: '2px dashed #00BB78',
+            boxShadow: '0 8px 20px -6px rgba(0,187,120,0.28), inset 0 1px 0 rgba(255,255,255,0.9)',
+          }}
         >
-          <MapPin size={20} style={{ color: '#00BB78' }} />
+          <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(140deg,#34d399,#00BB78)', boxShadow: '0 4px 10px rgba(0,187,120,0.4), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+            <MapPin size={17} className="text-white" />
+          </span>
           <span className="font-bold" style={{ color: '#001A11' }}>Locate My Farm Boundary</span>
         </motion.button>
       </motion.div>
@@ -459,67 +451,64 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           <span className="text-[11px] font-semibold" style={{ color: '#00BB78' }}>9 tools</span>
         </div>
 
-        {/* ── ROW 1: Two featured large cards ── */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigateTo('market' as Screen)}
-            className="flex flex-col justify-between p-4 rounded-3xl text-left"
-            style={{ background: '#001A11', minHeight: 130 }}
-          >
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(0,187,120,0.15)' }}>
-              <TrendingUp size={20} style={{ color: '#00BB78' }} />
+        {/* ── ROW 1: Two featured large 3D cards ── */}
+        <div className="grid grid-cols-2 gap-3 mb-3" style={{ perspective: '900px' }}>
+          <Tilt3D maxTilt={10} onClick={() => navigateTo('market' as Screen)} className="rounded-3xl">
+            <div variants={itemVariants} className="relative flex flex-col justify-between p-4 rounded-3xl text-left h-full overflow-hidden shine"
+              style={{ minHeight: 138, background: 'linear-gradient(150deg, #0e3322 0%, #001A11 60%, #04240f 100%)', border: '1px solid rgba(52,211,153,0.25)', boxShadow: '0 14px 30px -8px rgba(0,26,17,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' }}
+            >
+              {/* ambient glow blob */}
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full blur-2xl opacity-40 pointer-events-none" style={{ background: 'radial-gradient(circle, #00BB78, transparent 70%)' }} />
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center icon-chip-3d" style={{ background: 'linear-gradient(140deg, #34d399, #059669)', boxShadow: '0 6px 14px rgba(0,187,120,0.45), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+                <TrendingUp size={20} className="text-white" />
+              </div>
+              <div className="mt-6 relative z-10">
+                <p className="text-[13px] font-bold text-white leading-tight">Market Prices</p>
+                <p className="text-[10px] mt-0.5" style={{ color: '#A5FFA7' }}>Live mandi rates</p>
+              </div>
             </div>
-            <div className="mt-6">
-              <p className="text-[13px] font-bold text-white leading-tight">Market Prices</p>
-              <p className="text-[10px] mt-0.5" style={{ color: '#A5FFA7' }}>Live mandi rates</p>
-            </div>
-          </motion.button>
+          </Tilt3D>
 
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigateTo('vision' as Screen)}
-            className="flex flex-col justify-between p-4 rounded-3xl text-left"
-            style={{ background: '#00BB78', minHeight: 130 }}
-          >
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
-              <ScanLine size={20} className="text-white" />
+          <Tilt3D maxTilt={10} onClick={() => navigateTo('vision' as Screen)} className="rounded-3xl">
+            <div variants={itemVariants} className="relative flex flex-col justify-between p-4 rounded-3xl text-left h-full overflow-hidden shine"
+              style={{ minHeight: 138, background: 'linear-gradient(150deg, #34d399 0%, #00BB78 50%, #059669 100%)', border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 14px 30px -8px rgba(0,187,120,0.5), inset 0 1px 0 rgba(255,255,255,0.5)' }}
+            >
+              <div className="absolute -bottom-10 -left-6 w-28 h-28 rounded-full blur-2xl opacity-50 pointer-events-none" style={{ background: 'radial-gradient(circle, #ffffff, transparent 70%)' }} />
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center icon-chip-3d" style={{ background: 'rgba(255,255,255,0.28)', backdropFilter: 'blur(6px)', boxShadow: '0 6px 14px rgba(4,120,87,0.35), inset 0 1px 0 rgba(255,255,255,0.7)' }}>
+                <ScanLine size={20} className="text-white" />
+              </div>
+              <div className="mt-6 relative z-10">
+                <p className="text-[13px] font-bold text-white leading-tight drop-shadow-sm">Crop Scanner</p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.85)' }}>AI disease detection</p>
+              </div>
             </div>
-            <div className="mt-6">
-              <p className="text-[13px] font-bold text-white leading-tight">Crop Scanner</p>
-              <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>AI disease detection</p>
-            </div>
-          </motion.button>
+          </Tilt3D>
         </div>
 
-        {/* ── ROW 2: 2×2 grid ── */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        {/* ── ROW 2: 2×2 grid — raised 3D tiles ── */}
+        <div className="grid grid-cols-2 gap-3 mb-3" style={{ perspective: '900px' }}>
           {[
-            { icon: <BookOpen size={16} strokeWidth={2} />, label: 'Govt Schemes', desc: 'Subsidies & loans', screen: 'scheme-setu', iconColor: '#001A11', bg: '#F5FAF7' },
-            { icon: <Umbrella size={16} strokeWidth={2} />, label: 'Crop Insurance', desc: 'Protect your yield', screen: 'insurance', iconColor: '#001A11', bg: '#F5FAF7' },
-            { icon: <Activity size={16} strokeWidth={2} />, label: 'Soil Carbon', desc: 'SOC modeling', screen: 'soil-carbon', iconColor: '#00BB78', bg: '#E8FBF3' },
-            { icon: <Sprout size={16} strokeWidth={2} />, label: 'Carbon Vault', desc: 'Credit management', screen: 'carbon-vault', iconColor: '#00BB78', bg: '#E8FBF3' },
+            { icon: <BookOpen size={16} strokeWidth={2} />, label: 'Govt Schemes', desc: 'Subsidies & loans', screen: 'scheme-setu', iconBg: 'linear-gradient(140deg,#cbd5e1,#94a3b8)', iconColor: '#1e293b' },
+            { icon: <Umbrella size={16} strokeWidth={2} />, label: 'Crop Insurance', desc: 'Protect your yield', screen: 'insurance', iconBg: 'linear-gradient(140deg,#bae6fd,#38bdf8)', iconColor: '#075985' },
+            { icon: <Activity size={16} strokeWidth={2} />, label: 'Soil Carbon', desc: 'SOC modeling', screen: 'soil-carbon', iconBg: 'linear-gradient(140deg,#6ee7b7,#10b981)', iconColor: '#065f46' },
+            { icon: <Sprout size={16} strokeWidth={2} />, label: 'Carbon Vault', desc: 'Credit management', screen: 'carbon-vault', iconBg: 'linear-gradient(140deg,#86efac,#22c55e)', iconColor: '#14532d' },
           ].map((s, i) => (
-            <motion.button
-              key={i}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => navigateTo(s.screen as Screen)}
-              className="flex flex-col gap-3 p-3.5 rounded-2xl text-left"
-              style={{ background: s.bg, border: '1px solid #EFEFEF' }}
-            >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white" style={{ color: s.iconColor }}>
-                {s.icon}
+            <Tilt3D key={i} maxTilt={10} onClick={() => navigateTo(s.screen as Screen)} className="rounded-2xl">
+              <div variants={itemVariants} className="surface-3d flex flex-col gap-3 p-3.5 rounded-2xl text-left h-full">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center icon-chip-3d" style={{ background: s.iconBg, color: s.iconColor }}>
+                  {s.icon}
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold leading-tight" style={{ color: '#001A11' }}>{s.label}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: '#616B68' }}>{s.desc}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[12px] font-bold leading-tight" style={{ color: '#001A11' }}>{s.label}</p>
-                <p className="text-[10px] mt-0.5" style={{ color: '#616B68' }}>{s.desc}</p>
-              </div>
-            </motion.button>
+            </Tilt3D>
           ))}
         </div>
 
-        {/* ── ROW 3: Compact list ── */}
-        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #F0F0F0' }}>
+        {/* ── ROW 3: Compact list — glass panel ── */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(160deg, rgba(255,255,255,0.92), rgba(240,250,245,0.85))', border: '1px solid #E4EFE8', boxShadow: 'var(--shadow-soft), var(--inner-glow)' }}>
           {[
             { icon: <Zap size={15} strokeWidth={2} />, label: 'Weather Forecast', desc: '7-day prediction', screen: 'forecast' },
             { icon: <Droplets size={15} strokeWidth={2} />, label: 'Smart Irrigation', desc: 'Water optimization', screen: 'smart-irrigation' },
@@ -531,17 +520,17 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
               key={i}
               whileTap={{ scale: 0.98 }}
               onClick={() => navigateTo(s.screen as Screen)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 bg-white text-left"
-              style={{ borderBottom: i < 2 ? '1px solid #F8F8F8' : 'none' }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-emerald-50/60 transition-colors"
+              style={{ borderBottom: i < 2 ? '1px solid #EDF5EF' : 'none' }}
             >
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#F5F5F5', color: '#616B68' }}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(140deg,#e8fbf3,#d1f5e4)', color: '#059669', boxShadow: '0 3px 8px rgba(0,187,120,0.18), inset 0 1px 0 rgba(255,255,255,0.9)' }}>
                 {s.icon}
               </div>
               <div className="flex-1">
                 <p className="text-[13px] font-semibold" style={{ color: '#001A11' }}>{s.label}</p>
                 <p className="text-[11px]" style={{ color: '#616B68' }}>{s.desc}</p>
               </div>
-              <ChevronRight size={14} style={{ color: '#A5FFA7', flexShrink: 0 }} />
+              <ChevronRight size={14} style={{ color: '#00BB78', flexShrink: 0 }} />
             </motion.button>
           ))}
         </div>
@@ -564,12 +553,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
               <motion.div
                 key={idx}
                 variants={itemVariants}
-                whileHover={{ y: -3 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ y: -5, scale: 1.06, rotateX: 10 }}
+                whileTap={{ scale: 0.93 }}
                 className="snap-start flex flex-col gap-2 flex-shrink-0 cursor-pointer group"
+                style={{ transformStyle: 'preserve-3d' }}
               >
-                <div className="w-[68px] h-[68px] rounded-full overflow-hidden shadow-md border-2 border-white relative">
+                <div className="w-[68px] h-[68px] rounded-full overflow-hidden border-2 border-white relative"
+                  style={{ boxShadow: '0 8px 20px rgba(0,60,30,0.22), 0 2px 6px rgba(0,60,30,0.15), inset 0 0 0 1px rgba(255,255,255,0.4)' }}>
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all z-10"></div>
+                  {/* glossy sphere highlight */}
+                  <div className="absolute top-1 left-2 w-5 h-3 rounded-full bg-white/50 blur-[3px] z-20 pointer-events-none"></div>
                   <img
                     src={getCropImage(crop)}
                     alt={crop}
@@ -624,51 +617,55 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         )}
 
         {!isLoadingPlots && userPlots.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-4" style={{ perspective: '1000px' }}>
             {userPlots.map((plot) => (
-              <div key={plot.id} className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #F0F0F0', boxShadow: '0 2px 8px rgba(0,187,120,0.06)' }}>
-                {/* Field image */}
-                <div className="relative h-36 w-full">
-                  <img
-                    src={getFieldImage(plot.id)}
-                    alt={plot.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-3 left-4 right-4 flex justify-between items-end">
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{plot.name}</h3>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <MapPin size={10} style={{ color: '#A5FFA7' }} />
-                        <span className="text-[10px] text-gray-300">{plotLocationNames[plot.id] || 'Locating…'}</span>
+              <Tilt3D key={plot.id} maxTilt={6} className="rounded-2xl">
+                <div variants={itemVariants} className="surface-3d rounded-2xl overflow-hidden">
+                  {/* Field image */}
+                  <div className="relative h-36 w-full">
+                    <motion.img
+                      animate={{ scale: [1, 1.08, 1] }}
+                      transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+                      src={getFieldImage(plot.id)}
+                      alt={plot.name}
+                      className="w-full h-full object-cover absolute inset-0"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                    <div className="absolute bottom-3 left-4 right-4 flex justify-between items-end">
+                      <div>
+                        <h3 className="text-sm font-bold text-white drop-shadow-md">{plot.name}</h3>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <MapPin size={10} style={{ color: '#A5FFA7' }} />
+                          <span className="text-[10px] text-gray-300">{plotLocationNames[plot.id] || 'Locating…'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/25" style={{ background: 'rgba(0,187,120,0.35)', backdropFilter: 'blur(8px)', boxShadow: '0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)' }}>
+                        <Leaf size={11} style={{ color: '#A5FFA7' }} />
+                        <span className="text-xs font-bold text-white">{plot.area} ha</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,187,120,0.25)', backdropFilter: 'blur(8px)' }}>
-                      <Leaf size={11} style={{ color: '#A5FFA7' }} />
-                      <span className="text-xs font-bold text-white">{plot.area} ha</span>
-                    </div>
+                  </div>
+
+                  {/* Action row */}
+                  <div className="grid grid-cols-3">
+                    {[
+                      { icon: <MapPin size={15} />, label: 'Map', action: () => navigateTo('map') },
+                      { icon: <BarChart2 size={15} />, label: 'Satellite', action: () => navigateTo('field-monitor', { plotId: plot.id }) },
+                      { icon: <TrendingUp size={15} />, label: 'Yield', action: () => navigateTo('forecast') },
+                    ].map((btn, i) => (
+                      <button
+                        key={i}
+                        onClick={btn.action}
+                        className="flex flex-col items-center gap-1.5 py-3 hover:bg-emerald-50/70 transition-colors"
+                        style={{ borderRight: i < 2 ? '1px solid #EDF5EF' : 'none', color: '#00BB78' }}
+                      >
+                        {btn.icon}
+                        <span className="text-[10px] font-semibold" style={{ color: '#616B68' }}>{btn.label}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
-
-                {/* Action row */}
-                <div className="grid grid-cols-3" style={{ borderTop: '1px solid #F0F0F0' }}>
-                  {[
-                    { icon: <MapPin size={15} style={{ color: '#00BB78' }} />, label: 'Map', action: () => navigateTo('map') },
-                    { icon: <BarChart2 size={15} style={{ color: '#00BB78' }} />, label: 'Satellite', action: () => navigateTo('field-monitor', { plotId: plot.id }) },
-                    { icon: <TrendingUp size={15} style={{ color: '#00BB78' }} />, label: 'Yield', action: () => navigateTo('forecast') },
-                  ].map((btn, i) => (
-                    <button
-                      key={i}
-                      onClick={btn.action}
-                      className="flex flex-col items-center gap-1.5 py-3 transition-colors"
-                      style={{ borderRight: i < 2 ? '1px solid #F0F0F0' : 'none' }}
-                    >
-                      {btn.icon}
-                      <span className="text-[10px] font-semibold" style={{ color: '#616B68' }}>{btn.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              </Tilt3D>
             ))}
           </div>
         )}

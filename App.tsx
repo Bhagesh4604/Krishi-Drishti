@@ -702,19 +702,44 @@ const AppContent: React.FC = () => {
   const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result', 'acoustic-scanner', 'traceability', 'trace-verify', 'field-monitor', 'corporate-dashboard', 'crop-cycle', 'smart-irrigation', 'digital-twin'].includes(currentScreen);
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto shadow-2xl relative overflow-hidden text-gray-900 bg-white" style={{ transform: 'translate(0)' }}>
+    <div className="min-h-screen w-full flex items-center justify-center relative" style={{ perspective: '1600px' }}>
+      {/* Ambient glow behind the floating device frame */}
+      <div
+        aria-hidden
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse 60% 45% at 50% 42%, rgba(0,187,120,0.28), transparent 70%)',
+          filter: 'blur(2px)',
+        }}
+      />
+
+      {/* ══ Floating 3D App Frame ══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 40, rotateX: 8, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col w-full max-w-md h-[100dvh] sm:h-[94vh] sm:max-h-[920px] relative text-gray-900 bg-white overflow-hidden rounded-none sm:rounded-[2.5rem]"
+        style={{
+          transformStyle: 'preserve-3d',
+          boxShadow:
+            '0 2px 6px rgba(0,40,20,0.25), 0 16px 40px rgba(0,40,20,0.35), 0 60px 120px -20px rgba(0,0,0,0.6), 0 0 80px rgba(0,187,120,0.18), inset 0 1px 0 rgba(255,255,255,0.5)',
+          border: '1px solid rgba(255,255,255,0.18)',
+        }}
+      >
       <main className={`flex-1 overflow-y-auto mobile-container relative ${showNav ? 'pb-20' : 'pb-0'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentScreen}
-            initial={{ opacity: 0, x: 30, scale: 0.98 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -30, scale: 0.98 }}
+            initial={{ opacity: 0, x: 30, scale: 0.98, rotateY: 6 }}
+            animate={{ opacity: 1, x: 0, scale: 1, rotateY: 0 }}
+            exit={{ opacity: 0, x: -30, scale: 0.98, rotateY: -6 }}
             transition={{
-              duration: 0.3,
+              duration: 0.35,
               ease: [0.25, 0.1, 0.25, 1],
             }}
             className="h-full"
+            style={{ transformStyle: 'preserve-3d' }}
           >
             {renderScreen()}
           </motion.div>
@@ -871,6 +896,7 @@ const AppContent: React.FC = () => {
       {showNav && (
         <BottomNav currentScreen={currentScreen} onNavigate={navigateTo} />
       )}
+      </motion.div>
     </div>
   );
 };
