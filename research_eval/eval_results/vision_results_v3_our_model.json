@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-09-15T18:34:25.222829",
+  "module": "Vision AI — Krishi-Drishti Custom CNN (universal_vision_model.h5)",
+  "evaluation_version": "v3-own-model",
+  "model_path": "C:\\Users\\bhage\\Desktop\\Krishi-Drishti\\backend\\ml_models\\universal_vision_model.h5",
+  "model_params": 3578953,
+  "input_shape": "(None, 224, 224, 3)",
+  "total_images": 200,
+  "metrics": {
+    "accuracy": 20.0,
+    "precision_weighted": 13.0,
+    "recall_weighted": 20.0,
+    "f1_weighted": 10.0
+  },
+  "classification_report": "                precision    recall  f1-score   support\n\nbacterial spot       0.00      0.00      0.00        40\n  early blight       0.21      0.90      0.34        40\n       healthy       0.11      0.03      0.05        60\n   late blight       0.29      0.05      0.09        40\n     leaf mold       0.00      0.00      0.00        20\n\n      accuracy                           0.20       200\n     macro avg       0.12      0.20      0.09       200\n  weighted avg       0.13      0.20      0.10       200\n"
+}

@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-09-15T18:40:21.586609",
+  "module": "Vision AI (MobileNetV2 — trained on PlantVillage)",
+  "evaluation_version": "v3-trained",
+  "model_path": "C:\\Users\\bhage\\Desktop\\Krishi-Drishti\\research_eval\\eval_results\\trained_model\\plant_disease_mobilenetv2.h5",
+  "dataset": "PlantVillage (41K images)",
+  "train_images": 2920,
+  "test_images": 730,
+  "architecture": "MobileNetV2 + custom head (transfer learning)",
+  "epochs": 10,
+  "metrics": {
+    "accuracy": 88.1,
+    "precision_weighted": 90.0,
+    "recall_weighted": 88.1,
+    "f1_weighted": 88.4
+  },
+  "classes": [
+    "healthy",
+    "early blight",
+    "late blight",
+    "bacterial spot",
+    "leaf mold"
+  ],
+  "classification_report": "                precision    recall  f1-score   support\n\n       healthy       0.96      0.89      0.92       160\n  early blight       0.93      0.78      0.85       160\n   late blight       0.91      0.90      0.91       160\nbacterial spot       0.94      0.90      0.92       160\n     leaf mold       0.64      0.99      0.78        90\n\n      accuracy                           0.88       730\n     macro avg       0.88      0.89      0.87       730\n  weighted avg       0.90      0.88      0.88       730\n"
+}

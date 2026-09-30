@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-09-15T17:20:53.597467",
+  "module": "System Performance (ESTIMATED \u2014 start backend for real values)",
+  "note": "Start run_backend.bat and re-run this script for real measurements",
+  "estimated_metrics": {
+    "weather_api_avg_ms": "< 200ms",
+    "market_listings_avg_ms": "< 150ms",
+    "carbon_projects_avg_ms": "< 300ms",
+    "satellite_processing_sec": "~12 seconds",
+    "offline_reliability": "100% (SQLite cache)",
+    "concurrent_users_supported": "10+",
+    "languages_supported": 8
+  }
+}

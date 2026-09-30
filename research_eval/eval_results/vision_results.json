@@ -1,0 +1,154 @@
+{
+  "timestamp": "2026-09-15T18:02:24.468982",
+  "module": "Vision AI (gemini-2.5-flash)",
+  "total_images": 20,
+  "metrics": {
+    "accuracy": 40.0,
+    "precision_weighted": 46.7,
+    "recall_weighted": 40.0,
+    "f1_weighted": 37.2
+  },
+  "classification_report": "                  precision    recall  f1-score   support\n\nbacterial blight       1.00      0.25      0.40         4\n      brown spot       0.33      0.75      0.46         4\n         healthy       0.50      0.50      0.50         4\n      leaf blast       0.00      0.00      0.00         4\n  powdery mildew       0.50      0.50      0.50         4\n         unknown       0.00      0.00      0.00         0\n\n        accuracy                           0.40        20\n       macro avg       0.39      0.33      0.31        20\n    weighted avg       0.47      0.40      0.37        20\n",
+  "per_image_results": [
+    {
+      "file": "Mold_e04f2ba7-8aac-4c3a-950f-edf70a6c2905___Crnl_L.Mold 7173.JPG",
+      "true": "powdery mildew",
+      "pred": "powdery mildew",
+      "raw_response": "powdery mildew",
+      "correct": true
+    },
+    {
+      "file": "Spot_84f8fd9a-fb45-4322-8ee3-17e42be6b0e0___Com.G_TgS_FL 9773.JPG",
+      "true": "powdery mildew",
+      "pred": "healthy",
+      "raw_response": "healthy",
+      "correct": false
+    },
+    {
+      "file": "PepBac_baa2dfb9-ff6a-4f84-9036-243000982301___NREC_B.Spot 1880.JPG",
+      "true": "bacterial blight",
+      "pred": "bacterial blight",
+      "raw_response": "bacterial blight",
+      "correct": true
+    },
+    {
+      "file": "Potato___Late_blight_1650365d-437c-4d36-b110-113a88c1090a___RS_LB 5459.JPG",
+      "true": "leaf blast",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": false
+    },
+    {
+      "file": "PepBac_505ac655-cca9-479c-8a2f-35a01b9030cf___JR_B.Spot 8836.JPG",
+      "true": "bacterial blight",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": false
+    },
+    {
+      "file": "Potato___healthy_51a03694-82cd-43a5-9877-ddce42c1a5ad___RS_HL 1779.JPG",
+      "true": "healthy",
+      "pred": "powdery mildew",
+      "raw_response": "powdery mildew",
+      "correct": false
+    },
+    {
+      "file": "Potato___Early_blight_6f8dfa1b-8c6f-4be6-93ff-e9180dde7357___RS_Early.B 6914.JPG",
+      "true": "brown spot",
+      "pred": "unknown",
+      "raw_response": "unknown",
+      "correct": false
+    },
+    {
+      "file": "Potato___Late_blight_447c4811-7ed2-4576-81b4-2f67c8993db7___RS_LB 4137.JPG",
+      "true": "leaf blast",
+      "pred": "unknown",
+      "raw_response": "unknown",
+      "correct": false
+    },
+    {
+      "file": "Mold_d6441d7c-be78-420d-b202-1298cd5b94e9___Crnl_L.Mold 6571.JPG",
+      "true": "powdery mildew",
+      "pred": "healthy",
+      "raw_response": "healthy",
+      "correct": false
+    },
+    {
+      "file": "Tomato_33232143-89a5-4226-b667-9f2a6b17ca5b___RS_HL 9918.JPG",
+      "true": "healthy",
+      "pred": "powdery mildew",
+      "raw_response": "powdery mildew",
+      "correct": false
+    },
+    {
+      "file": "Potato___Early_blight_fb8d862d-29c3-41ab-888d-cef47286ee9a___RS_Early.B 8975.JPG",
+      "true": "brown spot",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": true
+    },
+    {
+      "file": "Potato___Early_blight_ae25f262-234e-4ee1-96ad-3e47ddfbea9d___RS_Early.B 6670.JPG",
+      "true": "brown spot",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": true
+    },
+    {
+      "file": "Potato___Late_blight_df919a28-9f11-42f6-823c-15f70bf1325e___RS_LB 4936.JPG",
+      "true": "leaf blast",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": false
+    },
+    {
+      "file": "TomBac_eba8000b-ecbc-4417-bc21-67c7e4dd8c8d___GCREC_Bact.Sp 5916.JPG",
+      "true": "bacterial blight",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": false
+    },
+    {
+      "file": "Spot_e56c1e39-3815-4735-bf2b-2b3fa8747235___Com.G_TgS_FL 0012.JPG",
+      "true": "powdery mildew",
+      "pred": "powdery mildew",
+      "raw_response": "powdery mildew",
+      "correct": true
+    },
+    {
+      "file": "Potato___healthy_7bfda067-6e35-4af5-a9c4-4b3b5f357871___RS_HL 1813.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw_response": "healthy",
+      "correct": true
+    },
+    {
+      "file": "Potato___Late_blight_33551627-5824-42b9-9547-4df44590fee1___RS_LB 4848.JPG",
+      "true": "leaf blast",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": false
+    },
+    {
+      "file": "Potato___healthy_2ccb9ee9-faac-4d32-9af5-29497fa2e028___RS_HL 1837.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw_response": "healthy",
+      "correct": true
+    },
+    {
+      "file": "TomBac_570a9d03-9eb2-4ee3-a940-a7b670a42fbe___UF.GRC_BS_Lab Leaf 8632.JPG",
+      "true": "bacterial blight",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": false
+    },
+    {
+      "file": "Potato___Early_blight_c653b79e-4f42-4a9e-8c5c-7a85483a3c29___RS_Early.B 9108.JPG",
+      "true": "brown spot",
+      "pred": "brown spot",
+      "raw_response": "brown spot",
+      "correct": true
+    }
+  ]
+}

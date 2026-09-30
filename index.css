@@ -53,7 +53,7 @@ body {
 .mobile-container {
   min-height: 100vh;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* Scrollbar hide */
@@ -81,11 +81,10 @@ body {
   background: linear-gradient(150deg, #ffffff 0%, #f2faf5 55%, #e9f7ef 100%);
   border: 1px solid rgba(0, 100, 60, 0.08);
   box-shadow: var(--shadow-soft), var(--inner-glow);
-  transform-style: preserve-3d;
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
 }
 .surface-3d:hover {
-  transform: translateY(-5px) rotateX(4deg) scale(1.015);
+  transform: translateY(-5px) scale(1.015);
   box-shadow: var(--shadow-lift), var(--inner-glow);
 }
 
@@ -94,11 +93,10 @@ body {
   background: linear-gradient(150deg, #0c2b1c 0%, #06180f 60%, #0a2417 100%);
   border: 1px solid rgba(52, 211, 153, 0.18);
   box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.08);
-  transform-style: preserve-3d;
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
 }
 .surface-dark:hover {
-  transform: translateY(-5px) rotateX(4deg);
+  transform: translateY(-5px);
   box-shadow: 0 30px 60px -18px rgba(0, 0, 0, 0.65), 0 0 40px rgba(0, 187, 120, 0.18), inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
@@ -107,11 +105,10 @@ body {
   background: linear-gradient(140deg, #34d399 0%, #00BB78 45%, #059669 100%);
   border: 1px solid rgba(255, 255, 255, 0.28);
   box-shadow: var(--shadow-brand), inset 0 1px 0 rgba(255,255,255,0.4);
-  transform-style: preserve-3d;
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
 }
 .surface-brand:hover {
-  transform: translateY(-5px) rotateX(4deg) scale(1.015);
+  transform: translateY(-5px) scale(1.015);
   box-shadow: 0 8px 20px rgba(0,187,120,0.35), 0 24px 60px rgba(0,187,120,0.35), 0 50px 90px -20px rgba(0,187,120,0.5), inset 0 1px 0 rgba(255,255,255,0.45);
 }
 

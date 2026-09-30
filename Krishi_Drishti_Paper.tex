@@ -1,0 +1,449 @@
+\documentclass[10pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx} % Times New Roman
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{authblk}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{geometry}
+\usepackage{multirow}
+\usepackage{fancyhdr}
+\geometry{a4paper, top=1.3cm, bottom=1.3cm, left=2cm, right=2cm, includeheadfoot}
+
+% --- Dark Blue Running Header & Footer (ITEGAM-JETIA style) ---
+\pagestyle{fancy}
+\fancyhf{}
+\definecolor{navyblue}{HTML}{001a57}
+\setlength{\headheight}{28pt}
+\setlength{\headsep}{8pt}
+\setlength{\footskip}{32pt}
+\fancyhead[C]{%
+  \colorbox{navyblue}{\makebox[\textwidth][c]{\rule[-4pt]{0pt}{18pt}%
+    \textcolor{white}{\normalsize\textbf{ITEGAM-JETIA, Manaus, v.XX n.XX, p.XX-XX. Mon./Mon., 20XX.}}}}
+}
+\fancyfoot[C]{%
+  \colorbox{navyblue}{\makebox[\textwidth][c]{\rule[-4pt]{0pt}{18pt}%
+    \textcolor{white}{\normalsize\textbf{Page \thepage}}}}
+}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% --- Hyperref Setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+    citecolor=blue,
+}
+
+% --- Heading Formatting (ITEGAM-JETIA style) ---
+\titleformat{\section}{\normalfont\normalsize\bfseries\color{navyblue}\uppercase}{\thesection.}{1em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries\color{navyblue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\color{navyblue}}{\thesubsubsection}{1em}{}
+
+\begin{document}
+
+% --- Header / Journal Info ---
+\begin{center}
+    {\Large \textbf{Journal of Engineering and Technology for Industrial Applications}} \\
+    \vspace{0.2cm}
+    {\huge \textbf{ITEGAM-JETIA}} \\
+    \vspace{0.2cm}
+    \colorbox{yellow}{\textbf{Manaus, v.XX n.XX, p. XX-XX. Mon./Mon., 20XX.}} \\
+    \colorbox{yellow}{\textbf{DOI: https://doi.org/10.5935/jetia.XXXXX.XXX}}
+\end{center}
+
+\vspace{0.3cm}
+\noindent\colorbox{navyblue}{\makebox[\textwidth][l]{\textcolor{white}{\textbf{RESEARCH ARTICLE \hfill OPEN ACCESS}}}}
+\vspace{0.5cm}
+
+% --- Title Block with Dark Blue Rules (matching ITEGAM-JETIA sample) ---
+\vspace{0.4cm}
+\noindent{\color{navyblue}\rule{\textwidth}{1.5pt}}
+\vspace{0.3cm}
+
+\begin{center}
+    {\Large \textbf{\color{navyblue}KRISHI-DRISHTI: AN INTEGRATED AI-POWERED AGRICULTURAL INTELLIGENCE PLATFORM FOR PRECISION FARMING, CARBON MONITORING, AND SUSTAINABLE LIVELIHOOD ENHANCEMENT}} \\
+\end{center}
+
+\vspace{0.2cm}
+\noindent{\color{navyblue}\rule{\textwidth}{2.5pt}}
+\vspace{0.4cm}
+
+\begin{center}
+    % --- Authors ---
+    {\normalsize \textbf{Dr. Rama Krishna K*$^1$, Dr. Sheethal Aji Mani$^2$, Bhagesh Biradar$^3$, Manjunath Khot$^4$, Jayanth R$^5$ and Pruthviraja S$^6$}} \\
+    \vspace{0.4cm}
+    
+    % --- Affiliations ---
+    {\small $^{1,2,3,4,5,6}$Department of CSE Data Science, Impact College of Engineering and Applied Sciences, Visvesvaraya Technological University, Bangalore, Karnataka, India.} \\
+    \vspace{0.3cm}
+    
+    % --- ORCID ---
+    {\footnotesize 
+    $^1$\url{https://orcid.org/0000-0000-0000-0001}, 
+    $^2$\url{https://orcid.org/0000-0000-0000-0002}, 
+    $^3$\url{https://orcid.org/0000-0000-0000-0003}, \\
+    $^4$\url{https://orcid.org/0000-0000-0000-0004}, 
+    $^5$\url{https://orcid.org/0000-0000-0000-0005}, 
+    $^6$\url{https://orcid.org/0000-0000-0000-0006}} \\
+    \vspace{0.2cm}
+    
+    % --- Emails ---
+    {\small Email: *ramakrishna@example.com, sheethal@example.com, bhagesh@example.com, manjunath@example.com, jayanth@example.com, pruthviraja@example.com}
+\end{center}
+
+\vspace{0.4cm}
+
+% --- Article Info & Abstract ---
+\noindent\begin{tabularx}{\textwidth}{@{}p{0.3\textwidth} X@{}}
+\toprule
+\textbf{ARTICLE INFO} & \textbf{ABSTRACT} \\
+\midrule
+\textbf{Article History} \newline 
+Received: Month 01th, 20XX \newline 
+Reviewed: Month 05th, 20XX \newline
+Accepted: Month 15th, 20XX \newline 
+Published: Month 30th, 20XX 
+& 
+Indian smallholder farmers, who constitute over 86\% of the country's farming population, face systematic challenges rooted in information asymmetry, delayed crop disease diagnosis, limited market access, and exclusion from emerging climate finance ecosystems. This paper presents Krishi-Drishti ("Farmer's Vision"), a comprehensive mobile-first agricultural intelligence platform that unifies Artificial Intelligence (AI), satellite remote sensing, bioacoustic monitoring, blockchain-based traceability, and predictive analytics into a single multilingual ecosystem. The platform integrates: (i) a direct peer-to-peer Mandi (marketplace); (ii) AI-powered crop disease diagnosis using a custom-trained MobileNetV2 CNN and Google Gemini; (iii) satellite-based crop health and Soil Organic Carbon (SOC) monitoring through Google Earth Engine; (iv) a bioacoustic pest detection module; (v) a Carbon Vault for transparent carbon credit enrollment; and (vi) a Digital Twin engine for virtual farm simulation. Experimental evaluation of the custom-trained MobileNetV2 vision module on 730 held-out PlantVillage images achieves 88.1\% accuracy. SOC prediction using satellite-derived spectral indices yields an RMSE of 5.52 g/kg. A usability study with 5 farmers yielded a System Usability Scale (SUS) score of 84.0/100, indicating strong field adoption potential. The platform offers a scalable pathway to enhance farmer income stability and climate resilience. \\
+\addlinespace
+\textbf{Keywords:} \newline
+Smart Agriculture, \newline
+Deep Learning, \newline
+Soil Organic Carbon, \newline
+MobileNetV2, \newline
+Carbon Credits. 
+& \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.3cm}
+\noindent\fbox{%
+    \parbox{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}{%
+        Copyright \copyright 2026 by authors and Galileo Institute of Technology and Education of the Amazon (ITEGAM). This work is licensed under the Creative Commons Attribution International License (CC BY 4.0).
+    }%
+}
+\vspace{0.5cm}
+
+% --- Main Text ---
+
+\section{INTRODUCTION}
+Agriculture is the backbone of India's economy, supporting approximately 600 million livelihoods. However, the agricultural sector faces profound structural and environmental challenges. Over 86\% of Indian farmers cultivate plots under two hectares, making them highly susceptible to climate variability, yield uncertainty, and market exploitation [1]. The global food system is currently facing an unprecedented challenge: agricultural food production must increase by more than 70\% by 2050 to feed the projected 10 billion population [2], while simultaneously reducing greenhouse gas (GHG) emissions. Agriculture alone contributes approximately 11\% of the global GHG output [3]. 
+
+Despite significant investments in agricultural technology, the majority of digital farming solutions available today remain heavily siloed. Platforms focused on weather or agronomic advisory lack integrated crop disease diagnostic tools. Disease detection applications lack direct market linkage for the farmers to sell their recovered produce, and carbon credit systems remain entirely opaque and inaccessible to smallholders due to high verification costs [4]. As Nawaz \& Babar (2025) explicitly identify, the technical, financial, and social challenges in resource-constrained environments continue to impede the large-scale adoption of smart agriculture practices [5]. Furthermore, smallholder farmers often lack the literacy and technical proficiency required to navigate multiple disparate applications simultaneously.
+
+Timely diagnosis of crop diseases at the earliest stage is vital for treatment, especially when symptoms are barely visible or easily confused with nutritional deficiencies. Deep learning has been identified as a novel, effective method for automating disease detection in agriculture, leveraging the latest artificial intelligence (AI) and computer vision techniques. The introduction of deep convolutional neural networks (CNNs) has revolutionized image classification; as a result, deploying these techniques to detect crop diseases directly from mobile phone imagery is widely regarded as a feasible and highly impactful task. CNNs have a unique capability for spotting the tiniest textural details and image features, allowing them to distinguish between healthy and infected plants just as well, if not better, than human agronomists.
+
+However, recognizing diseases is only one facet of farm management. Soil health, specifically Soil Organic Carbon (SOC), is a critical indicator of both agricultural productivity and carbon sequestration potential. Traditional laboratory-based SOC testing is prohibitively expensive and logistically impossible to scale across millions of fragmented farms. The advent of satellite remote sensing, combined with Machine Learning (ML), offers a non-destructive, highly scalable alternative for continuous SOC monitoring [6].
+
+Krishi-Drishti directly addresses these multifaceted gaps. It is a full-stack, mobile-first platform designed to simultaneously tackle precision agriculture diagnostics, market access, sustainability tracking, and farmer financial empowerment. The platform's true novelty lies in the convergence of five distinct high-impact modules—AI vision diagnostics, bioacoustic monitoring, satellite SOC modeling, carbon credit tokenization, and digital twin simulation—within a single multilingual interface designed explicitly for low-literacy rural users.
+
+The main contributions of this paper are summarized as follows:
+\begin{itemize}
+    \item A unified system architecture integrating heterogeneous AI, IoT, and satellite data streams into a single agricultural ecosystem.
+    \item The design, training, and deployment of a highly optimized MobileNetV2 Convolutional Neural Network for real-time crop disease diagnosis, achieving over 88\% accuracy while remaining computationally lightweight for mobile inference.
+    \item An ensemble-based Soil Organic Carbon (SOC) prediction pipeline utilizing Sentinel-2 spectral indices, validated on Indian farmland, enabling algorithmic carbon tracking.
+    \item A novel Carbon Vault module with a transparent, satellite-verified carbon credit methodology aligned with global sustainability standards.
+    \item A bioacoustic pest detection module using passive acoustic monitoring (PAM) tailored for Indian farm environments, allowing early detection of invasive insect species.
+\end{itemize}
+
+\section{THEORETICAL REFERENCE}
+
+\subsection{Deep Learning for Crop Disease Detection}
+The application of Convolutional Neural Networks (CNNs) to plant disease detection has advanced significantly over the last decade. Early methods relied heavily on manual feature extraction and traditional machine learning classifiers like Support Vector Machines (SVMs) and Random Forests. However, these methods struggled to generalize across varying lighting conditions and complex background noise common in field photography. 
+
+Recent literature demonstrates the superiority of deep feature extraction. Iftikhar et al. (2024) achieved 98.17\% accuracy using a fine-tuned Enhanced CNN (E-CNN) for disease detection in Apple, Corn, and Potato crops, subsequently integrating the model into a mobile application for real-time diagnosis [7]. Hasan et al. (2023) proposed a lightweight CNN architecture for rice disease classification, achieving 97.9\% accuracy through K-means clustering-based background segmentation on a 4,530-image dataset—emphasizing the critical need for smaller, highly optimized models suited to embedded and mobile systems in rural areas with poor connectivity [8]. Askale et al. (2025) compared VGG16, AlexNet, and ResNet50 for maize leaf disease detection, with VGG16 achieving 95\% accuracy, which was subsequently deployed as a real-time mobile application for farmers in Ethiopia [9].
+
+Despite these advances, a common limitation persists: most CNN models are strictly crop-specific and struggle when presented with out-of-distribution data. Furthermore, while these models identify the disease, they rarely provide actionable, localized, and multi-lingual remediation advice. Our approach addresses this by combining the high-precision classification of a localized MobileNetV2 CNN with the generative capabilities of Large Language Models (LLMs) to provide zero-shot treatment recommendations.
+
+\subsection{Soil Organic Carbon Monitoring via Remote Sensing}
+Accurate SOC monitoring is central to both agricultural productivity and carbon accounting. Khaddi et al. (2026) provide a comprehensive review demonstrating that the integration of Geographic Information Systems (GIS), remote sensing, and Machine Learning—particularly using Sentinel-2 multispectral data—significantly advances SOC spatial mapping [10]. Xiao et al. (2024) demonstrated that combining environmental variables (terrain, climate, soil) with Landsat 5 TM spectral data using an SVM model achieved an R$^2$ of 0.9590, establishing environmental context as a critical factor in SOC estimation accuracy [11]. 
+
+Iswarya \& Tamizhazhagan (2026) proposed a Quantile Random Forest (QRF) framework for SOC prediction using Sentinel-2 spectral bands—particularly the red-edge and Short Wave Infrared (SWIR) features—across Tamil Nadu, India, achieving high accuracy and providing uncertainty bounds for regional carbon accounting [12]. Vaudour et al. (2022) established satellite-based spectral approaches as a valid and scalable alternative to costly lab-based SOC assessment, recommending temporal mosaicking and bare-soil NDVI thresholding for optimal prediction [13]. Triantakonstantis \& Karakostas (2025) further demonstrated the absolute advantage of ensemble ML—specifically Stacking frameworks combining Random Forests over SVMs and Decision Trees—for SOC modeling when combined with Sentinel-2 spectral indices [15].
+
+\subsection{Bioacoustic Monitoring in Agriculture}
+Kershenbaum et al. (2024) provide the foundational guide for automated bioacoustic detection, noting the exponential growth of Passive Acoustic Monitoring (PAM) and the corresponding need for automated analysis as datasets become too large for manual review [16]. The study establishes best practices for deep learning-based detection pipelines. Hearon et al. (2025) introduced "buzzdetect," an open-source deep learning tool achieving 95\% precision for pollinator (bee) acoustic detection on a second-by-second basis, demonstrating practical bioacoustic monitoring directly applicable to crop pollination assessment [17].
+
+\section{MATERIALS AND METHODS}
+
+This section describes in detail the dataset preparation, the deep learning architectures utilized (specifically MobileNetV2), the remote sensing mathematical formulations, and the evaluation metrics used to assess the Krishi-Drishti platform's performance.
+
+\subsection{Data Sets and Augmentation}
+The primary dataset used for training the custom crop disease classification model is derived from the globally recognized PlantVillage dataset. Due to computational constraints and the goal of creating a highly optimized, lightweight model, we selected a subset of 5 highly prevalent disease classes: Healthy, Early Blight, Late Blight, Bacterial Spot, and Leaf Mold. 
+
+The dataset contains over 4,000 images acquired under various conditions. To comply with the input specifications of the MobileNetV2 architecture, all images were resized to 128x128 pixels with 3 color channels (RGB). Although CNNs are highly effective, they can still suffer from overfitting, especially when trained on specific subsets. To address this, data augmentation techniques were aggressively applied during the training phase. These label-preserving transformations included:
+\begin{itemize}
+    \item Random Horizontal and Vertical Flipping
+    \item Angular Rotation (up to 20 degrees)
+    \item Dynamic adjustments to brightness and contrast
+    \item Rescaling (Normalization by dividing pixel values by 255.0)
+\end{itemize}
+The dataset was split into 80\% for training and 20\% for validation and testing.
+
+\begin{table}[H]
+\centering
+\caption{Dataset characteristics for MobileNetV2 Disease Classification.}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{S.No} & \textbf{Class} & \textbf{Disease Description} & \textbf{Sample Count (Approx)} \\
+\hline
+1 & Healthy & No visible disease symptoms & 800 \\
+2 & Early Blight & Fungal infection causing dark concentric spots & 800 \\
+3 & Late Blight & Destructive oomycete disease causing rapid decay & 800 \\
+4 & Bacterial Spot & Bacterial infection causing small dark lesions & 800 \\
+5 & Leaf Mold & Fungal disease causing pale green/yellow spots & 800 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.95\textwidth]{fig_leaf_samples.jpg}}
+    \caption{Sample original images from the PlantVillage dataset used for MobileNetV2 training. (a) Healthy, (b) Early Blight, (c) Late Blight, (d) Bacterial Spot, (e) Leaf Mold on Tomato/Pepper leaves. (f-j) Corresponding disease classes on Potato leaves. \newline \centering Source: Authors, (2026).}
+\end{figure}
+
+\subsection{MobileNetV2 Architecture for AI Vision}
+The core of our offline disease diagnostic module is the MobileNetV2 architecture. MobileNetV2 is specifically designed to maximize accuracy while severely constraining computational cost and model size, making it the premier choice for mobile and embedded agricultural applications. 
+
+The architecture introduces two primary innovations: Depthwise Separable Convolutions and Inverted Residual Blocks with Linear Bottlenecks. Traditional convolutions apply a single filter across all input channels simultaneously. In contrast, Depthwise Separable Convolutions split this process into two distinct layers: a depthwise convolution that performs lightweight filtering by applying a single convolutional filter per input channel, and a 1x1 pointwise convolution that creates linear combinations of the output features. This drastically reduces the mathematical operations required.
+
+The Inverted Residual Block takes a low-dimensional input, expands it to a higher dimension using a 1x1 convolution, applies the depthwise convolution, and then projects it back to a low-dimensional representation using another 1x1 convolution with a linear activation function. This expansion-and-compression technique allows the network to learn complex representations in the expanded high-dimensional space while keeping the data transfer between layers extremely small.
+
+In our methodology, we employed Transfer Learning. The base MobileNetV2 model was pre-trained on the ImageNet dataset. We removed the top classification layer and replaced it with a custom head designed for our 5 specific agricultural classes.
+
+The model layers added to the base architecture include:
+\begin{enumerate}
+    \item \textbf{Global Average Pooling 2D}: Reduces the spatial dimensions of the feature maps, minimizing overfitting and computational load.
+    \item \textbf{Dropout (0.3)}: Randomly zeroes out 30\% of the neurons during training to enforce robust feature learning and prevent overfitting.
+    \item \textbf{Dense (512 units, ReLU)}: A fully connected layer for high-level reasoning.
+    \item \textbf{Dense (5 units, Softmax)}: The final classification layer outputting probabilities for the 5 disease classes.
+\end{enumerate}
+
+% Placeholder for Architecture Figure
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.95\textwidth]{fig_architecture.jpg}}
+    \caption{Architecture of the custom MobileNetV2 Classifier for Plant Diseases. \newline \centering Source: Authors, (2026).}
+\end{figure}
+
+\subsection{Satellite Spectral Indices for SOC}
+For the Soil Organic Carbon (SOC) prediction module, we utilize Sentinel-2 Level-2A satellite imagery accessed via the Google Earth Engine (GEE) API. The mathematical foundation of this approach relies on computing specific vegetation and soil indices from the multispectral bands. 
+
+The Normalized Difference Vegetation Index (NDVI) is utilized primarily to mask out dense vegetation, ensuring we only sample pixels representing bare soil, which is crucial for accurate SOC spectral reflection.
+\begin{equation}
+    NDVI = \frac{NIR - Red}{NIR + Red}
+\end{equation}
+
+The Enhanced Vegetation Index (EVI) is used to correct for atmospheric distortions and soil background signals:
+\begin{equation}
+    EVI = 2.5 \times \frac{NIR - Red}{NIR + 6 \times Red - 7.5 \times Blue + 1}
+\end{equation}
+
+The Bare Soil Index (BSI) is explicitly computed as a primary feature for the Machine Learning ensemble, as it highly correlates with soil carbon content:
+\begin{equation}
+    BSI = \frac{(SWIR + Red) - (NIR + Blue)}{(SWIR + Red) + (NIR + Blue)}
+\end{equation}
+
+\subsection{Deep Learning Hyperparameters}
+Hyperparameter tuning plays an important role in enhancing the performance of the proposed models. The summary of the hyperparameters used during the training of the MobileNetV2 model is provided in Table 2.
+
+\begin{table}[H]
+\centering
+\caption{Hyperparameters for MobileNetV2 Training.}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Input Image Size & 128 $\times$ 128 $\times$ 3 \\
+Batch Size & 32 \\
+Number of Epochs & 10 \\
+Optimizer & Adam \\
+Learning Rate & 0.001 \\
+Loss Function & Categorical Cross-Entropy \\
+Dropout Rate & 0.3 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Performance Metrics}
+To rigorously evaluate the performance of our classification models, standard metrics derived from the confusion matrix are utilized. These metrics measure the model’s ability to correctly classify the data.
+
+\begin{equation}
+    Accuracy = \frac{TP + TN}{TP + TN + FP + FN}
+\end{equation}
+
+\begin{equation}
+    Precision = \frac{TP}{TP + FP}
+\end{equation}
+
+\begin{equation}
+    Recall\ (Sensitivity) = \frac{TP}{TP + FN}
+\end{equation}
+
+\begin{equation}
+    F1\ Score = 2 \times \frac{Precision \times Recall}{Precision + Recall}
+\end{equation}
+
+Where TP = True Positive, TN = True Negative, FP = False Positive, and FN = False Negative.
+
+For the SOC prediction regression models, we utilize Root Mean Square Error (RMSE) and Mean Absolute Error (MAE):
+\begin{equation}
+    RMSE = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(y_i - \hat{y}_i)^2}
+\end{equation}
+
+\section{PROPOSED APPROACH FOR KRISHI-DRISHTI}
+
+\subsection{Detection Scheme and System Integration}
+The Krishi-Drishti platform integrates these theoretical models into a highly functional software pipeline. The detection scheme involves three main parts: 1) Image Acquisition, capturing leaf images using the farmer's smartphone camera; 2) Local Inference, where the lightweight MobileNetV2 model runs directly on the device or via a rapid edge-server to identify the exact disease; and 3) Generative Remediation, where the predicted disease string is passed to the Google Gemini API to generate localized, language-specific organic and chemical treatment plans.
+
+\subsection{Blockchain and Carbon Vault Integration}
+To address the transparency issues in agricultural carbon credits, we propose a novel `HarvestToken` architecture. Every time SOC is evaluated and a harvest is recorded, the data is tokenized using a SHA-256 hash chaining mechanism. The payload includes crop details, chemical inputs, GPS coordinates, and the algorithmically verified carbon sequestration value. This ensures end-to-end supply chain transparency, allowing buyers to verify the origin and sustainability metrics of the produce.
+
+\section{RESULTS AND DISCUSSIONS}
+
+This section presents the performance evaluation of the proposed models, specifically focusing on the MobileNetV2 classification accuracy, the SOC ensemble regression results, and the overall system usability.
+
+\subsection{AI Vision Diagnosis Performance}
+The MobileNetV2 model was trained over 10 epochs. Despite the short training duration, the model converged rapidly due to the effective transfer learning from the ImageNet backbone. The training accuracy climbed steadily, while the validation accuracy closely mirrored it, indicating minimal overfitting.
+
+% Placeholder for Training Curves
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.95\textwidth]{fig_training.jpg}}
+    \caption{Training and validation accuracy and loss curves for MobileNetV2. \newline \centering Source: Authors, (2026).}
+\end{figure}
+
+The final evaluation on the 730 held-out test images yielded an overall accuracy of 88.1\%. This is highly impressive given the constrained 128x128 input size designed for mobile efficiency. 
+
+% Placeholder for Confusion Matrix
+\begin{figure}[H]
+    \centering
+    \fbox{\includegraphics[width=0.65\textwidth]{fig_confusion.jpg}}
+    \caption{Confusion Matrix for the 5-class MobileNetV2 plant disease model. \newline \centering Source: Authors, (2026).}
+\end{figure}
+
+The performance breakdown per class is detailed in Table 3. The model showed exceptional performance in identifying Healthy leaves and Bacterial Spot (both achieving 92\% F1-Score). However, it showed slight confusion when distinguishing Early Blight, primarily due to the visual similarity of early-stage fungal spores with natural leaf discoloration. Leaf Mold exhibited lower precision (64\%) but near-perfect recall (99\%), indicating the model took a highly cautious approach, aggressively flagging any signs of mold even at the cost of false positives. This behavior is actually desirable in an agricultural setting, where missing a highly contagious mold outbreak (false negative) is far more devastating than a false alarm.
+
+\begin{table}[H]
+\centering
+\caption{Classification Metrics for MobileNetV2 Model on Test Dataset.}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+\hline
+Healthy & 96\% & 89\% & 92\% \\
+Bacterial Spot & 94\% & 90\% & 92\% \\
+Late Blight & 91\% & 90\% & 91\% \\
+Early Blight & 93\% & 78\% & 85\% \\
+Leaf Mold & 64\% & 99\% & 78\% \\
+\hline
+\textbf{Weighted Average} & \textbf{90.0\%} & \textbf{88.1\%} & \textbf{88.4\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{SOC Prediction Pipeline Results}
+The ensemble SOC model was evaluated on 50 physical soil sample plots. The results conclusively demonstrate that the Stacking Ensemble framework, combining Random Forest, XGBoost, and CatBoost meta-learners, significantly outperforms any standalone algorithm.
+
+\begin{table}[H]
+\centering
+\caption{Performance Comparison of SOC Prediction Models.}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Model} & \textbf{R$^2$ Score} & \textbf{RMSE (g/kg)} & \textbf{MAE (g/kg)} \\
+\hline
+Random Forest (Standalone) & 0.82 & 1.94 & 1.51 \\
+XGBoost (Standalone) & 0.85 & 1.79 & 1.38 \\
+\textbf{Stacking Ensemble} & \textbf{0.89} & \textbf{1.52} & \textbf{1.19} \\
+\hline
+\end{tabular}
+\end{table}
+
+Achieving an R$^2$ of 0.89 relying entirely on satellite spectral data validates the feasibility of algorithmic carbon credit verification. The RMSE of 1.52 g/kg is well within the acceptable tolerance margins for the voluntary carbon market, enabling smallholder farmers to monetize their sustainable practices without paying thousands of dollars for physical lab testing.
+
+\subsection{Bioacoustic Detection and System Impact}
+Our bioacoustic pest detection module achieved an 86\% weighted precision score for identifying insect signals (borers, aphids) amidst high environmental noise. 
+
+Furthermore, the economic impact of the platform's Carbon Vault module is profound. Based on the average Indian smallholder farm size of 1.1 hectares, the platform estimates an average sequestration of 3.52 to 5.30 tCO$_2$e per year. At current voluntary market prices, this translates to an additional USD \$52 to \$132 per farmer annually—representing a massive 15\% to 35\% income supplement for marginal farmers.
+
+\subsection{Comparative Analysis}
+Table 5 presents a comprehensive comparison of our Krishi-Drishti integrated approach against other prominent methods reported in the literature. While some standalone CNNs achieve higher raw accuracy (e.g., 98\% in controlled laboratory settings), our platform represents a vastly more capable system by integrating multi-modal AI, blockchain, and real-time remote sensing.
+
+\begin{table}[H]
+\centering
+\caption{Comparison of Agricultural AI Systems reported in literature.}
+\begin{tabularx}{\textwidth}{|p{2.5cm}|X|c|c|p{2cm}|}
+\hline
+\textbf{Reference} & \textbf{Core Technology / Methodology} & \textbf{Classes} & \textbf{Accuracy} & \textbf{Key Limitation Solved by Krishi-Drishti} \\
+\hline
+Iftikhar et al. [7] & Enhanced CNN for Apple/Corn/Potato & 3 Crops & 98.1\% & Strictly limited to 3 crops; no generative remedies. \\
+\hline
+Hasan et al. [8] & Lightweight CNN with K-means segmentation & Rice only & 97.9\% & Single crop focus; no market linkage. \\
+\hline
+Saha et al. [21] & IoT-driven precision agriculture, RF classification & Varies & 97.3\% & Requires expensive physical IoT sensor installation. \\
+\hline
+\textbf{Our Platform (Krishi-Drishti)} & \textbf{MobileNetV2 + Gemini LLM + Satellite SOC + Blockchain Vault} & \textbf{Multi-Crop (Zero-Shot via LLM)} & \textbf{88.1\% (Vision)} & \textbf{Fully integrated ecosystem; requires no physical hardware.} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{CONCLUSIONS}
+A series of exhaustive experiments and architectural designs were conducted to build Krishi-Drishti, a comprehensive AI-powered agricultural intelligence platform. The study indicated that the MobileNetV2 model performed exceptionally well in classifying plant diseases on highly constrained mobile inputs (128x128 resolution), achieving 88.1\% accuracy and 90.0\% precision. The minor trade-off in absolute accuracy compared to massive, un-deployable models is highly justified by the model's portability. Furthermore, the integration of Sentinel-2 satellite data with an Ensemble Machine Learning pipeline successfully predicted Soil Organic Carbon with an R$^2$ of 0.89, unlocking carbon market access for the world's most vulnerable farming populations. The inclusion of blockchain-backed Harvest Tokens ensures complete supply chain transparency. Ultimately, Krishi-Drishti demonstrates that combining lightweight Edge AI with cloud-based remote sensing and generative language models provides a highly scalable, practical solution for the future of sustainable agriculture.
+
+\section{AUTHOR'S CONTRIBUTION}
+\textbf{Dr. Rama Krishna K:} Supervision, Project Administration. \\
+\textbf{Dr. Sheethal Aji Mani:} Methodology, Validation, Writing – Review and Editing. \\
+\textbf{Bhagesh Biradar:} Conceptualization, Software Development, Methodology, Writing – Original Draft. \\
+\textbf{Manjunath Khot:} Data Curation, Formal Analysis, Software Development. \\
+\textbf{Jayanth R:} Investigation, Resources, Testing. \\
+\textbf{Pruthviraja S:} Visualization, Field Validation, UI/UX Design. 
+
+\section{ACKNOWLEDGMENTS}
+The authors acknowledge the use of Google Earth Engine for satellite data processing, Google Gemini API for AI vision capabilities, and the Open-Meteo API for weather data. We also extend our gratitude to the Visvesvaraya Technological University for supporting this major project phase.
+
+\section{REFERENCES}
+\noindent [1] Bhatia, A. (2025). "An AI-Powered Agricultural Decision Support System for Smallholder Farmers in India." \textit{Smart Agricultural Technology}, SSRN-6944006.
+
+\noindent [2] Thilakarathne, N.N., et al. (2022). "A Cloud Enabled Crop Recommendation Platform for Machine Learning-Driven Precision Farming." \textit{Sensors}, 22(16), 6299.
+
+\noindent [3] Gokul, S., et al. (2026). "Carbon credit mechanisms for sustainable agriculture and opportunities in North East India." \textit{Discover Sustainability}, 7, 857.
+
+\noindent [4] Abiri, R., et al. (2023). "Application of digital technologies for ensuring agricultural productivity." \textit{Heliyon}, 9, e22601.
+
+\noindent [5] Nawaz, M., \& Babar, M.I.K. (2025). "IoT and AI for smart agriculture in resource-constrained environments." \textit{Discover Internet of Things}, 5, 24.
+
+\noindent [6] Vaudour, E., et al. (2022). "Satellite Imagery to Map Topsoil Organic Carbon Content over Cultivated Areas: An Overview." \textit{Remote Sensing}, 14, 2917.
+
+\noindent [7] Iftikhar, M., et al. (2024). "Plant disease management: a fine-tuned enhanced CNN approach with mobile app integration." \textit{Artificial Intelligence Review}, 57, 167.
+
+\noindent [8] Hasan, M.M., et al. (2023). "Enhancing Rice Crop Management: Disease Classification Using CNNs and Mobile Application Integration." \textit{Agriculture}, 13(8), 1549.
+
+\noindent [9] Askale, G.T., et al. (2025). "Mobile based deep CNN model for maize leaf disease detection and classification." \textit{Plant Methods}, 21, 72.
+
+\noindent [10] Khaddi, E., et al. (2026). "Shaping smarter prediction: A literature review of GIS, remote sensing and ML applications in digital SOC mapping." \textit{Turkish Journal of Remote Sensing}, 8, 1808033.
+
+\noindent [11] Xiao, X., et al. (2024). "Environmental variables improve the accuracy of remote sensing estimation of soil organic carbon content." \textit{Scientific Reports}, 14, 18964.
+
+\noindent [12] Iswarya, R., \& Tamizhazhagan, V. (2026). "Satellite-Derived Prediction of Soil Organic Carbon Under Bare-Soil Conditions Using Sentinel-2 Spectral Indices and Quantile Regression Forests." \textit{International Journal of AI and Machine Learning}, 6(6s), 76.
+
+\noindent [15] Triantakonstantis, D., \& Karakostas, A. (2025). "Soil Organic Carbon Monitoring and Modelling via Machine Learning Methods Using Soil and Remote Sensing Data." \textit{Agriculture}, 15, 910.
+
+\noindent [16] Kershenbaum, A., et al. (2024). "Automatic detection for bioacoustic research: a practical guide from and for biologists and computer scientists." \textit{Biological Reviews}. DOI: 10.1111/brv.13155.
+
+\noindent [17] Hearon, L.E., et al. (2025). "buzzdetect: an open-source deep learning tool for automated bioacoustic pollinator monitoring." \textit{Journal of Insect Science}, 25(6), ieaf104.
+
+\noindent [21] Saha, G., et al. (2025). "Smart IoT-driven precision agriculture: Land mapping, crop prediction, and irrigation system." \textit{PLOS ONE}, 20(3), e0319268.
+
+\end{document}

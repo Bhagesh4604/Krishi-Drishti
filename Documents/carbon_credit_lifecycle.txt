@@ -1,0 +1,35 @@
+Krishi-Drishti Carbon Credit Lifecycle
+
+Here is the complete, end-to-end lifecycle of how carbon credits are generated, verified, and issued to farmers in the Krishi-Drishti ecosystem, based on the architecture and modules we've built:
+
+1. Farmer Onboarding & Baseline Establishment
+* Registration: The farmer registers their land on the Krishi-Drishti mobile app (or web portal), geolocating their specific field coordinates.
+* Historical Baseline: The system integrates with the Google Earth Engine (GEE) API to pull historical Satellite NDVI (Vegetation) and NDWI (Water) data. This establishes the "baseline"—the amount of carbon the farm *traditionally* sequesters before any new interventions.
+* Pledge: The farmer pledges to adopt specific climate-smart practices (e.g., zero-tillage, agroforestry, alternate wetting and drying for paddy, or reduced synthetic fertilizers).
+
+2. Live Monitoring & Evidence Collection 
+Over the course of the crop cycle, Krishi-Drishti actively monitors the farm to gather irrefutable proof that the pledged practices are taking place:
+* IoT & Satellite Sync: Continuous satellite sweeps monitor crop health and soil moisture.
+* Evidence Uploads: The farmer uses the app to upload periodic timestamped and geolocated photos of their field. (This is backed by the secure Cloudinary evidence storage we set up).
+* AI Diagnostics: The YOLOv8 visual models and Random Forest ML models process these images and satellite feeds to verify that the sustainable practices are actually happening without excessive chemical intervention.
+
+3. The 5-Layer Additionality Verification
+Before any credit can be issued, it must pass a strict "Additionality" check. This proves that the carbon reduction *would not have happened* without the new practices.
+1. Remote Sensing Check: GEE confirms vegetation index improvements.
+2. ML Anomaly Scan: Models verify that there are no red flags (e.g., sudden drops in biomass that indicate crop burning).
+3. Regional Cross-Reference: The farm's data is compared against real local district datasets (e.g., ICAR/NABARD data) to ensure the claims are scientifically possible for that specific soil and climate.
+4. Photographic Evidence Audit: AI confirms the geolocated evidence photos map correctly to the claimed field.
+5. System Integrity Check: The Admin Engine does a final automated sweep of all telemetry.
+
+4. Carbon Quantification
+* Once the harvest cycle is complete and the 5-layer verification passes, the backend Business Engine calculates the exact tonnage of CO2 captured or avoided.
+* It uses standardized agricultural carbon formulas to convert the improvements in soil health, reduced inputs, and biomass growth into a hard number. For example: 1 Metric Ton of CO2 avoided/sequestered = 1 Carbon Credit.
+
+5. Minting & Issuing Credits to the Farmer
+* The calculated CO2 tonnage is converted into formal Carbon Credits on the internal Krishi-Drishti ledger.
+* These credits are officially "minted" and deposited directly into the farmer's Carbon Ledger / Digital Wallet within the Farmer App. 
+
+6. The Direct Marketplace (Monetization)
+* Once the credits are in the farmer's wallet, they become visible on the De-centralized Direct Marketplace.
+* Corporate buyers or sustainability funds can browse the marketplace to offset their emissions. Because Krishi-Drishti's credits are backed by 5 layers of hard AI/Satellite evidence, they command a high premium.
+* Zero Middlemen: When a buyer purchases the credits, the funds route directly to the farmer's financial account, completing the cycle and financially rewarding the farmer for their climate-smart agriculture.

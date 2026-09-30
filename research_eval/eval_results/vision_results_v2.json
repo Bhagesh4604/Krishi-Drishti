@@ -1,0 +1,722 @@
+{
+  "timestamp": "2026-09-15T18:21:02.523952",
+  "module": "Vision AI (gemini-flash-lite-latest) — Corrected Labels",
+  "evaluation_version": "v2",
+  "total_images": 100,
+  "metrics": {
+    "accuracy": 50.0,
+    "precision_weighted": 56.5,
+    "recall_weighted": 50.0,
+    "f1_weighted": 50.7
+  },
+  "class_labels": [
+    "healthy",
+    "early blight",
+    "late blight",
+    "bacterial spot",
+    "leaf mold"
+  ],
+  "classification_report": "                precision    recall  f1-score   support\n\nbacterial spot       0.67      0.30      0.41        20\n  early blight       0.41      0.35      0.38        20\n       healthy       0.71      0.50      0.59        20\n   late blight       0.50      0.50      0.50        20\n     leaf mold       0.53      0.85      0.65        20\n       unknown       0.00      0.00      0.00         0\n\n      accuracy                           0.50       100\n     macro avg       0.47      0.42      0.42       100\n  weighted avg       0.56      0.50      0.51       100\n",
+  "per_image_results": [
+    {
+      "file": "003_4c24021e-90e2-4b84-89c2-c904dc8bb0b4___GCREC_Bact.Sp 5706.JPG",
+      "true": "bacterial spot",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "006_55fa97d3-71b6-4487-9757-f9195f97ba5a___RS_LB 4047.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "008_e7ec8fef-daec-4f8f-93b1-67d40ec68cae___JR_B.Spot 8850.JPG",
+      "true": "bacterial spot",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": true
+    },
+    {
+      "file": "009_670616fe-c1a6-41a9-99b2-eb6270d8c299___GHLB_PS Leaf 26.2 Day 16.jpg",
+      "true": "late blight",
+      "pred": "unknown",
+      "raw": "unknown",
+      "correct": false
+    },
+    {
+      "file": "007_893b7469-eb50-4567-9292-dc8f7610c311___RS_Erly.B 6442.JPG",
+      "true": "early blight",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": true
+    },
+    {
+      "file": "008_ca6362b2-b680-4348-a795-3bc37275e70f___GHLB2 Leaf 79.JPG",
+      "true": "late blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "006_55fa97d3-71b6-4487-9757-f9195f97ba5a___RS_LB 4047.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "005_525c5249-eccb-4c23-b5b7-e9d103857432___RS_LB 4077.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "000_06ac6596-8d65-46dd-a343-a2209f3480e4___RS_Early.B 6921.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "007_893b7469-eb50-4567-9292-dc8f7610c311___RS_Erly.B 6442.JPG",
+      "true": "early blight",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": true
+    },
+    {
+      "file": "007_594d63cf-a655-4d53-a5e4-d38857d91a67___JR_HL 7853.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "003_905a051a-0649-4b4a-8dc7-273952cbd832___Crnl_L.Mold 6574.JPG",
+      "true": "leaf mold",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": false
+    },
+    {
+      "file": "008_8d78a34f-1777-4bd8-a925-795c57c11787___GH_HL Leaf 429.1.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "006_3ba0eff1-bb0f-4624-8693-1890087db1d3___JR_HL 8510.JPG",
+      "true": "healthy",
+      "pred": "unknown",
+      "raw": "unknown",
+      "correct": false
+    },
+    {
+      "file": "005_4797e35c-7ec7-4853-95d5-c9fa4b6c0be9___Crnl_L.Mold 9162.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "009_58fb4710-c0a7-4a76-8667-07fbe66bfac9___Crnl_L.Mold 6568.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "005_4797e35c-7ec7-4853-95d5-c9fa4b6c0be9___Crnl_L.Mold 9162.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "002_a3e7a5cc-1dbc-4492-8a07-15c12c97493f___Crnl_L.Mold 6548.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "004_a20c374f-18a9-40ba-b531-516967f848c6___Crnl_L.Mold 8862.JPG",
+      "true": "leaf mold",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "005_d46517ef-7359-469f-9dd3-c8669c6cd889___NREC_B.Spot 1902.JPG",
+      "true": "bacterial spot",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": true
+    },
+    {
+      "file": "008_ef5b06f0-4c81-4e47-9ec3-499af1571d9e___RS_Early.B 8455.JPG",
+      "true": "early blight",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": true
+    },
+    {
+      "file": "002_07672c2f-860a-455f-9fa4-f761f4bc090e___RS_Late.B 5017.JPG",
+      "true": "late blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "000_ec7b4bc1-dd3e-4735-a90c-1d51831994a1___GCREC_Bact.Sp 3134.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "008_e7ec8fef-daec-4f8f-93b1-67d40ec68cae___JR_B.Spot 8850.JPG",
+      "true": "bacterial spot",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": true
+    },
+    {
+      "file": "009_5abfa537-636f-41df-a833-311a3018aac9___RS_Early.B 8176.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "002_a3e7a5cc-1dbc-4492-8a07-15c12c97493f___Crnl_L.Mold 6548.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "001_2f08688f-f6ea-4772-bfa3-5a995e38988c___GHLB2 Leaf 8827.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "007_b26ccea5-3d59-45ad-9957-983c2547d915___GCREC_Bact.Sp 6131.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "005_525c5249-eccb-4c23-b5b7-e9d103857432___RS_LB 4077.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "004_cc2e453a-3331-4385-baab-e0935661bba4___GCREC_Bact.Sp 3590.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "001_77b74ab1-43d3-4d49-b901-e6e19ee0f200___Crnl_L.Mold 9063.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "002_016c8a9f-8eab-41b2-bb4b-0eb6ed0b2a7d___JR_HL 8591.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "000_06ac6596-8d65-46dd-a343-a2209f3480e4___RS_Early.B 6921.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "003_4c24021e-90e2-4b84-89c2-c904dc8bb0b4___GCREC_Bact.Sp 5706.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "004_cc2e453a-3331-4385-baab-e0935661bba4___GCREC_Bact.Sp 3590.JPG",
+      "true": "bacterial spot",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": true
+    },
+    {
+      "file": "003_905a051a-0649-4b4a-8dc7-273952cbd832___Crnl_L.Mold 6574.JPG",
+      "true": "leaf mold",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": false
+    },
+    {
+      "file": "000_f4aa3db8-2ad1-4abc-bb2e-4b63ed4d966a___GHLB2 Leaf 107.2.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "005_d46517ef-7359-469f-9dd3-c8669c6cd889___NREC_B.Spot 1902.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "002_016c8a9f-8eab-41b2-bb4b-0eb6ed0b2a7d___JR_HL 8591.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "002_5caecfc6-8e1d-401b-8014-763dec01cb98___RS_Early.B 8063.JPG",
+      "true": "early blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "003_e9f9e200-b7ff-4a59-af32-b4faf3f27b17___RS_Early.B 8028.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "009_58fb4710-c0a7-4a76-8667-07fbe66bfac9___Crnl_L.Mold 6568.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "000_d0bce877-53bf-4be0-b05d-6f403c5d4504___JR_HL 8838.JPG",
+      "true": "healthy",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "002_bcd94233-e103-4604-8c04-67177af3c7e0___GCREC_Bact.Sp 6233.JPG",
+      "true": "bacterial spot",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": false
+    },
+    {
+      "file": "002_5caecfc6-8e1d-401b-8014-763dec01cb98___RS_Early.B 8063.JPG",
+      "true": "early blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "008_8d78a34f-1777-4bd8-a925-795c57c11787___GH_HL Leaf 429.1.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "001_2f08688f-f6ea-4772-bfa3-5a995e38988c___GHLB2 Leaf 8827.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "006_f0dfdada-f425-46d7-8cf3-2957850b5a2e___RS_Erly.B 9466.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "007_6dcf84e4-bfbc-467d-83d8-546c22779f6d___GHLB2 Leaf 76.1.JPG",
+      "true": "late blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "004_96aa2fd2-d8dc-4650-9b56-7b0f25f27edf___RS_Erly.B 7821.JPG",
+      "true": "early blight",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": false
+    },
+    {
+      "file": "000_f4aa3db8-2ad1-4abc-bb2e-4b63ed4d966a___GHLB2 Leaf 107.2.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "007_b26ccea5-3d59-45ad-9957-983c2547d915___GCREC_Bact.Sp 6131.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "004_46aabd9e-80c5-440b-924a-229f146b571c___GHLB2 Leaf 8955.JPG",
+      "true": "late blight",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "006_db6177ef-cf23-402a-ac95-f8c136c6385d___GCREC_Bact.Sp 3135.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "008_ef5b06f0-4c81-4e47-9ec3-499af1571d9e___RS_Early.B 8455.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "003_72c50697-b546-4737-a9bc-e14d1d6f71cd___JR_HL 8575.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "001_77b74ab1-43d3-4d49-b901-e6e19ee0f200___Crnl_L.Mold 9063.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "003_72c50697-b546-4737-a9bc-e14d1d6f71cd___JR_HL 8575.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "004_16898ed4-107c-40ba-8e1f-2818e06f8426___JR_HL 8702.JPG",
+      "true": "healthy",
+      "pred": "unknown",
+      "raw": "unknown",
+      "correct": false
+    },
+    {
+      "file": "006_3ba0eff1-bb0f-4624-8693-1890087db1d3___JR_HL 8510.JPG",
+      "true": "healthy",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "003_e9f9e200-b7ff-4a59-af32-b4faf3f27b17___RS_Early.B 8028.JPG",
+      "true": "early blight",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": true
+    },
+    {
+      "file": "000_ec7b4bc1-dd3e-4735-a90c-1d51831994a1___GCREC_Bact.Sp 3134.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "000_d0bce877-53bf-4be0-b05d-6f403c5d4504___JR_HL 8838.JPG",
+      "true": "healthy",
+      "pred": "unknown",
+      "raw": "unknown",
+      "correct": false
+    },
+    {
+      "file": "009_338ebacf-1cf2-48e7-a69a-708b37f4210b___JR_HL 8821.JPG",
+      "true": "healthy",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": false
+    },
+    {
+      "file": "007_6dcf84e4-bfbc-467d-83d8-546c22779f6d___GHLB2 Leaf 76.1.JPG",
+      "true": "late blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "005_94eb2aa6-7f9e-4a5a-b519-2106984e9a7d___RS_Early.B 8770.JPG",
+      "true": "early blight",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": true
+    },
+    {
+      "file": "001_d270bd0e-c248-4bbd-8aa8-fd4a13351772___JR_HL 8346.JPG",
+      "true": "healthy",
+      "pred": "unknown",
+      "raw": "unknown",
+      "correct": false
+    },
+    {
+      "file": "009_d4f5ce4f-56e2-4e4c-b696-e760f02fe2a5___NREC_B.Spot 1928.JPG",
+      "true": "bacterial spot",
+      "pred": "unknown",
+      "raw": "unknown",
+      "correct": false
+    },
+    {
+      "file": "009_338ebacf-1cf2-48e7-a69a-708b37f4210b___JR_HL 8821.JPG",
+      "true": "healthy",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": false
+    },
+    {
+      "file": "003_0b137624-885b-4d9b-b9e6-330c6681de4b___GHLB2 Leaf 8848.JPG",
+      "true": "late blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "009_5abfa537-636f-41df-a833-311a3018aac9___RS_Early.B 8176.JPG",
+      "true": "early blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "006_db6177ef-cf23-402a-ac95-f8c136c6385d___GCREC_Bact.Sp 3135.JPG",
+      "true": "bacterial spot",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": false
+    },
+    {
+      "file": "008_d33d8470-d090-474b-8c16-cd5e88d40f51___Crnl_L.Mold 6998.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "005_94eb2aa6-7f9e-4a5a-b519-2106984e9a7d___RS_Early.B 8770.JPG",
+      "true": "early blight",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": true
+    },
+    {
+      "file": "008_d33d8470-d090-474b-8c16-cd5e88d40f51___Crnl_L.Mold 6998.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "001_58cb5c58-3161-4476-9361-3ee2673cc82b___RS_Early.B 7368.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "001_975b25df-a4d7-4aca-b1b9-312487544eaa___JR_B.Spot 8830.JPG",
+      "true": "bacterial spot",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": true
+    },
+    {
+      "file": "003_0b137624-885b-4d9b-b9e6-330c6681de4b___GHLB2 Leaf 8848.JPG",
+      "true": "late blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "004_16898ed4-107c-40ba-8e1f-2818e06f8426___JR_HL 8702.JPG",
+      "true": "healthy",
+      "pred": "unknown",
+      "raw": "unknown",
+      "correct": false
+    },
+    {
+      "file": "008_ca6362b2-b680-4348-a795-3bc37275e70f___GHLB2 Leaf 79.JPG",
+      "true": "late blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "001_58cb5c58-3161-4476-9361-3ee2673cc82b___RS_Early.B 7368.JPG",
+      "true": "early blight",
+      "pred": "early blight",
+      "raw": "early blight",
+      "correct": true
+    },
+    {
+      "file": "006_306d3e00-d180-4645-9858-b22e3a292554___Crnl_L.Mold 6627.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "004_46aabd9e-80c5-440b-924a-229f146b571c___GHLB2 Leaf 8955.JPG",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "000_c037b9ad-fa8f-4bbf-a38f-ec0cd6db860d___Crnl_L.Mold 9024.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "006_306d3e00-d180-4645-9858-b22e3a292554___Crnl_L.Mold 6627.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "007_24b03bfc-3491-490d-9178-61c6c56c4b56___Crnl_L.Mold 9018.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "002_07672c2f-860a-455f-9fa4-f761f4bc090e___RS_Late.B 5017.JPG",
+      "true": "late blight",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "007_594d63cf-a655-4d53-a5e4-d38857d91a67___JR_HL 7853.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "000_c037b9ad-fa8f-4bbf-a38f-ec0cd6db860d___Crnl_L.Mold 9024.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "005_1dfb5aeb-8d00-4672-9755-5da982758453___RS_HL 9987.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "001_d270bd0e-c248-4bbd-8aa8-fd4a13351772___JR_HL 8346.JPG",
+      "true": "healthy",
+      "pred": "unknown",
+      "raw": "unknown",
+      "correct": false
+    },
+    {
+      "file": "006_f0dfdada-f425-46d7-8cf3-2957850b5a2e___RS_Erly.B 9466.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "004_a20c374f-18a9-40ba-b531-516967f848c6___Crnl_L.Mold 8862.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "007_24b03bfc-3491-490d-9178-61c6c56c4b56___Crnl_L.Mold 9018.JPG",
+      "true": "leaf mold",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": true
+    },
+    {
+      "file": "005_1dfb5aeb-8d00-4672-9755-5da982758453___RS_HL 9987.JPG",
+      "true": "healthy",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": true
+    },
+    {
+      "file": "002_bcd94233-e103-4604-8c04-67177af3c7e0___GCREC_Bact.Sp 6233.JPG",
+      "true": "bacterial spot",
+      "pred": "healthy",
+      "raw": "healthy",
+      "correct": false
+    },
+    {
+      "file": "009_d4f5ce4f-56e2-4e4c-b696-e760f02fe2a5___NREC_B.Spot 1928.JPG",
+      "true": "bacterial spot",
+      "pred": "leaf mold",
+      "raw": "leaf mold",
+      "correct": false
+    },
+    {
+      "file": "004_96aa2fd2-d8dc-4650-9b56-7b0f25f27edf___RS_Erly.B 7821.JPG",
+      "true": "early blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": false
+    },
+    {
+      "file": "009_670616fe-c1a6-41a9-99b2-eb6270d8c299___GHLB_PS Leaf 26.2 Day 16.jpg",
+      "true": "late blight",
+      "pred": "late blight",
+      "raw": "late blight",
+      "correct": true
+    },
+    {
+      "file": "001_975b25df-a4d7-4aca-b1b9-312487544eaa___JR_B.Spot 8830.JPG",
+      "true": "bacterial spot",
+      "pred": "bacterial spot",
+      "raw": "bacterial spot",
+      "correct": true
+    }
+  ]
+}

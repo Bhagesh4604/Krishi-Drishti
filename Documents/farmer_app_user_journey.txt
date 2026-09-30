@@ -1,0 +1,37 @@
+Krishi-Drishti: Farmer App User Journey for Carbon Credits
+
+Based strictly on the React application components and backend routers we've built, here is the exact, step-by-step User Journey for a farmer navigating from first opening the app to seeing carbon credits in their wallet:
+
+Step 1: Account Creation & Authentication (AuthScreen.tsx)
+1. The farmer opens the app and lands on the mobile-responsive landing page.
+2. They enter their Phone Number into the secure login prompt.
+3. The Krishi-Drishti backend (authService) fires an OTP to their device.
+4. They enter the OTP, their secure token is stored in local storage, and their User Profile (including Name, Base Location, and Language parameters) is initialized. 
+
+Step 2: Geofencing the Farm (LandMarkingScreen.tsx)
+1. To qualify for carbon credits, the farmer navigates from the Dashboard to the Land Marking module.
+2. A satellite map interface loads. The farmer taps the screen to drop boundary pins, outlining the exact perimeter of their field.
+3. Upon hitting "Save Plot", the polygon coordinates are sent to the plots.router on the backend.
+4. Behind the scenes: The backend immediately triggers the Google Earth Engine (GEE) integration (authenticate_gee.py) using these coordinates to fetch historical NDVI and NDWI data, establishing the farm's "Historical Carbon Baseline".
+
+Step 3: Seasonal Monitoring & Evidence Building (CropStressScreen.tsx / DashboardScreen.tsx)
+1. Throughout the crop cycle, the farmer uses the app normally, checking the Weather and reading localized News on the Dashboard.
+2. They periodically use the Crop Scanner (CropStressScreen). They take a picture of their crop leaves.
+3. Behind the scenes: Your YOLOv8 AI analyzes these images for disease (ai.router / diagnose). Crucially, these images act as geolocated, timestamped photographic evidence of their active farming practices, which are stored securely via Cloudinary to build their "Additionality" proof.
+
+Step 4: The Automated Carbon Audit (CarbonVaultScreen.tsx)
+1. At the end of the season (or during milestones), the farmer navigates to the Carbon Vault screen using the Bottom Navigation bar.
+2. They will see an overview of their farm's verified status. They tap the "Start Earth Engine Audit" button.
+3. Behind the scenes: The frontend hits the /api/carbon router. The backend launches the 5-Layer Additionality Verification mechanism:
+   * It pulls fresh GEE satellite data to scan for actual biomass growth compared to the baseline.
+   * It runs the anomaly_detector.py cron job to ensure there were no massive dips in biomass (which would indicate crop burning).
+   * It correlates their uploaded crop photos to their land boundary.
+
+Step 5: Minting & Dashboard Reward (DashboardScreen.tsx & CarbonVaultScreen.tsx)
+1. Once the backend verification passes and computes the CO2 tonnage avoided/sequestered, it formally converts this into Carbon Tokens.
+2. The UI instantly updates. The Carbon Earnings widget on the main DashboardScreen (which previously sat at "0.00 ACT") dynamically increments to show their newly minted tokens (e.g., "1.45 ACT").
+3. The credits are formally locked into their digital wallet on their User Profile. 
+
+Step 6: Monetization (MarketScreen.tsx)
+1. The farmer can now navigate to the Mandi / Marketplace.
+2. Because the farmer holds verified Carbon Tokens backed by hard AI and Satellite proof, these credits seamlessly integrate into their marketplace profile, making them viewable to corporate sustainability buyers who can purchase them directly, routing funds straight to the farmer's account.

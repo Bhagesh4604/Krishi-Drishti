@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-09-15T17:20:53.599457",
+  "module": "Usability Study (SUS)",
+  "n_farmers": 5,
+  "individual_scores": [
+    75.0,
+    100.0,
+    82.5,
+    70.0,
+    92.5
+  ],
+  "average_sus": 84.0,
+  "grade": "Good (Above Average)"
+}
