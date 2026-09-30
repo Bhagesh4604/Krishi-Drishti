@@ -774,25 +774,23 @@ const AppContent: React.FC = () => {
   const showNav = !['landing', 'auth', 'profile', 'market-detail', 'live-audio', 'carbon-vault', 'scheme-setu', 'landmark', 'chat', 'vision', 'vision-result', 'acoustic-scanner', 'traceability', 'trace-verify', 'field-monitor', 'corporate-dashboard', 'crop-cycle', 'smart-irrigation', 'digital-twin'].includes(currentScreen);
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center relative">
-      {/* Ambient glow behind the floating device frame */}
+    <div className="min-h-screen w-full flex items-center justify-center relative"
+      style={{ background: 'linear-gradient(160deg, #020B06 0%, #031208 40%, #041A0E 100%)' }}>
+
+      {/* Ambient glow */}
       <div
         aria-hidden
         className="fixed inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 60% 45% at 50% 42%, rgba(0,187,120,0.28), transparent 70%)',
-          filter: 'blur(2px)',
-        }}
+        style={{ background: 'radial-gradient(ellipse 60% 45% at 50% 42%, rgba(0,187,120,0.12), transparent 70%)' }}
       />
 
-      {/* ══ App Frame ══ */}
+      {/* App Frame */}
       <div
-        className="flex flex-col w-full max-w-md h-[100dvh] sm:h-[94vh] sm:max-h-[920px] relative text-gray-900 bg-white overflow-hidden rounded-none sm:rounded-[2.5rem]"
+        className="flex flex-col w-full max-w-md h-[100dvh] sm:h-[94vh] sm:max-h-[920px] relative overflow-hidden rounded-none sm:rounded-[2.5rem]"
         style={{
-          boxShadow:
-            '0 2px 6px rgba(0,40,20,0.25), 0 16px 40px rgba(0,40,20,0.35), 0 60px 120px -20px rgba(0,0,0,0.6), 0 0 80px rgba(0,187,120,0.18), inset 0 1px 0 rgba(255,255,255,0.5)',
-          border: '1px solid rgba(255,255,255,0.18)',
+          background: '#020B06',
+          boxShadow: '0 2px 6px rgba(0,40,20,0.5), 0 16px 40px rgba(0,40,20,0.6), 0 60px 120px -20px rgba(0,0,0,0.8), 0 0 80px rgba(0,255,135,0.08)',
+          border: '1px solid rgba(255,255,255,0.06)',
         }}
       >
       <main className={`flex-1 overflow-y-auto mobile-container relative ${showNav ? 'pb-20' : 'pb-0'}`}>

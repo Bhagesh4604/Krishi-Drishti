@@ -1,46 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Screen, UserProfile, Language } from '../types';
 import { languages } from '../translations';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import {
-  MapPin,
-  Bell,
-  Thermometer,
-  Droplets,
-  Wind,
-  CloudRain,
-  Leaf,
-  MoreHorizontal,
-  Home,
-  Sprout,
-  Zap,
-  Landmark,
-  Radio,
-  ScrollText,
-  Activity,
-  Calendar,
-  Bot,
-  Umbrella,
-  TrendingUp,
-  ScanLine,
-  BookOpen,
-  Coins,
-  ArrowRight,
-  MessageCircle,
-  Sun,
-  Plus,
-  Link2,
-  Building2,
-  ChevronRight,
-  BarChart2,
-  Search,
-  Grid3x3,
+  MapPin, Bell, Thermometer, Droplets, Wind, CloudRain, Leaf,
+  Home, Sprout, Zap, Landmark, Radio, ScrollText, Activity,
+  Calendar, Bot, Umbrella, TrendingUp, ScanLine, BookOpen,
+  Coins, ArrowRight, MessageCircle, Sun, Plus, Link2,
+  Building2, ChevronRight, BarChart2, Search, Grid3x3,
+  Satellite, Brain, Shield, Flame, Star, Globe2, Wheat,
+  AreaChart, Award, AlertCircle, CheckCircle2, ArrowUpRight,
+  Cloud, CloudSun, DropletIcon, Crop
 } from 'lucide-react';
 import { weatherService } from '../src/services/api';
 import WeatherModal from '../components/WeatherModal';
 import CarbonWalletCard from '../components/CarbonWalletCard';
 import { plotService } from '../src/services/api';
-import Tilt3D from '../components/Tilt3D';
 
 interface DashboardScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -52,730 +27,647 @@ interface DashboardScreenProps {
   locationName: string;
 }
 
+// Animated number counter
+const AnimatedCounter = ({ target, suffix = '', prefix = '' }: { target: number; suffix?: string; prefix?: string }) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    const step = target / 30;
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) { setCount(target); clearInterval(timer); }
+      else setCount(Math.floor(start));
+    }, 40);
+    return () => clearInterval(timer);
+  }, [target]);
+  return <span>{prefix}{count.toLocaleString()}{suffix}</span>;
+};
+
+// Pulse indicator
+const PulseDot = ({ color = '#00BB78' }: { color?: string }) => (
+  <span className="relative inline-flex h-2.5 w-2.5">
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: color }} />
+    <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ backgroundColor: color }} />
+  </span>
+);
+
+const getCropImage = (crop: string) => {
+  const map: any = {
+    'Wheat': 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&q=80',
+    'Corn': 'https://images.unsplash.com/photo-1601593346740-925612772716?w=400&q=80',
+    'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&q=80',
+    'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&q=80',
+    'Tomato': 'https://images.unsplash.com/photo-1561136594-7f68807a8d35?w=400&q=80',
+    'Cotton': 'https://images.unsplash.com/photo-1565108754993-f1e4cec2f5e9?w=400&q=80',
+    'Sugarcane': 'https://images.unsplash.com/photo-1559181567-c3190ca9be46?w=400&q=80',
+  };
+  return map[crop] || 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&q=80';
+};
+
+const fieldImages = [
+  'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80',
+  'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&q=80',
+  'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80',
+  'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800&q=80',
+];
+
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, onLangChange, currentLang, weather, locationName }) => {
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [userPlots, setUserPlots] = useState<any[]>([]);
   const [isLoadingPlots, setIsLoadingPlots] = useState(true);
-  const [plotLocationNames, setPlotLocationNames] = useState<{ [key: number]: string }>({});
-  const hasFetched = React.useRef(false);
-
-  // ── Location picker state ──
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [cityQuery, setCityQuery] = useState('');
   const [cityResults, setCityResults] = useState<any[]>([]);
   const [citySearching, setCitySearching] = useState(false);
-  const citySearchTimer = React.useRef<any>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'alerts'>('overview');
+  const citySearchTimer = useRef<any>(null);
+  const hasFetched = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Guard: only fetch once per component lifetime to avoid double-fire
-    // from AnimatePresence remounts or locationName prop changes.
     if (hasFetched.current) return;
     hasFetched.current = true;
-
-    const locationFallback = locationName; // snapshot at mount time
-
     const fetchPlots = async () => {
       try {
         const data = await plotService.getPlots();
         setUserPlots(data);
-
-        // Sequential geocoding with 250ms throttle to respect Nominatim's 1 req/s limit
-        const locationMap: { [key: number]: string } = {};
-        for (const plot of data) {
-          if (plot.coordinates && plot.coordinates.length > 0) {
-            const firstCoord = plot.coordinates[0];
-            try {
-              const locData = await weatherService.reverseGeocode(firstCoord.lat, firstCoord.lng);
-              if (locData && (locData.city || locData.district)) {
-                locationMap[plot.id] = `${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`;
-              } else {
-                locationMap[plot.id] = locationFallback.split(',')[0] || 'Unknown Location';
-              }
-            } catch (locErr) {
-              console.error(`Failed to reverse geocode plot ${plot.id}:`, locErr);
-              locationMap[plot.id] = locationFallback.split(',')[0] || 'Unknown Location';
-            }
-            // 250ms throttle — prevents 429 rate-limiting from Nominatim (1 req/s max)
-            await new Promise(r => setTimeout(r, 250));
-          } else {
-            locationMap[plot.id] = locationFallback.split(',')[0] || 'Unknown Location';
-          }
-        }
-        setPlotLocationNames(locationMap);
-
-      } catch (error) {
-        console.error('Failed to fetch user plots:', error);
-      } finally {
-        setIsLoadingPlots(false);
-      }
+      } catch (e) { console.error(e); }
+      finally { setIsLoadingPlots(false); }
     };
     fetchPlots();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // ── City search debounce ──
   const handleCitySearch = (q: string) => {
     setCityQuery(q);
     clearTimeout(citySearchTimer.current);
     if (!q.trim()) { setCityResults([]); return; }
     citySearchTimer.current = setTimeout(async () => {
       setCitySearching(true);
-      try {
-        const results = await weatherService.searchCity(q);
-        setCityResults(results || []);
-      } catch { setCityResults([]); }
+      try { const r = await weatherService.searchCity(q); setCityResults(r || []); }
+      catch { setCityResults([]); }
       finally { setCitySearching(false); }
     }, 400);
   };
 
   const handlePickCity = (city: any) => {
-    const loc = { lat: city.latitude, lng: city.longitude, name: `${city.name}, ${city.country}` };
-    // Persist so it overrides IP location on next load
-    localStorage.setItem('kd_saved_location', JSON.stringify(loc));
-    // Clear session cache so App.tsx re-fetches weather with new coords
+    localStorage.setItem('kd_saved_location', JSON.stringify({ lat: city.latitude, lng: city.longitude, name: `${city.name}, ${city.country}` }));
     sessionStorage.removeItem('kd_last_location');
     setShowLocationPicker(false);
-    setCityQuery('');
-    setCityResults([]);
-    // Reload to apply new location everywhere
     window.location.reload();
   };
 
-  const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : '--';
+  const currentTemp = weather?.current?.temperature_2m ? Math.round(weather.current.temperature_2m) : 28;
+  const humidity = weather?.current?.relative_humidity_2m ?? 65;
+  const windSpeed = weather?.current?.wind_speed_10m ?? 12;
+  const precipitation = weather?.current?.precipitation ?? 0;
+  const crops = (user?.crops && Array.isArray(user.crops) && user.crops.length > 0) ? user.crops : ['Wheat', 'Rice'];
 
-  const crops = (user?.crops && Array.isArray(user.crops) && user.crops.length > 0) ? user.crops : [];
+  const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
+  const fadeUp = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } };
 
-  const getCropImage = (crop: string) => {
-    const map: any = {
-      'Wheat': 'https://images.unsplash.com/photo-1501430654243-c934cec2e1c0?w=1000&q=80',
-      'Corn': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=1000&q=80',
-      'Grapes': 'https://images.unsplash.com/photo-1537640538965-1756fb179c26?w=1000&q=80',
-      'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=1000&q=80',
-      'Olive': 'https://images.unsplash.com/photo-1471180625745-944903837c22?w=1000&q=80',
-      'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=1000&q=80',
-    };
-    return map[crop] || map['Wheat'];
-  };
-
-  const fieldImages = [
-    'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800',
-    'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800',
-    'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800',
-    'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=800',
-    'https://images.unsplash.com/photo-1444858291040-58f756a3bdd6?w=800',
-    'https://images.unsplash.com/photo-1589710321151-2495dbfc1fa2?w=800'
-  ];
-
-  const getFieldImage = (id: number) => {
-    return fieldImages[id % fieldImages.length];
-  };
-
-  // Animation Variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
-  };
+  // NDVI Health score mock
+  const ndviScore = 82;
+  const soilMoisture = 71;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="min-h-full pb-0 font-sans text-gray-800 relative"
-      style={{ background: 'linear-gradient(180deg, #f4fbf6 0%, #ffffff 32%, #ffffff 100%)' }}
-    >
+    <div className="min-h-full bg-[#F0FBF5] font-sans relative overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
 
-      {/* Dynamic Animated Background Mesh — aurora depth field */}
-      <div className="absolute top-0 left-0 w-full h-[620px] z-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-300/50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float"></div>
-        <div className="absolute top-10 -right-10 w-80 h-80 bg-amber-300/45 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-teal-300/45 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float" style={{ animationDelay: '4s' }}></div>
-        {/* floating 3D orbs */}
-        <motion.div
-          animate={{ y: [0, -18, 0], x: [0, 8, 0] }}
-          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-40 right-10 w-16 h-16 rounded-full opacity-60"
-          style={{ background: 'radial-gradient(circle at 30% 30%, #6ee7b7, #059669 70%, #065f46)', boxShadow: '0 14px 28px rgba(5,150,105,0.35), inset 0 2px 6px rgba(255,255,255,0.6)' }}
-        />
-        <motion.div
-          animate={{ y: [0, 14, 0], x: [0, -10, 0] }}
-          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
-          className="absolute top-72 left-6 w-10 h-10 rounded-full opacity-50"
-          style={{ background: 'radial-gradient(circle at 30% 30%, #fde68a, #f59e0b 70%, #b45309)', boxShadow: '0 12px 24px rgba(245,158,11,0.35), inset 0 2px 5px rgba(255,255,255,0.6)' }}
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/10 via-white/50 to-transparent"></div>
+      {/* ════════════════════════════ HERO HEADER ════════════════════════════ */}
+      <div className="relative overflow-hidden" style={{
+        background: 'linear-gradient(160deg, #011C0E 0%, #022D18 40%, #044726 80%, #055A30 100%)',
+        paddingBottom: '70px',
+      }}>
+        {/* Animated aurora blobs */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <motion.div animate={{ x: [0,30,0], y: [0,-20,0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -top-20 -left-20 w-72 h-72 rounded-full opacity-25"
+            style={{ background: 'radial-gradient(circle, #00FF87, transparent 70%)' }} />
+          <motion.div animate={{ x: [0,-20,0], y: [0,25,0] }} transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+            className="absolute top-10 -right-10 w-64 h-64 rounded-full opacity-20"
+            style={{ background: 'radial-gradient(circle, #FFB800, transparent 70%)' }} />
+          <motion.div animate={{ scale: [1,1.2,1] }} transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-40 rounded-full opacity-15"
+            style={{ background: 'radial-gradient(circle, #00D4FF, transparent 70%)' }} />
+          {/* Grid pattern */}
+          <div className="absolute inset-0 opacity-5"
+            style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        </div>
+
+        {/* Header top row */}
+        <div className="relative z-10 px-5 pt-12 pb-4 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <PulseDot color="#00FF87" />
+              <span className="text-xs font-bold tracking-widest uppercase text-emerald-400/80">Live Dashboard</span>
+            </div>
+            <h1 className="text-2xl font-bold text-white leading-tight">
+              नमस्ते, <span className="text-transparent bg-clip-text"
+                style={{ backgroundImage: 'linear-gradient(90deg, #6EE7B7, #34D399, #A7F3D0)' }}>
+                {user?.name?.split(' ')[0] || 'Farmer'} 👋
+              </span>
+            </h1>
+            <button onClick={() => setShowLocationPicker(true)}
+              className="flex items-center gap-1.5 mt-1 hover:opacity-80 transition-opacity">
+              <MapPin size={12} className="text-emerald-400" fill="currentColor" />
+              <span className="text-xs font-semibold text-white/70">{locationName.split(',')[0]}</span>
+              <span className="text-xs text-emerald-400">↓</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {/* Language selector */}
+            <div className="relative">
+              <motion.button whileTap={{ scale: 0.9 }}
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="w-9 h-9 rounded-full flex items-center justify-center border border-white/20 text-xs font-bold text-white"
+                style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}>
+                {currentLang.toUpperCase()}
+              </motion.button>
+              <AnimatePresence>
+                {showLangMenu && (
+                  <>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[60]" onClick={() => setShowLangMenu(false)} />
+                    <motion.div initial={{ opacity: 0, scale: 0.9, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
+                      className="absolute top-full mt-2 right-0 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 z-[70] w-52 max-h-72 overflow-y-auto">
+                      {languages.map((lang: any) => (
+                        <button key={lang.code} onClick={() => { onLangChange(lang.code as Language); setShowLangMenu(false); }}
+                          className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex justify-between items-center mb-0.5 transition-all ${currentLang === lang.code ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+                          <div className="flex flex-col">
+                            <span>{lang.label}</span>
+                            <span className="text-[10px] text-gray-400 font-medium">{lang.native}</span>
+                          </div>
+                          {currentLang === lang.code && <CheckCircle2 size={14} className="text-emerald-500" />}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigateTo('corporate-dashboard')}
+              className="w-9 h-9 rounded-full flex items-center justify-center border border-white/20"
+              style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}>
+              <Building2 size={16} className="text-white/80" />
+            </motion.button>
+
+            <motion.button whileTap={{ scale: 0.9 }}
+              className="relative w-9 h-9 rounded-full flex items-center justify-center border border-amber-400/40"
+              style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.1))' }}>
+              <Bell size={16} className="text-amber-300" />
+              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-[#022D18] text-[8px] font-bold text-white flex items-center justify-center">3</span>
+            </motion.button>
+          </div>
+        </div>
+
+        {/* ── WEATHER HERO CARD ── */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          className="mx-5 relative z-10">
+          <motion.div whileTap={{ scale: 0.98 }} onClick={() => setShowWeatherModal(true)}
+            className="relative rounded-3xl overflow-hidden cursor-pointer"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)',
+              backdropFilter: 'blur(24px)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            }}>
+            {/* Weather condition glow */}
+            <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-30 pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(255,220,100,0.6), transparent 70%)', transform: 'translate(30%, -30%)' }} />
+
+            <div className="p-5 flex items-start justify-between">
+              <div>
+                <div className="flex items-end gap-2">
+                  <span className="text-6xl font-extralight text-white tabular-nums">{currentTemp}°</span>
+                  <span className="text-2xl text-white/50 mb-3">C</span>
+                </div>
+                <p className="text-sm font-semibold text-white/80 mt-1">
+                  {precipitation > 0 ? '🌧 Rainy' : currentTemp > 30 ? '☀️ Hot & Sunny' : '⛅ Pleasant'} · {locationName.split(',')[0]}
+                </p>
+                <div className="flex items-center gap-3 mt-3">
+                  {[
+                    { icon: <Droplets size={13} />, val: `${humidity}%`, color: '#60A5FA' },
+                    { icon: <Wind size={13} />, val: `${windSpeed} m/s`, color: '#A7F3D0' },
+                    { icon: <CloudRain size={13} />, val: `${precipitation}mm`, color: '#818CF8' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-1" style={{ color: item.color }}>
+                      {item.icon}
+                      <span className="text-xs font-bold text-white/80">{item.val}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-2">
+                <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                  className="text-5xl">☀️</motion.div>
+                <div className="text-right">
+                  <div className="text-xs font-bold text-white/50 uppercase tracking-wider">Tap for 7-day</div>
+                  <div className="flex items-center gap-1 justify-end mt-0.5">
+                    <span className="text-xs text-emerald-400 font-bold">Forecast</span>
+                    <ArrowUpRight size={11} className="text-emerald-400" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mini forecast strip */}
+            <div className="px-5 pb-4 pt-0">
+              <div className="flex gap-1 overflow-x-auto no-scrollbar">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
+                  <div key={day} className={`flex-shrink-0 flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl text-center ${i === 0 ? 'bg-white/20' : 'bg-white/8'}`}>
+                    <span className="text-[9px] font-bold text-white/60">{day}</span>
+                    <span className="text-sm">{['☀️','⛅','🌧','☀️','🌤','⛅','☀️'][i]}</span>
+                    <span className="text-[10px] font-bold text-white/90">{currentTemp - 2 + i}°</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
       </div>
 
-      {/* 1. Header Section */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="px-6 pt-12 pb-6 flex justify-between items-start relative z-20"
-      >
-        <div>
-          <h1 className="text-4xl font-light text-gray-800 tracking-tight">Hello, <span className="font-bold text-gray-900">{user?.name?.split(' ')[0] || 'Farmer'}</span></h1>
-          <button
-            onClick={() => setShowLocationPicker(true)}
-            className="flex flex-col mt-1 self-start px-2 py-1.5 rounded-xl hover:bg-amber-50 active:scale-95 transition-all border border-transparent hover:border-amber-200 group"
-          >
-            <div className="flex items-center gap-1">
-              <MapPin size={14} className="text-emerald-500" fill="currentColor" />
-              <span className="text-sm font-semibold text-gray-800 tracking-wide">{locationName.split(',')[0]}</span>
-              <span className="text-[10px] text-gray-400 font-bold">▼</span>
-            </div>
-            <span className="text-[10px] text-amber-500 font-semibold ml-4 group-hover:text-amber-600">
-              Wrong location? Tap to set →
-            </span>
-          </button>
+      {/* ════════════════ FARM HEALTH METRICS ════════════════ */}
+      <div className="relative z-20 -mt-10 px-5">
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'NDVI Score', value: ndviScore, unit: '%', icon: <Satellite size={16} />, color: '#10B981', bg: 'linear-gradient(135deg, #065F46, #059669)', status: 'Healthy' },
+            { label: 'Soil Moisture', value: soilMoisture, unit: '%', icon: <Droplets size={16} />, color: '#3B82F6', bg: 'linear-gradient(135deg, #1E3A5F, #2563EB)', status: 'Optimal' },
+            { label: 'Pest Risk', value: 'LOW', unit: '', icon: <Shield size={16} />, color: '#F59E0B', bg: 'linear-gradient(135deg, #451A03, #D97706)', status: 'Safe' },
+          ].map((metric, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.07 }}
+              className="rounded-2xl overflow-hidden relative"
+              style={{ background: metric.bg, boxShadow: `0 8px 24px -4px ${metric.color}40` }}>
+              <div className="absolute inset-0 opacity-20"
+                style={{ backgroundImage: 'radial-gradient(circle at top right, white, transparent 60%)' }} />
+              <div className="p-3 relative z-10">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-2"
+                  style={{ background: 'rgba(255,255,255,0.2)' }}>
+                  <span style={{ color: 'white' }}>{metric.icon}</span>
+                </div>
+                <div className="text-xl font-black text-white">
+                  {typeof metric.value === 'number' ? <AnimatedCounter target={metric.value} suffix={metric.unit} /> : metric.value}
+                </div>
+                <div className="text-[9px] font-bold text-white/60 uppercase tracking-wider mt-0.5">{metric.label}</div>
+                <div className="flex items-center gap-1 mt-1">
+                  <PulseDot color="rgba(255,255,255,0.8)" />
+                  <span className="text-[9px] text-white/70 font-semibold">{metric.status}</span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* ════════════════ AI QUICK ACTIONS ════════════════ */}
+      <motion.div variants={stagger} initial="hidden" animate="show" className="px-5 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-black text-gray-900">AI Tools</h2>
+          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">✦ Powered by Gemini</span>
         </div>
 
-
-        <div className="flex items-center gap-3 relative">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.9 }}
-            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
-            onClick={() => setShowLangMenu(!showLangMenu)}
-          >
-            <span className="sr-only">Change Language</span>
-            <div className={`w-5 h-5 flex items-center justify-center font-bold text-xs border-2 rounded-full transition-colors ${showLangMenu ? 'bg-gray-900 text-white border-gray-900' : 'text-gray-900 border-gray-900'}`}>
-              {currentLang.toUpperCase()}
+        <div className="grid grid-cols-2 gap-3">
+          {/* AI CROP DOCTOR — featured */}
+          <motion.div variants={fadeUp} whileTap={{ scale: 0.96 }}
+            onClick={() => navigateTo('vision')}
+            className="col-span-2 relative rounded-3xl overflow-hidden cursor-pointer"
+            style={{
+              background: 'linear-gradient(135deg, #0D0D0D 0%, #1A0A2E 50%, #0D1B2A 100%)',
+              border: '1px solid rgba(139,92,246,0.3)',
+              boxShadow: '0 16px 48px -8px rgba(139,92,246,0.3)',
+            }}>
+            <div className="absolute inset-0">
+              <motion.div animate={{ x: [0,20,0], y: [0,-15,0] }} transition={{ duration: 8, repeat: Infinity }}
+                className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-30"
+                style={{ background: 'radial-gradient(circle, #7C3AED, transparent 70%)', transform: 'translate(20%, -20%)' }} />
+              <motion.div animate={{ x: [0,-15,0], y: [0,20,0] }} transition={{ duration: 10, repeat: Infinity, delay: 2 }}
+                className="absolute bottom-0 left-0 w-40 h-40 rounded-full opacity-20"
+                style={{ background: 'radial-gradient(circle, #EC4899, transparent 70%)' }} />
             </div>
-          </motion.button>
 
-          <AnimatePresence>
-            {showLangMenu && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[60]"
-                  onClick={() => setShowLangMenu(false)}
-                />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                  className="absolute top-full mt-2 right-12 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-[70] w-48 max-h-80 overflow-y-auto"
-                  style={{ minWidth: '200px' }}
-                >
-                  <div className="px-3 py-2 border-b border-gray-100 mb-1">
-                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Language ({languages.length})</span>
+            <div className="relative z-10 p-5 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)', boxShadow: '0 4px 12px rgba(124,58,237,0.5)' }}>
+                    <Brain size={16} className="text-white" />
                   </div>
-                  {languages.map((lang: any) => (
-                    <motion.button
-                      key={lang.code}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`w-full text-left px-3 py-3 rounded-xl text-sm font-bold flex justify-between items-center transition-all mb-1 ${currentLang === lang.code
-                        ? 'bg-green-50 text-green-700 shadow-sm'
-                        : 'text-gray-700 hover:bg-gray-50'}`}
-                      onClick={() => {
-                        onLangChange(lang.code as Language);
-                        setShowLangMenu(false);
-                      }}
-                    >
-                      <div className="flex flex-col">
-                        <span>{lang.label}</span>
-                        <span className="text-[10px] font-medium text-gray-400">{lang.native}</span>
-                      </div>
-                      {currentLang === lang.code && <div className="w-2 h-2 rounded-full bg-green-500 shadow-green-200 shadow-lg" />}
-                    </motion.button>
-                  ))}
+                  <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">AI Crop Doctor</span>
+                </div>
+                <h3 className="text-lg font-black text-white leading-tight">Scan & Detect<br/>
+                  <span className="text-transparent bg-clip-text"
+                    style={{ backgroundImage: 'linear-gradient(90deg, #A78BFA, #F9A8D4)' }}>
+                    Any Disease Instantly
+                  </span>
+                </h3>
+                <p className="text-xs text-white/50 mt-1.5">Upload photo · Get diagnosis · Treatment plan</p>
+                <motion.div whileHover={{ x: 3 }} className="flex items-center gap-1.5 mt-3">
+                  <span className="text-xs font-bold text-purple-400">Scan Now</span>
+                  <ArrowUpRight size={13} className="text-purple-400" />
                 </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+              </div>
+              <div className="text-6xl">🔬</div>
+            </div>
+          </motion.div>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.9 }}
-            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
-            onClick={() => navigateTo('corporate-dashboard')}
-          >
-            <Building2 size={20} className="text-gray-900" />
-          </motion.button>
+          {/* AI Chat */}
+          <motion.div variants={fadeUp} whileTap={{ scale: 0.96 }}
+            onClick={() => navigateTo('chat')}
+            className="relative rounded-2xl overflow-hidden cursor-pointer"
+            style={{ background: 'linear-gradient(135deg, #0C4A6E, #0284C7)', border: '1px solid rgba(56,189,248,0.3)', boxShadow: '0 10px 30px -5px rgba(2,132,199,0.4)' }}>
+            <div className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-30"
+              style={{ background: 'radial-gradient(circle, white, transparent 70%)', transform: 'translate(40%, -40%)' }} />
+            <div className="p-4 relative z-10">
+              <div className="text-3xl mb-2">🤖</div>
+              <p className="text-sm font-black text-white">AI Advisory</p>
+              <p className="text-[10px] text-white/60 mt-0.5">Ask anything</p>
+              <div className="mt-2 flex items-center gap-1">
+                <PulseDot color="#7DD3FC" />
+                <span className="text-[9px] text-sky-300 font-bold">Online</span>
+              </div>
+            </div>
+          </motion.div>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.9 }}
-            className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
-          >
-            <div className="w-2 h-2 bg-black rounded-full absolute top-3 right-3 border border-white pointer-events-none" />
-            <Bell size={20} className="text-gray-900" fill="black" />
-          </motion.button>
+          {/* Voice Assistant */}
+          <motion.div variants={fadeUp} whileTap={{ scale: 0.96 }}
+            onClick={() => navigateTo('live-audio')}
+            className="relative rounded-2xl overflow-hidden cursor-pointer"
+            style={{ background: 'linear-gradient(135deg, #064E3B, #059669)', border: '1px solid rgba(52,211,153,0.3)', boxShadow: '0 10px 30px -5px rgba(5,150,105,0.4)' }}>
+            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+              <div className="flex gap-1 items-center h-full">
+                {[...Array(8)].map((_, i) => (
+                  <motion.div key={i} animate={{ scaleY: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.15 }}
+                    className="w-1.5 rounded-full bg-white" style={{ height: '60%' }} />
+                ))}
+              </div>
+            </div>
+            <div className="p-4 relative z-10">
+              <div className="text-3xl mb-2">🎙</div>
+              <p className="text-sm font-black text-white">Voice AI</p>
+              <p className="text-[10px] text-white/60 mt-0.5">Speak in Hindi</p>
+              <div className="mt-2 flex items-center gap-1">
+                <PulseDot color="#86EFAC" />
+                <span className="text-[9px] text-emerald-300 font-bold">8 Languages</span>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </motion.div>
 
-      {/* 2. Weather Section */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="px-6 mb-8 relative"
-      >
-        <motion.div variants={itemVariants} className="flex justify-between items-start relative z-10 mb-6">
-          <div>
-            <div className="flex items-start gap-2">
-              <span className="text-7xl font-medium text-gray-900 tracking-tighter">{currentTemp}°</span>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              >
-                <Sun size={32} className="text-yellow-400 fill-yellow-400 mt-2" />
-              </motion.div>
-            </div>
-            <p className="text-md font-medium text-gray-500 mt-1">
-              {locationName.split(',').slice(-1)[0]?.trim() || locationName}
-            </p>
-          </div>
-          <div className="absolute -top-60 -right-8 w-64 h-[34rem] z-0 pointer-events-none mix-blend-multiply opacity-90">
-            <img src="/assets/crops/Wheat.jpg" className="w-full h-full object-contain" alt="Wheat" />
-          </div>
-        </motion.div>
+      {/* ════════════════ SERVICES GRID ════════════════ */}
+      <div className="px-5 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-black text-gray-900">Services</h2>
+          <span className="text-xs text-gray-500 font-semibold">12 tools →</span>
+        </div>
 
-        <div className="grid grid-cols-2 gap-4 relative z-10" style={{ perspective: '900px' }}>
+        {/* Featured 2-column cards */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
           {[
-            { label: 'Soil temp', value: weather?.current?.soil_temperature_0cm !== undefined ? `+${Math.round(weather.current.soil_temperature_0cm)} C` : '-- C', icon: <Thermometer size={18} />, chipBg: 'linear-gradient(140deg,#a7f3d0,#34d399)', chipColor: '#047857' },
-            { label: 'Humidity', value: `${weather?.current?.relative_humidity_2m ?? '--'}%`, icon: <Droplets size={18} fill="currentColor" />, chipBg: 'linear-gradient(140deg,#bfdbfe,#60a5fa)', chipColor: '#1d4ed8' },
-            { label: 'Wind', value: `${weather?.current?.wind_speed_10m ?? '--'} m/s`, icon: <Wind size={18} />, chipBg: 'linear-gradient(140deg,#fde68a,#fbbf24)', chipColor: '#b45309' },
-            { label: 'Precipitation', value: `${weather?.current?.precipitation ?? '--'} mm`, icon: <CloudRain size={18} fill="currentColor" />, chipBg: 'linear-gradient(140deg,#c7d2fe,#818cf8)', chipColor: '#4338ca' },
-          ].map((pill, i) => (
-            <Tilt3D key={i} maxTilt={9} className="rounded-[2rem]">
-              <div variants={itemVariants} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default h-full">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-md border border-white/70 icon-chip-3d"
-                  style={{ background: pill.chipBg, color: pill.chipColor }}>
-                  {pill.icon}
+            {
+              title: 'Live Market', sub: 'Mandi prices now', icon: '📈', screen: 'market',
+              bg: 'linear-gradient(135deg, #1C1917 0%, #292524 100%)',
+              accent: '#F59E0B', border: 'rgba(245,158,11,0.3)',
+              badge: 'LIVE',
+            },
+            {
+              title: 'Carbon Vault', sub: 'Earn from farming', icon: '🌿', screen: 'carbon-vault',
+              bg: 'linear-gradient(135deg, #052E16 0%, #14532D 100%)',
+              accent: '#22C55E', border: 'rgba(34,197,94,0.3)',
+              badge: '₹2,400',
+            },
+          ].map((card, i) => (
+            <motion.div key={i} whileTap={{ scale: 0.96 }} onClick={() => navigateTo(card.screen as Screen)}
+              className="rounded-2xl overflow-hidden cursor-pointer relative"
+              style={{ background: card.bg, border: `1px solid ${card.border}`, minHeight: 130, boxShadow: `0 12px 32px -6px ${card.accent}30` }}>
+              <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20"
+                style={{ background: `radial-gradient(circle, ${card.accent}, transparent 70%)`, transform: 'translate(30%, -30%)' }} />
+              <div className="p-4 relative z-10">
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-3xl">{card.icon}</span>
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full"
+                    style={{ background: `${card.accent}22`, color: card.accent, border: `1px solid ${card.accent}44` }}>
+                    {card.badge}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{pill.label}</p>
-                  <p className="text-lg font-bold text-gray-900">{pill.value}</p>
-                </div>
-              </div>
-            </Tilt3D>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Carbon Wallet Integration */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 20 }}
-        className="mx-6 mb-6"
-      >
-        <CarbonWalletCard />
-        <motion.button
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={() => navigateTo('landmark')}
-          className="shine relative w-full mt-4 rounded-2xl p-4 flex items-center justify-center gap-2 overflow-hidden"
-          style={{
-            background: 'linear-gradient(150deg, rgba(232,251,243,0.9), rgba(255,255,255,0.85))',
-            border: '2px dashed #00BB78',
-            boxShadow: '0 8px 20px -6px rgba(0,187,120,0.28), inset 0 1px 0 rgba(255,255,255,0.9)',
-          }}
-        >
-          <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(140deg,#34d399,#00BB78)', boxShadow: '0 4px 10px rgba(0,187,120,0.4), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
-            <MapPin size={17} className="text-white" />
-          </span>
-          <span className="font-bold" style={{ color: '#001A11' }}>Locate My Farm Boundary</span>
-        </motion.button>
-      </motion.div>
-
-      {/* Supply Chain Traceability Discovery Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, type: 'spring', stiffness: 200, damping: 20 }}
-        className="mx-6 mb-6"
-      >
-        <div
-          onClick={() => navigateTo('traceability')}
-          className="cursor-pointer overflow-hidden"
-          style={{ background: '#0D0D0D', border: '1px solid #292524' }}
-        >
-          {/* Header strip */}
-          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #1c1917' }}>
-            <div className="flex items-center gap-2">
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#F59E0B', letterSpacing: '0.2em' }}>SUPPLY CHAIN TRACEABILITY</span>
-            </div>
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#57534e', letterSpacing: '0.15em' }}>OPEN LEDGER →</span>
-          </div>
-
-          {/* 4-step cycle */}
-          <div className="grid grid-cols-4" style={{ borderBottom: '1px solid #1c1917' }}>
-            {[
-              { step: '01', label: 'HARVEST', icon: '🌾' },
-              { step: '02', label: 'MINT', icon: '◆' },
-              { step: '03', label: 'QR CODE', icon: '▣' },
-              { step: '04', label: 'VERIFY', icon: '✓' },
-            ].map((item, i) => (
-              <div key={item.step}
-                className="py-3 flex flex-col items-center gap-1"
-                style={{ borderRight: i < 3 ? '1px solid #1c1917' : 'none' }}
-              >
-                <span className="text-base">{item.icon}</span>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '8px', color: '#F59E0B', fontWeight: 700 }}>{item.step}</span>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '7px', color: '#57534e', letterSpacing: '0.1em' }}>{item.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Tagline */}
-          <div className="px-4 py-2.5">
-            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#78716c', lineHeight: 1.6 }}>
-              Mint a harvest token after every crop cycle. Buyers scan a QR to verify your crop's carbon footprint, chemical inputs &amp; origin — CBAM compliant.
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ═══════════════════════════════════════════════
-          SERVICES
-      ═══════════════════════════════════════════════ */}
-      <div className="px-5 mt-4 mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-bold" style={{ color: '#001A11' }}>Services</h2>
-          <span className="text-[11px] font-semibold" style={{ color: '#00BB78' }}>9 tools</span>
-        </div>
-
-        {/* ── ROW 1: Two featured large 3D cards ── */}
-        <div className="grid grid-cols-2 gap-3 mb-3" style={{ perspective: '900px' }}>
-          <Tilt3D maxTilt={10} onClick={() => navigateTo('market' as Screen)} className="rounded-3xl">
-            <div variants={itemVariants} className="relative flex flex-col justify-between p-4 rounded-3xl text-left h-full overflow-hidden shine"
-              style={{ minHeight: 138, background: 'linear-gradient(150deg, #0e3322 0%, #001A11 60%, #04240f 100%)', border: '1px solid rgba(52,211,153,0.25)', boxShadow: '0 14px 30px -8px rgba(0,26,17,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' }}
-            >
-              {/* ambient glow blob */}
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full blur-2xl opacity-40 pointer-events-none" style={{ background: 'radial-gradient(circle, #00BB78, transparent 70%)' }} />
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center icon-chip-3d" style={{ background: 'linear-gradient(140deg, #34d399, #059669)', boxShadow: '0 6px 14px rgba(0,187,120,0.45), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
-                <TrendingUp size={20} className="text-white" />
-              </div>
-              <div className="mt-6 relative z-10">
-                <p className="text-[13px] font-bold text-white leading-tight">Market Prices</p>
-                <p className="text-[10px] mt-0.5" style={{ color: '#A5FFA7' }}>Live mandi rates</p>
-              </div>
-            </div>
-          </Tilt3D>
-
-          <Tilt3D maxTilt={10} onClick={() => navigateTo('vision' as Screen)} className="rounded-3xl">
-            <div variants={itemVariants} className="relative flex flex-col justify-between p-4 rounded-3xl text-left h-full overflow-hidden shine"
-              style={{ minHeight: 138, background: 'linear-gradient(150deg, #34d399 0%, #00BB78 50%, #059669 100%)', border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 14px 30px -8px rgba(0,187,120,0.5), inset 0 1px 0 rgba(255,255,255,0.5)' }}
-            >
-              <div className="absolute -bottom-10 -left-6 w-28 h-28 rounded-full blur-2xl opacity-50 pointer-events-none" style={{ background: 'radial-gradient(circle, #ffffff, transparent 70%)' }} />
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center icon-chip-3d" style={{ background: 'rgba(255,255,255,0.28)', backdropFilter: 'blur(6px)', boxShadow: '0 6px 14px rgba(4,120,87,0.35), inset 0 1px 0 rgba(255,255,255,0.7)' }}>
-                <ScanLine size={20} className="text-white" />
-              </div>
-              <div className="mt-6 relative z-10">
-                <p className="text-[13px] font-bold text-white leading-tight drop-shadow-sm">Crop Scanner</p>
-                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.85)' }}>AI disease detection</p>
-              </div>
-            </div>
-          </Tilt3D>
-        </div>
-
-        {/* ── ROW 2: 2×2 grid — raised 3D tiles ── */}
-        <div className="grid grid-cols-2 gap-3 mb-3" style={{ perspective: '900px' }}>
-          {[
-            { icon: <BookOpen size={16} strokeWidth={2} />, label: 'Govt Schemes', desc: 'Subsidies & loans', screen: 'scheme-setu', iconBg: 'linear-gradient(140deg,#cbd5e1,#94a3b8)', iconColor: '#1e293b' },
-            { icon: <Umbrella size={16} strokeWidth={2} />, label: 'Crop Insurance', desc: 'Protect your yield', screen: 'insurance', iconBg: 'linear-gradient(140deg,#bae6fd,#38bdf8)', iconColor: '#075985' },
-            { icon: <Activity size={16} strokeWidth={2} />, label: 'Soil Carbon', desc: 'SOC modeling', screen: 'soil-carbon', iconBg: 'linear-gradient(140deg,#6ee7b7,#10b981)', iconColor: '#065f46' },
-            { icon: <Sprout size={16} strokeWidth={2} />, label: 'Carbon Vault', desc: 'Credit management', screen: 'carbon-vault', iconBg: 'linear-gradient(140deg,#86efac,#22c55e)', iconColor: '#14532d' },
-          ].map((s, i) => (
-            <Tilt3D key={i} maxTilt={10} onClick={() => navigateTo(s.screen as Screen)} className="rounded-2xl">
-              <div variants={itemVariants} className="surface-3d flex flex-col gap-3 p-3.5 rounded-2xl text-left h-full">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center icon-chip-3d" style={{ background: s.iconBg, color: s.iconColor }}>
-                  {s.icon}
-                </div>
-                <div>
-                  <p className="text-[12px] font-bold leading-tight" style={{ color: '#001A11' }}>{s.label}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#616B68' }}>{s.desc}</p>
+                <p className="text-sm font-black text-white leading-tight">{card.title}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: card.accent }}>{card.sub}</p>
+                <div className="flex items-center gap-1 mt-3">
+                  <ArrowRight size={12} style={{ color: card.accent }} />
+                  <span className="text-[10px] font-bold" style={{ color: card.accent }}>Open</span>
                 </div>
               </div>
-            </Tilt3D>
+            </motion.div>
           ))}
         </div>
 
-        {/* ── ROW 3: Compact list — glass panel ── */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(160deg, rgba(255,255,255,0.92), rgba(240,250,245,0.85))', border: '1px solid #E4EFE8', boxShadow: 'var(--shadow-soft), var(--inner-glow)' }}>
+        {/* 4-tile grid */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
           {[
-            { icon: <Zap size={15} strokeWidth={2} />, label: 'Weather Forecast', desc: '7-day prediction', screen: 'forecast' },
-            { icon: <Droplets size={15} strokeWidth={2} />, label: 'Smart Irrigation', desc: 'Water optimization', screen: 'smart-irrigation' },
-            { icon: <Grid3x3 size={15} strokeWidth={2} />, label: 'Digital Twin', desc: '2D farm layout', screen: 'digital-twin' },
-            { icon: <Radio size={15} strokeWidth={2} />, label: 'Acoustic Scan', desc: 'Bioacoustic monitor', screen: 'acoustic-scanner' },
-            { icon: <Link2 size={15} strokeWidth={2} />, label: 'Traceability', desc: 'Supply chain QR', screen: 'traceability' },
-          ].map((s, i) => (
-            <motion.button
-              key={i}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigateTo(s.screen as Screen)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-emerald-50/60 transition-colors"
-              style={{ borderBottom: i < 2 ? '1px solid #EDF5EF' : 'none' }}
-            >
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(140deg,#e8fbf3,#d1f5e4)', color: '#059669', boxShadow: '0 3px 8px rgba(0,187,120,0.18), inset 0 1px 0 rgba(255,255,255,0.9)' }}>
-                {s.icon}
+            { icon: '🛡', label: 'Insurance', screen: 'insurance', color: '#60A5FA', bg: '#EFF6FF' },
+            { icon: '🌱', label: 'Schemes', screen: 'scheme-setu', color: '#34D399', bg: '#ECFDF5' },
+            { icon: '🗺', label: 'Farm Map', screen: 'map', color: '#A78BFA', bg: '#F5F3FF' },
+            { icon: '🔬', label: 'Soil Lab', screen: 'soil-carbon', color: '#F97316', bg: '#FFF7ED' },
+          ].map((item, i) => (
+            <motion.div key={i} whileTap={{ scale: 0.92 }} onClick={() => navigateTo(item.screen as Screen)}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-2xl cursor-pointer"
+              style={{ background: item.bg, border: `1px solid ${item.color}22` }}>
+              <span className="text-2xl">{item.icon}</span>
+              <span className="text-[10px] font-bold text-center leading-tight" style={{ color: '#1F2937' }}>{item.label}</span>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Advanced features list */}
+        <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white" style={{ boxShadow: '0 4px 20px -4px rgba(0,0,0,0.08)' }}>
+          <div className="px-4 py-2.5 border-b border-gray-50">
+            <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Advanced Features</span>
+          </div>
+          {[
+            { icon: '⚡', label: 'Weather Forecast', sub: '7-day · Hyperlocal', screen: 'forecast', color: '#F59E0B' },
+            { icon: '💧', label: 'Smart Irrigation', sub: 'AI water scheduling', screen: 'smart-irrigation', color: '#3B82F6' },
+            { icon: '📡', label: 'Acoustic Scan', sub: 'Pest audio detection', screen: 'acoustic-scanner', color: '#8B5CF6' },
+            { icon: '🔗', label: 'Traceability', sub: 'Supply chain QR', screen: 'traceability', color: '#10B981' },
+            { icon: '🏗', label: 'Digital Twin', sub: '2D farm layout', screen: 'digital-twin', color: '#EC4899' },
+          ].map((item, i, arr) => (
+            <motion.button key={i} whileTap={{ scale: 0.99 }}
+              onClick={() => navigateTo(item.screen as Screen)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+              style={{ borderBottom: i < arr.length - 1 ? '1px solid #F9FAFB' : 'none' }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+                style={{ background: `${item.color}15` }}>
+                {item.icon}
               </div>
-              <div className="flex-1">
-                <p className="text-[13px] font-semibold" style={{ color: '#001A11' }}>{s.label}</p>
-                <p className="text-[11px]" style={{ color: '#616B68' }}>{s.desc}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-800 truncate">{item.label}</p>
+                <p className="text-[10px] text-gray-400 font-medium">{item.sub}</p>
               </div>
-              <ChevronRight size={14} style={{ color: '#00BB78', flexShrink: 0 }} />
+              <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
             </motion.button>
           ))}
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════
-          COMMODITIES & FOOD
-      ═══════════════════════════════════════════════ */}
+      {/* ════════════════ MY CROPS ════════════════ */}
       {crops.length > 0 && (
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-50px" }}
-          className="px-6 mt-4 relative z-10 w-full overflow-hidden"
-        >
-          <h2 className="text-base font-bold text-gray-900 mb-4">Commodities &amp; Food</h2>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 pr-6 snap-x">
-            {crops.map((crop, idx) => (
-              <motion.div
-                key={idx}
-                variants={itemVariants}
-                whileHover={{ y: -5, scale: 1.06, rotateX: 10 }}
-                whileTap={{ scale: 0.93 }}
-                className="snap-start flex flex-col gap-2 flex-shrink-0 cursor-pointer group"
-                style={{ transformStyle: 'preserve-3d' }}
-              >
-                <div className="w-[68px] h-[68px] rounded-full overflow-hidden border-2 border-white relative"
-                  style={{ boxShadow: '0 8px 20px rgba(0,60,30,0.22), 0 2px 6px rgba(0,60,30,0.15), inset 0 0 0 1px rgba(255,255,255,0.4)' }}>
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all z-10"></div>
-                  {/* glossy sphere highlight */}
-                  <div className="absolute top-1 left-2 w-5 h-3 rounded-full bg-white/50 blur-[3px] z-20 pointer-events-none"></div>
-                  <img
-                    src={getCropImage(crop)}
-                    alt={crop}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                    loading="lazy"
-                  />
+        <div className="mt-6 px-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-black text-gray-900">My Crops</h2>
+            <span className="text-xs text-gray-400">{crops.length} varieties</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+            {crops.map((crop, i) => (
+              <motion.div key={i} whileTap={{ scale: 0.95 }}
+                onClick={() => navigateTo('vision')}
+                className="flex-shrink-0 relative rounded-2xl overflow-hidden cursor-pointer"
+                style={{ width: 100, height: 120 }}>
+                <img src={getCropImage(crop)} alt={crop} className="w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 60%)' }} />
+                <div className="absolute bottom-0 left-0 right-0 p-2">
+                  <p className="text-xs font-black text-white truncate">{crop}</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <div className="h-1 rounded-full flex-1 bg-white/20">
+                      <div className="h-1 rounded-full bg-emerald-400" style={{ width: `${60 + i * 15}%` }} />
+                    </div>
+                    <span className="text-[8px] text-white/70">{60 + i * 15}%</span>
+                  </div>
                 </div>
-                <span className="text-xs font-semibold text-gray-700 text-center">{crop}</span>
               </motion.div>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* ═══════════════════════════════════════════════
-          MY FIELDS
-      ═══════════════════════════════════════════════ */}
-      <div className="mt-6 px-5 pb-10" style={{ fontFamily: 'Inter, sans-serif' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-bold" style={{ color: '#001A11' }}>My Fields</h2>
-          <button
-            onClick={() => navigateTo('landmark')}
-            className="flex items-center gap-1 text-xs font-semibold"
-            style={{ color: '#00BB78' }}
-          >
-            <Plus size={13} strokeWidth={2.5} /> Add
-          </button>
+      {/* ════════════════ CARBON WALLET ════════════════ */}
+      <div className="px-5 mt-6">
+        <CarbonWalletCard />
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigateTo('landmark')}
+          className="relative w-full mt-3 rounded-2xl p-4 flex items-center justify-center gap-2.5 overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)', border: '2px dashed #22C55E' }}>
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)', boxShadow: '0 4px 10px rgba(22,163,74,0.4)' }}>
+            <MapPin size={16} className="text-white" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-black text-gray-800">Locate My Farm Boundary</p>
+            <p className="text-xs text-gray-500">Draw fields on map for precise monitoring</p>
+          </div>
+          <ArrowRight size={16} className="text-emerald-600 ml-auto" />
+        </motion.button>
+      </div>
+
+      {/* ════════════════ MY FIELDS ════════════════ */}
+      <div className="px-5 mt-6 pb-32">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-black text-gray-900">My Fields</h2>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigateTo('landmark')}
+            className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+            <Plus size={11} strokeWidth={3} /> Add Field
+          </motion.button>
         </div>
 
         {isLoadingPlots && (
-          <div className="flex items-center gap-3 p-5 bg-gray-50 border border-gray-100 rounded-2xl">
-            <div className="w-5 h-5 border-2 border-gray-200 border-t-[#00BB78] rounded-full animate-spin flex-shrink-0" />
-            <span className="text-sm font-medium" style={{ color: '#616B68' }}>Loading your plots…</span>
+          <div className="space-y-2">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-24 rounded-2xl bg-gray-100 animate-pulse" />
+            ))}
           </div>
         )}
 
         {!isLoadingPlots && userPlots.length === 0 && (
-          <button
-            onClick={() => navigateTo('map')}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl active:scale-95 transition-transform"
-            style={{ background: '#F7FFFE', border: '1.5px dashed #00BB78' }}
-          >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: '#E8FBF3' }}>
-              <MapPin size={20} style={{ color: '#00BB78' }} />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold" style={{ color: '#001A11' }}>No fields added yet</p>
-              <p className="text-xs mt-0.5" style={{ color: '#616B68' }}>Tap to locate your farm on the map</p>
-            </div>
-            <ChevronRight size={16} style={{ color: '#A5FFA7', marginLeft: 'auto', flexShrink: 0 }} />
-          </button>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="relative rounded-2xl overflow-hidden text-center py-8 px-4"
+            style={{ background: 'linear-gradient(135deg, #F0FDF4, #ECFDF5)', border: '2px dashed #86EFAC' }}>
+            <div className="text-5xl mb-3">🌾</div>
+            <p className="font-bold text-gray-700 text-sm">No fields added yet</p>
+            <p className="text-xs text-gray-400 mt-1">Add your farm boundary to unlock satellite monitoring & AI insights</p>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigateTo('landmark')}
+              className="mt-4 px-5 py-2 rounded-full text-sm font-bold text-white"
+              style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)', boxShadow: '0 4px 14px rgba(22,163,74,0.4)' }}>
+              + Add My First Field
+            </motion.button>
+          </motion.div>
         )}
 
-        {!isLoadingPlots && userPlots.length > 0 && (
-          <div className="space-y-4" style={{ perspective: '1000px' }}>
-            {userPlots.map((plot) => (
-              <Tilt3D key={plot.id} maxTilt={6} className="rounded-2xl">
-                <div variants={itemVariants} className="surface-3d rounded-2xl overflow-hidden">
-                  {/* Field image */}
-                  <div className="relative h-36 w-full">
-                    <motion.img
-                      animate={{ scale: [1, 1.08, 1] }}
-                      transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-                      src={getFieldImage(plot.id)}
-                      alt={plot.name}
-                      className="w-full h-full object-cover absolute inset-0"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
-                    <div className="absolute bottom-3 left-4 right-4 flex justify-between items-end">
-                      <div>
-                        <h3 className="text-sm font-bold text-white drop-shadow-md">{plot.name}</h3>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <MapPin size={10} style={{ color: '#A5FFA7' }} />
-                          <span className="text-[10px] text-gray-300">{plotLocationNames[plot.id] || 'Locating…'}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/25" style={{ background: 'rgba(0,187,120,0.35)', backdropFilter: 'blur(8px)', boxShadow: '0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)' }}>
-                        <Leaf size={11} style={{ color: '#A5FFA7' }} />
-                        <span className="text-xs font-bold text-white">{plot.area} ha</span>
-                      </div>
-                    </div>
+        {!isLoadingPlots && userPlots.map((plot, i) => (
+          <motion.div key={plot.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
+            whileTap={{ scale: 0.98 }} onClick={() => navigateTo('field-monitor')}
+            className="mb-3 rounded-2xl overflow-hidden cursor-pointer"
+            style={{ background: 'white', border: '1px solid #F3F4F6', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.08)' }}>
+            <div className="flex">
+              <div className="w-24 h-24 relative flex-shrink-0">
+                <img src={fieldImages[i % fieldImages.length]} alt="Field" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/30" />
+              </div>
+              <div className="flex-1 p-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-black text-gray-800">{plot.name || `Field ${i + 1}`}</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{plot.area_acres ? `${plot.area_acres} acres` : '—'}</p>
                   </div>
-
-                  {/* Action row */}
-                  <div className="grid grid-cols-3">
-                    {[
-                      { icon: <MapPin size={15} />, label: 'Map', action: () => navigateTo('map') },
-                      { icon: <BarChart2 size={15} />, label: 'Satellite', action: () => navigateTo('field-monitor', { plotId: plot.id }) },
-                      { icon: <TrendingUp size={15} />, label: 'Yield', action: () => navigateTo('forecast') },
-                    ].map((btn, i) => (
-                      <button
-                        key={i}
-                        onClick={btn.action}
-                        className="flex flex-col items-center gap-1.5 py-3 hover:bg-emerald-50/70 transition-colors"
-                        style={{ borderRight: i < 2 ? '1px solid #EDF5EF' : 'none', color: '#00BB78' }}
-                      >
-                        {btn.icon}
-                        <span className="text-[10px] font-semibold" style={{ color: '#616B68' }}>{btn.label}</span>
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+                    style={{ background: '#ECFDF5' }}>
+                    <PulseDot color="#10B981" />
+                    <span className="text-[9px] font-bold text-emerald-700">ACTIVE</span>
                   </div>
                 </div>
-              </Tilt3D>
-            ))}
-          </div>
-        )}
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-[9px] text-gray-400 font-bold">NDVI Health</span>
+                      <span className="text-[9px] font-black text-emerald-600">{70 + i * 8}%</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${70 + i * 8}%` }} transition={{ delay: 0.5, duration: 0.8 }}
+                        className="h-full rounded-full"
+                        style={{ background: 'linear-gradient(90deg, #34D399, #10B981)' }} />
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-gray-300" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
-      {/* ── Location Picker Modal ── */}
+      {/* ════════════════ MODALS ════════════════ */}
+      <AnimatePresence>
+        {showWeatherModal && <WeatherModal weather={weather} locationName={locationName} onClose={() => setShowWeatherModal(false)} />}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showLocationPicker && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200]"
-              onClick={() => { setShowLocationPicker(false); setCityQuery(''); setCityResults([]); }}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 60, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 60, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl z-[201] p-5 shadow-2xl"
-              style={{ maxHeight: '80vh' }}
-            >
-              {/* Handle */}
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: '#E8FBF3' }}>
-                  <MapPin size={20} style={{ color: '#00BB78' }} />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold" style={{ color: '#001A11' }}>Set Your Location</h2>
-                  <p className="text-xs" style={{ color: '#616B68' }}>Search for your city or district</p>
-                </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-end"
+            onClick={(e) => e.target === e.currentTarget && setShowLocationPicker(false)}>
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="w-full rounded-t-3xl p-6 bg-white">
+              <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5" />
+              <h3 className="text-lg font-black text-gray-900 mb-4">Set Location</h3>
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="text" value={cityQuery} onChange={(e) => handleCitySearch(e.target.value)}
+                  placeholder="Search city or village..."
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-gray-50 border border-gray-200 text-sm font-medium outline-none focus:border-emerald-400 focus:bg-white transition-all" />
               </div>
-
-              {/* Search input */}
-              <div className="relative mb-3">
-                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#616B68' }} />
-                <input
-                  autoFocus
-                  type="text"
-                  value={cityQuery}
-                  onChange={e => handleCitySearch(e.target.value)}
-                  placeholder="e.g. Nagpur, Pune, Hubli..."
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-2xl text-sm font-medium focus:outline-none transition-all"
-                  style={{ border: '1.5px solid #E0E0E0', fontFamily: 'Inter, sans-serif' }}
-                />
-                {citySearching && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                    <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid #A5FFA7', borderTopColor: '#00BB78' }} />
-                  </div>
-                )}
-              </div>
-
-              {/* Results */}
-              <div className="overflow-y-auto" style={{ maxHeight: '45vh' }}>
-                {cityResults.length > 0 ? (
-                  <div className="space-y-1">
-                    {cityResults.map((city, i) => (
-                      <motion.button
-                        key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.04 }}
-                        onClick={() => handlePickCity(city)}
-                        className="w-full flex items-center gap-3 p-3 rounded-2xl transition-colors text-left"
-                        style={{ '--hover-bg': '#E8FBF3' } as any}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#E8FBF3')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#F5F5F5' }}>
-                          <MapPin size={14} style={{ color: '#616B68' }} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold" style={{ color: '#001A11' }}>{city.name}</p>
-                          <p className="text-xs" style={{ color: '#616B68' }}>{city.country} · {city.latitude?.toFixed(2)}°N, {city.longitude?.toFixed(2)}°E</p>
-                        </div>
-                        <ChevronRight size={14} style={{ color: '#A5FFA7', marginLeft: 'auto', flexShrink: 0 }} />
-                      </motion.button>
-                    ))}
-                  </div>
-                ) : cityQuery && !citySearching ? (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                      <MapPin size={22} className="text-gray-400" />
-                    </div>
-                    <p className="text-sm font-semibold text-gray-700">No results for "{cityQuery}"</p>
-                    <p className="text-xs text-gray-400 mt-1">Try a different spelling or nearby city</p>
-                  </div>
-                ) : !cityQuery ? (
-                  <div className="text-center py-6">
-                    <p className="text-xs text-gray-400 font-medium">Start typing to search cities</p>
-                    {localStorage.getItem('kd_saved_location') && (
-                      <button
-                        onClick={() => { localStorage.removeItem('kd_saved_location'); sessionStorage.removeItem('kd_last_location'); window.location.reload(); }}
-                        className="mt-3 text-xs text-red-500 font-semibold underline"
-                      >
-                        Reset to auto-detect
-                      </button>
-                    )}
-                  </div>
-                ) : null}
-              </div>
+              {citySearching && <div className="text-center py-4 text-sm text-gray-400">Searching…</div>}
+              {cityResults.map((city: any, i: number) => (
+                <motion.button key={i} whileTap={{ scale: 0.98 }} onClick={() => handlePickCity(city)}
+                  className="w-full text-left px-4 py-3 mt-2 rounded-2xl bg-gray-50 hover:bg-emerald-50 transition-colors">
+                  <p className="font-bold text-gray-800 text-sm">{city.name}</p>
+                  <p className="text-xs text-gray-400">{city.country}</p>
+                </motion.button>
+              ))}
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 
