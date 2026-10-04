@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
-import { Mic, FileAudio, Loader2, ShieldAlert, ArrowLeft, Activity } from 'lucide-react';
+import { Mic, FileAudio, Loader2, ShieldAlert, ArrowLeft, Activity, Cpu } from 'lucide-react';
 import { aiService } from '../src/services/api';
 import { GradientFileUpload } from '../components/ui/gradient-file-upload';
 
@@ -14,6 +14,7 @@ interface AnalysisResult {
     pest_detected: boolean;
     confidence: number;
     pest_type: string;
+    heuristic?: boolean;  // true when AI model unavailable
 }
 
 const getPestAdvice = (pestType: string) => {
@@ -132,6 +133,45 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
         setIsRecording(false);
     };
 
+    // Heuristic fallback using Web Audio API when model server is unavailable
+    const heuristicAnalyze = async (file: File): Promise<AnalysisResult> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const arrayBuffer = e.target?.result as ArrayBuffer;
+                    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                    ctx.close();
+                    const data = audioBuffer.getChannelData(0);
+                    // Simple energy + zero-crossing heuristic
+                    let energy = 0;
+                    let zeroCrossings = 0;
+                    for (let i = 1; i < data.length; i++) {
+                        energy += data[i] * data[i];
+                        if ((data[i] >= 0) !== (data[i - 1] >= 0)) zeroCrossings++;
+                    }
+                    const rms = Math.sqrt(energy / data.length);
+                    const zcr = zeroCrossings / (data.length / audioBuffer.sampleRate);
+                    // Classify: high ZCR = high freq insect sounds
+                    const pest_detected = rms > 0.01 && zcr > 1200;
+                    let pest_type = 'None';
+                    let confidence = 0.55;
+                    if (pest_detected) {
+                        if (zcr > 4000)      { pest_type = 'Cicada / Leafhopper'; confidence = 0.72; }
+                        else if (zcr > 2800) { pest_type = 'Locust / Cricket';    confidence = 0.65; }
+                        else if (zcr > 1800) { pest_type = 'Beetle / Weevil';     confidence = 0.60; }
+                        else                 { pest_type = 'Grub / Stem Borer';   confidence = 0.57; }
+                    }
+                    resolve({ pest_detected, confidence, pest_type, heuristic: true });
+                } catch {
+                    resolve({ pest_detected: false, confidence: 0.5, pest_type: 'None', heuristic: true });
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    };
+
     const analyzeAudioFile = async (file: File, filename: string) => {
         setIsAnalyzing(true);
         setResult(null);
@@ -141,16 +181,13 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
             formData.append('file', file);
 
             const response = await axios.post<AnalysisResult>(SERVER_URL, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 15000,
             });
-
             setResult(response.data);
 
-            // Trigger dynamic real AI analysis if a pest is actually detected
             if (response.data.pest_detected) {
-                setDynamicAdvice("Consulting Krishi AI Agronomist on this pattern...");
+                setDynamicAdvice('Consulting Krishi AI Agronomist on this pattern...');
                 try {
                     const aiChat = await aiService.chat(
                         `Bioacoustic scanner detected ${response.data.pest_type} pest frequency patterns in my crop. Provide 1 specific, highly-actionable organic recommended action right now in English.`
@@ -164,8 +201,23 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
             }
 
         } catch (error: any) {
-            console.error("Error analyzing audio:", error);
-            setErrorMsg(error.response?.data?.detail || "Could not connect to the bioacoustic server.");
+            // If model not loaded or server error → run local heuristic
+            const detail: string = error.response?.data?.detail ?? '';
+            const isModelError = detail.includes('Model is not loaded') ||
+                                 error.response?.status === 500 ||
+                                 error.code === 'ECONNREFUSED' ||
+                                 error.code === 'ERR_NETWORK';
+            if (isModelError) {
+                setErrorMsg('AI model offline — running local heuristic analysis...');
+                const hResult = await heuristicAnalyze(file);
+                setResult(hResult);
+                setErrorMsg(null);
+                if (hResult.pest_detected) {
+                    setDynamicAdvice(getPestAdvice(hResult.pest_type));
+                }
+            } else {
+                setErrorMsg(detail || 'Could not connect to the bioacoustic server.');
+            }
         } finally {
             setIsAnalyzing(false);
         }
@@ -261,7 +313,14 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
                 {result && (
                     <div className="mt-8 w-full max-w-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
                         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Analysis Result</h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Analysis Result</h2>
+                                {result.heuristic && (
+                                    <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                                        <Cpu size={10} /> Heuristic Mode
+                                    </span>
+                                )}
+                            </div>
 
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl">
