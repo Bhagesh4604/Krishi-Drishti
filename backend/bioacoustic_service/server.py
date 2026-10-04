@@ -6,7 +6,22 @@ from fastapi.middleware.cors import CORSMiddleware
 import tensorflow as tf
 from model_trainer import audio_to_spectrogram
 
-app = FastAPI(title="Bioacoustic Pest Detection API")
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global model
+    if os.path.exists(MODEL_PATH):
+        try:
+            model = tf.keras.models.load_model(MODEL_PATH)
+            print(f"Loaded model from {MODEL_PATH}")
+        except Exception as e:
+            print(f"Error loading model: {e}")
+    else:
+        print(f"Warning: Model file {MODEL_PATH} not found. Please run model_trainer.py first.")
+    yield
+
+app = FastAPI(title="Bioacoustic Pest Detection API", lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
@@ -19,18 +34,6 @@ app.add_middleware(
 
 MODEL_PATH = "pest_audio_model.h5"
 model = None
-
-@app.on_event("startup")
-async def load_model():
-    global model
-    if os.path.exists(MODEL_PATH):
-        try:
-            model = tf.keras.models.load_model(MODEL_PATH)
-            print(f"Loaded model from {MODEL_PATH}")
-        except Exception as e:
-            print(f"Error loading model: {e}")
-    else:
-        print(f"Warning: Model file {MODEL_PATH} not found. Please run model_trainer.py first.")
 
 @app.post("/analyze-audio")
 async def analyze_audio(file: UploadFile = File(...)):

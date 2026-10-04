@@ -111,6 +111,27 @@ async def start_analysis(
         "message": "Analysis started. Connect to /api/v1/analyze-stream/{task_id} for results."
     }
 
+@router.get("/task-status/{task_id}")
+async def get_task_status(task_id: str):
+    """
+    Fallback polling endpoint for clients that don't support SSE.
+    """
+    result = _task_results.get(task_id)
+    if not result:
+        return {"status": "failed", "detail": "Task not found or expired"}
+    
+    if result.get("status") == "COMPLETE":
+        # Rename status to "success" for frontend compatibility
+        formatted_result = dict(result)
+        formatted_result["status"] = "success"
+        formatted_result["result"] = result
+        return formatted_result
+    
+    if result.get("status") == "ERROR":
+        return {"status": "failed", "detail": result.get("detail", "Unknown error")}
+        
+    return {"status": "queued"}
+
 
 @router.get("/analyze-stream/{task_id}")
 async def stream_analysis_result(

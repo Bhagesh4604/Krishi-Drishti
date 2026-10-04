@@ -169,8 +169,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
     'https://images.unsplash.com/photo-1589710321151-2495dbfc1fa2?w=800'
   ];
 
-  const getFieldImage = (id: number) => {
-    return fieldImages[id % fieldImages.length];
+  const getFieldImage = (id: string | number) => {
+    // Generate a simple hash from the id so that the image is deterministic but varies by plot
+    const hash = String(id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return fieldImages[hash % fieldImages.length];
   };
 
   // Animation Variants
@@ -695,10 +697,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         </motion.div>
       )}
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+      {/* ══════════════════════════════════════════════════════════════════════════════════
           MY FIELDS
-      ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <div className="mt-6 px-5 pb-10" style={{ fontFamily: 'Inter, sans-serif' }}>
+      ══════════════════════════════════════════════════════════════════════════════════ */}
+      <div className="mt-6 px-5 pb-32" style={{ fontFamily: 'Inter, sans-serif' }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold" style={{ color: '#001A11' }}>My Fields</h2>
           <button
@@ -738,9 +740,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           <div className="space-y-4" style={{ perspective: '1000px' }}>
             {userPlots.map((plot) => (
               <Tilt3D key={plot.id} maxTilt={6} className="rounded-2xl">
-                <div variants={itemVariants} className="surface-3d rounded-2xl overflow-hidden">
+                <motion.div variants={itemVariants} className="surface-3d rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                   {/* Field image */}
-                  <div className="relative h-36 w-full">
+                  <div className="relative h-36 w-full bg-gray-100">
                     <motion.img
                       animate={{ scale: [1, 1.08, 1] }}
                       transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
@@ -754,12 +756,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                         <h3 className="text-sm font-bold text-white drop-shadow-md">{plot.name}</h3>
                         <div className="flex items-center gap-1 mt-0.5">
                           <MapPin size={10} style={{ color: '#A5FFA7' }} />
-                          <span className="text-[10px] text-gray-300">{plotLocationNames[plot.id] || 'LocatingΓÇª'}</span>
+                          <span className="text-[10px] text-gray-300">{plotLocationNames[plot.id] || 'Locating…'}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/25" style={{ background: 'rgba(0,187,120,0.35)', backdropFilter: 'blur(8px)', boxShadow: '0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)' }}>
                         <Leaf size={11} style={{ color: '#A5FFA7' }} />
-                        <span className="text-xs font-bold text-white">{plot.area} ha</span>
+                        <span className="text-xs font-bold text-white">{Number(plot.area).toFixed(2)} ha</span>
                       </div>
                     </div>
                   </div>
@@ -782,7 +784,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
                       </button>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               </Tilt3D>
             ))}
           </div>

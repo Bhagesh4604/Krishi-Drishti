@@ -360,7 +360,7 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
       const job = await plotService.startAnalysis(plotId);
       pollRef.current = setInterval(async () => {
         try {
-          const status = await plotService.pollJob(job.job_id);
+          const status = await plotService.pollJob(job.task_id);
           setJobStatus(status.status);
           if (status.status === 'success') {
             clearInterval(pollRef.current!);
@@ -541,7 +541,7 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
             <div className="flex-1 min-w-0">
               <h2 className="text-white font-black text-sm truncate">{selectedPlot.name}</h2>
               <p className="text-gray-500 text-[10px]">
-                {selectedPlot.area} acres · {selectedPlot.crop_type || 'Mixed crops'} · {selectedPlot.area ? (selectedPlot.area * 0.405).toFixed(2) : '—'} ha
+                {Number(selectedPlot.area).toFixed(2)} acres · {selectedPlot.crop_type || 'Mixed crops'} · {selectedPlot.area ? (Number(selectedPlot.area) * 0.405).toFixed(2) : '—'} ha
               </p>
             </div>
             {!loadingAnalysis && analysis && (

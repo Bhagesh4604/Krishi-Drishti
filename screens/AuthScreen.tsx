@@ -170,7 +170,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onSkip, currentLang, o
                 {/* Phone input */}
                 <div className="relative mb-4">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                    <span className="text-base">🇮🇳</span>
+                    <img src="https://flagcdn.com/w20/in.png" width="20" alt="IN" className="rounded-sm" />
                     <span className="text-sm font-bold text-white/60">+91</span>
                     <div className="w-px h-5 bg-white/15" />
                   </div>
