@@ -49,4 +49,15 @@ export default {
     },
   },
   plugins: [],
+  safelist: [
+    'animate-ping',
+    'animate-spin',
+    'animate-pulse',
+    'animate-bounce',
+    'overflow-y-auto',
+    'overflow-hidden',
+    'h-full',
+    'min-h-full',
+    { pattern: /^(bg|text|border|ring)-(emerald|green|amber|sky|purple|pink|red|blue)-([\d]+)$/ },
+  ],
 };

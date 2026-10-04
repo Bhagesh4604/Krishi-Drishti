@@ -3,6 +3,7 @@ import { Language } from '../types';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { ChevronRight, ArrowRight, Globe, Leaf, Sprout, Satellite, BrainCircuit, Coins, Shield, Zap, Users, Award, TrendingUp, Star } from 'lucide-react';
 import { languages } from '../translations';
+import FoundationPrimitives, { FoundationItem } from '../components/ui/foundation-primitives';
 
 interface LandingScreenProps {
   onLogin: () => void;
@@ -243,6 +244,31 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onLogin, onBrowse, onAdmi
           <p className="text-sm text-white/50 font-medium mt-3 leading-relaxed max-w-xs mx-auto">
             AI-powered crop monitoring, disease detection & carbon credits — all in one app
           </p>
+        </motion.div>
+
+        {/* 3D WebGL Hero Visual */}
+        <motion.div variants={rise} className="mb-4 -mx-2">
+          <FoundationPrimitives
+            height="clamp(140px,35vw,190px)"
+            idle
+            lens
+            interactive
+            shadow={0.6}
+            glow={0.7}
+            items={[
+              { label: 'Crop Health', shape: 'sphere',    colors: ['#00BB78','#a7f3d0'], tile: 'disc'   },
+              { label: 'AI Doctor',   shape: 'asterisk',  colors: ['#7c3aed','#ddd6fe'], tile: 'square' },
+              { label: 'Soil Data',   shape: 'hourglass', colors: ['#d97706','#fde68a'], tile: 'square' },
+              { label: 'Weather',     shape: 'torus',     colors: ['#0ea5e9','#bae6fd'], tile: 'square' },
+              { label: 'Carbon',      shape: 'pill',      colors: ['#059669','#6ee7b7'], tile: 'none'   },
+            ] as FoundationItem[]}
+            className="text-white"
+          />
+          <div className="flex justify-center gap-4 mt-2">
+            {['🌿 Crop','🤖 AI','🌍 Soil','🌤 Weather','♻️ Carbon'].map((lbl,i) => (
+              <span key={i} className="text-[9px] font-bold text-white/30 uppercase tracking-wider">{lbl}</span>
+            ))}
+          </div>
         </motion.div>
 
         {/* Stats */}

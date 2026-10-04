@@ -221,3 +221,24 @@ body {
 
 /* Tabular numbers */
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ── GradientFileUpload: glow-breathe animation ── */
+@keyframes glow-breathe {
+  0%,100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ── Semantic CSS vars for GradientFileUpload (light) ── */
+:root {
+  --background:   255 255 255;
+  --foreground:   10  20  15;
+  --muted:        240 245 242;
+  --muted-foreground: 100 115 110;
+  --accent:       220 240 232;
+  --primary:      0   187 120;
+  --destructive:  239 68  68;
+  --ring:         0   187 120;
+  --radius: 0.5rem;
+}
+
+.squircle { border-radius: 0.75rem; }

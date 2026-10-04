@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { Mic, FileAudio, Loader2, ShieldAlert, ArrowLeft, Activity } from 'lucide-react';
 import { aiService } from '../src/services/api';
+import { GradientFileUpload } from '../components/ui/gradient-file-upload';
 
 // Constants
 // Bioacoustic service URL — proxy through main backend in production, or direct in dev
@@ -245,22 +246,17 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
                             Start Active Scan
                         </button>
 
-                        <button
-                            onClick={pickDocument}
-                            className="bg-white border-2 border-gray-100 text-gray-700 py-5 rounded-[2rem] shadow-sm hover:bg-gray-50 flex items-center justify-center gap-3 font-bold transition-transform active:scale-95"
-                        >
-                            <FileAudio size={22} className="text-gray-400" />
-                            Upload Reference Audio
-                        </button>
-                        <input
-                            type="file"
+                        {/* Premium animated upload widget */}
+                        <GradientFileUpload
                             accept="audio/*"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
+                            maxSizeMb={50}
+                            uploadDurationMs={1800}
+                            variant="original"
+                            onFileAccepted={(file) => analyzeAudioFile(file, file.name)}
                         />
                     </div>
                 )}
+
 
                 {result && (
                     <div className="mt-8 w-full max-w-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
