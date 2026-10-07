@@ -5,7 +5,7 @@ from typing import List, Optional
 import os
 
 try:
-    import google.generativeai as genai
+    from google import genai
 except ModuleNotFoundError:
     genai = None
 
@@ -15,14 +15,22 @@ from ..dependencies import get_current_user
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
+class GeminiWrapper:
+    def __init__(self, model_name="gemini-2.5-flash"):
+        self.model_name = model_name
+        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        
+    def generate_content(self, contents):
+        return self.client.models.generate_content(
+            model=self.model_name,
+            contents=contents
+        )
 
 def _get_gemini_model():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key or genai is None:
         return None
-
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-flash-latest")
+    return GeminiWrapper()
 
 class ListingCreate(BaseModel):
     crop_name: str
@@ -115,3 +123,19 @@ async def check_price(query: str, lat: Optional[float] = None, lng: Optional[flo
     response = model.generate_content(prompt)
     
     return {"text": response.text, "sources": []} 
+
+import urllib.request
+import json
+
+@router.get("/live-prices")
+def get_live_prices():
+    url = 'https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?api-key=579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b&format=json&limit=50'
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            return data
+    except Exception as e:
+        print("Live price proxy error:", e)
+        raise HTTPException(status_code=500, detail="Failed to fetch live prices from AGMARKNET")
+

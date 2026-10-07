@@ -3,7 +3,7 @@ import { Screen, UserProfile } from '../types';
 import {
   ArrowLeft, User, Ruler, Sprout, Tractor, CheckCircle2,
   Sparkles, Leaf, LogOut, MapPin, Loader2, Award, Shield,
-  ChevronRight, Star, Edit3
+  ChevronRight, Star, Edit3, X
 } from 'lucide-react';
 import { userService } from '../src/services/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,14 +16,14 @@ interface ProfileScreenProps {
 }
 
 const crops_data = [
-  { name: 'Wheat',    emoji: '🌾', image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=300&q=70', color: '#F59E0B' },
+  { name: 'Wheat',    emoji: '🌾', image: 'https://plus.unsplash.com/premium_photo-1663945778994-11b3201882a0?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8d2hlYXQlMjBmaWVsZHxlbnwwfHwwfHx8MA%3D%3D', color: '#F59E0B' },
   { name: 'Rice',     emoji: '🍚', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&q=70', color: '#10B981' },
-  { name: 'Cotton',   emoji: '☁️', image: 'https://images.unsplash.com/photo-1507204689620-eeba92147171?w=300&q=70', color: '#6366F1' },
+  { name: 'Cotton',   emoji: '☁️', image: 'https://images.unsplash.com/photo-1761069183527-a1a1414ee71f?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGNvdHRvbiUyMGZpZWxkfGVufDB8fDB8fHww', color: '#6366F1' },
   { name: 'Tomato',   emoji: '🍅', image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=300&q=70', color: '#EF4444' },
-  { name: 'Potato',   emoji: '🥔', image: 'https://images.unsplash.com/photo-1518977822534-7049a61ee0c2?w=300&q=70', color: '#D97706' },
+  { name: 'Potato',   emoji: '🥔', image: 'https://media.istockphoto.com/id/2192677464/photo/close-up-of-farmer-holding-potato-at-farm.webp?a=1&b=1&s=612x612&w=0&k=20&c=8XxVnwxQv6xz_vtjxYG9VPqQoBv2mSg-s5FJqpRtT2w=', color: '#D97706' },
   { name: 'Corn',     emoji: '🌽', image: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=300&q=70', color: '#FBBF24' },
-  { name: 'Soybean',  emoji: '🫘', image: 'https://images.unsplash.com/photo-1599863484218-c0b7937d2f9d?w=300&q=70', color: '#84CC16' },
-  { name: 'Sugarcane',emoji: '🎋', image: 'https://images.unsplash.com/photo-1615598681283-7d72cbff3462?w=300&q=70', color: '#14B8A6' },
+  { name: 'Soybean',  emoji: '🫘', image: 'https://images.unsplash.com/photo-1728931340275-430196814dc5?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8c295YmVhbnxlbnwwfHwwfHx8MA%3D%3D', color: '#84CC16' },
+  { name: 'Sugarcane',emoji: '🎋', image: 'https://media.istockphoto.com/id/93541349/photo/sugar-cane-plantation.webp?a=1&b=1&s=612x612&w=0&k=20&c=q-x3fulEUxWan5nnmS7PgUvqvuJfls40TKQlUUMeiDY=', color: '#14B8A6' },
   { name: 'Onion',    emoji: '🧅', image: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=300&q=70', color: '#A855F7' },
 ];
 
@@ -36,6 +36,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
   const [farmingType, setFarmingType] = useState<'Organic'|'Conventional'|'Mixed'>('Mixed');
   const [loading, setLoading]         = useState(false);
   const [focusedField, setFocusedField] = useState<string|null>(null);
+  const [customCropInput, setCustomCropInput] = useState('');
 
   React.useEffect(() => {
     const loadProfile = async () => {
@@ -161,7 +162,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
       {/* ══════════ FORM CARD ══════════ */}
       <div className="flex-1 overflow-y-auto -mt-8 relative z-10 rounded-t-3xl bg-white"
         style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.06)' }}>
-        <div className="px-5 pt-6 pb-32 space-y-5">
+        <div className="px-5 pt-6 pb-40 space-y-5">
 
           {/* ── Name ── */}
           <div>
@@ -240,26 +241,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
             </div>
           </div>
 
-          {/* ── Category ── */}
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: '#9CA3AF' }}>
-              Category
-            </label>
-            <div className="flex gap-2">
-              {(['General','OBC','SC','ST'] as const).map(cat => (
-                <motion.button key={cat} whileTap={{ scale: 0.92 }}
-                  onClick={() => setCategory(cat)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-black border transition-all"
-                  style={{
-                    background: category === cat ? '#001A11' : '#FAFAFA',
-                    color: category === cat ? '#00FF87' : '#9CA3AF',
-                    borderColor: category === cat ? '#001A11' : '#E5E7EB',
-                  }}>
-                  {cat}
-                </motion.button>
-              ))}
-            </div>
-          </div>
 
           {/* ── Crops ── */}
           <div>
@@ -311,29 +292,65 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
                 );
               })}
             </div>
+            
+            {/* ── Custom Crops ── */}
+            <div className="mt-6">
+              <label className="block text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: '#9CA3AF' }}>
+                Other Crops
+              </label>
+              <div className="flex items-center rounded-2xl overflow-hidden border transition-all bg-[#FAFAFA] focus-within:bg-[#F0FDF4] focus-within:border-[#00BB78]" style={{ borderColor: '#E5E7EB' }}>
+                <input 
+                  type="text" 
+                  value={customCropInput} 
+                  onChange={e => setCustomCropInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && customCropInput.trim()) {
+                      e.preventDefault();
+                      if (!crops.includes(customCropInput.trim())) {
+                        setCrops([...crops, customCropInput.trim()]);
+                      }
+                      setCustomCropInput('');
+                    }
+                  }}
+                  placeholder="Type crop name and press Enter"
+                  className="flex-1 py-3.5 pl-4 pr-2 bg-transparent outline-none text-xs font-bold"
+                  style={{ color: '#001A11' }} 
+                />
+                <button 
+                  onClick={() => {
+                    if (customCropInput.trim() && !crops.includes(customCropInput.trim())) {
+                      setCrops([...crops, customCropInput.trim()]);
+                      setCustomCropInput('');
+                    }
+                  }}
+                  className="px-4 py-2 mr-2 rounded-xl bg-gray-200/50 text-[10px] font-black uppercase text-gray-500 hover:bg-emerald-100 hover:text-emerald-700 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+
+              {/* Display custom crops tags */}
+              {crops.filter(c => !crops_data.some(d => d.name === c)).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {crops.filter(c => !crops_data.some(d => d.name === c)).map(c => (
+                    <span key={c} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black shadow-sm" style={{ background: '#001A11', color: '#00FF87' }}>
+                      {c}
+                      <button onClick={() => setCrops(crops.filter(x => x !== c))} className="text-white hover:text-red-400 p-0.5 rounded-full bg-white/10 transition-colors">
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* ── Stats cards ── */}
-          <div className="grid grid-cols-3 gap-2.5">
-            {[
-              { icon: '🏆', label: 'Rank', value: '#1,247', color: '#F59E0B', bg: '#FFFBEB' },
-              { icon: '🌿', label: 'Carbon', value: '0.0 ACT', color: '#10B981', bg: '#ECFDF5' },
-              { icon: '📍', label: 'Fields', value: '0 plots', color: '#6366F1', bg: '#EEF2FF' },
-            ].map((stat, i) => (
-              <div key={i} className="flex flex-col items-center gap-1 py-3 rounded-2xl border"
-                style={{ background: stat.bg, borderColor: `${stat.color}30` }}>
-                <span className="text-xl">{stat.icon}</span>
-                <p className="text-sm font-black" style={{ color: stat.color }}>{stat.value}</p>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
       {/* ══════════ BOTTOM ACTIONS ══════════ */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 pb-6 pt-3 z-20"
-        style={{ background: 'linear-gradient(0deg, white 70%, transparent)' }}>
+      <div className="absolute bottom-0 left-0 right-0 px-5 pb-12 pt-4 z-20"
+        style={{ background: 'linear-gradient(0deg, white 80%, transparent)' }}>
 
         <motion.button whileTap={{ scale: 0.97 }}
           onClick={handleSave}

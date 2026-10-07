@@ -18,10 +18,12 @@ import {
   Waves,
   Zap,
   MessageCircle,
+import {
   Activity,
   Satellite
 } from 'lucide-react';
 import { languages } from '../translations';
+import MorphOrb from '../components/MorphOrb';
 
 interface LiveAudioScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -405,144 +407,19 @@ const LiveAudioScreen: React.FC<LiveAudioScreenProps> = ({ navigateTo, language,
         </div>
       </motion.div>
 
-      {/* ========== MAIN VISUALIZER ========== */}
-      <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-6">
-
-        {/* ==== CENTRAL ORB WITH ADVANCED VISUALIZATIONS ==== */}
-        <div className="relative flex items-center justify-center" style={{ width: 320, height: 320 }}>
-
-          {/* Outer rotating rings */}
-          {isActive && (
-            <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: `conic-gradient(from 0deg, transparent, ${theme.glow}, transparent)`,
-                  filter: 'blur(8px)',
-                }}
-              />
-              <motion.div
-                animate={{ rotate: -360 }}
-                transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-                className={`absolute inset-4 rounded-full border-2 ${theme.ring} opacity-20`}
-                style={{ borderStyle: 'dashed' }}
-              />
-            </>
-          )}
-
-          {/* Audio-reactive waveform circles */}
-          {isActive && [...Array(3)].map((_, i) => (
-            <motion.div
-              key={i}
-              className={`absolute rounded-full border-2 ${theme.ring}`}
-              style={{
-                inset: 40 + i * 20,
-                opacity: 0.3 - i * 0.08,
-              }}
-              animate={{
-                scale: [1, 1 + audioLevel * 0.3, 1],
-              }}
-              transition={{
-                duration: 0.3,
-                ease: 'easeOut',
-              }}
-            />
-          ))}
-
-          {/* Ripple effects */}
-          {isActive && [0, 1, 2].map((i) => (
-            <motion.div
-              key={`ripple-${i}`}
-              className={`absolute inset-16 rounded-full border-2 ${theme.ring}`}
-              animate={{
-                scale: [1, 2],
-                opacity: [0.6, 0],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                delay: i * 1,
-                ease: 'easeOut',
-              }}
-            />
-          ))}
-
-          {/* Main central orb */}
-          <motion.div
-            animate={isActive ? {
-              scale: [1, 1 + audioLevel * 0.1, 1],
-            } : {}}
-            transition={{ duration: 0.2 }}
-            className="relative w-52 h-52 rounded-full flex items-center justify-center"
-            style={{
-              background: isActive
-                ? `radial-gradient(circle at 30% 30%, ${isDistressed ? '#60a5fa' : '#34d399'}, ${isDistressed ? '#1e40af' : '#065f46'})`
-                : 'radial-gradient(circle at 30% 30%, #475569, #0f172a)',
-              boxShadow: isActive
-                ? `0 0 80px ${theme.glow}, 0 0 140px ${theme.glow}, inset 0 0 40px rgba(255,255,255,0.2)`
-                : '0 0 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(255,255,255,0.05)',
-            }}
-          >
-            {/* Glossy highlight */}
-            <div
-              className="absolute inset-2 rounded-full opacity-40"
-              style={{
-                background: 'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.8), transparent 50%)',
-              }}
-            />
-
-            {/* Inner icon */}
-            <motion.div
-              animate={isConnecting ? { rotate: 360 } : {}}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="relative z-10"
-            >
-              {isConnecting ? (
-                <Loader2 size={56} className="text-white drop-shadow-lg" />
-              ) : isActive ? (
-                isDistressed ? (
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    <HeartHandshake size={72} className="text-white drop-shadow-xl" strokeWidth={1.5} />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    animate={{ rotate: [0, 5, -5, 0] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                  >
-                    <BrainCircuit size={72} className="text-white drop-shadow-xl" strokeWidth={1.5} />
-                  </motion.div>
-                )
-              ) : (
-                <MicOff size={56} className="text-white/60" strokeWidth={1.5} />
-              )}
-            </motion.div>
-
-            {/* Audio level bars inside orb */}
-            {isActive && (
-              <div className="absolute bottom-10 flex items-end gap-1 h-6">
-                {[...Array(7)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="w-1 bg-white/70 rounded-full"
-                    animate={{
-                      height: [`${20 + Math.random() * 60}%`, `${30 + audioLevel * 70}%`, `${20 + Math.random() * 60}%`],
-                    }}
-                    transition={{
-                      duration: 0.4,
-                      repeat: Infinity,
-                      delay: i * 0.05,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </motion.div>
-        </div>
+      {/* ========== MAIN VISUALIZER (MORPH ORB) ========== */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 px-2 mt-4">
+        <MorphOrb 
+          onSubmit={async (text) => {
+            if (sessionRef.current) {
+              sessionRef.current.send({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }] } });
+              return "Sent to voice stream.";
+            } else {
+              return "Please start the voice session first.";
+            }
+          }}
+        />
+      </div>
 
         {/* ==== STATUS TEXT ==== */}
         <motion.div

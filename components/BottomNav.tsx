@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Home, Store, User, Map } from 'lucide-react';
 import { Screen } from '../types';
@@ -19,8 +19,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate }) => {
   ];
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-4 pb-3 z-50 pointer-events-none" style={{ perspective: '800px' }}>
-      {/* ΓòÉΓòÉ Floating 3D Glass Dock ΓòÉΓòÉ */}
+    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-4 pb-3 z-[9999] pointer-events-none" style={{ perspective: '800px' }}>
+      {/* ══ Floating 3D Glass Dock ══ */}
       <motion.div
         initial={{ y: 80, rotateX: 30, opacity: 0 }}
         animate={{ y: 0, rotateX: 0, opacity: 1 }}

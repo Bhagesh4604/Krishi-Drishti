@@ -235,10 +235,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             <div className="flex items-center gap-1">
               <MapPin size={14} className="text-emerald-500" fill="currentColor" />
               <span className="text-sm font-semibold text-gray-800 tracking-wide">{locationName.split(',')[0]}</span>
-              <span className="text-[10px] text-gray-400 font-bold">Γû╝</span>
+              <span className="text-[10px] text-gray-400 font-bold">▼</span>
             </div>
             <span className="text-[10px] text-amber-500 font-semibold ml-4 group-hover:text-amber-600">
-              Wrong location? Tap to set ΓåÆ
+              Wrong location? Tap to set →
             </span>
           </button>
         </div>
@@ -417,16 +417,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
             <div className="flex items-center gap-2">
               <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#F59E0B', letterSpacing: '0.2em' }}>SUPPLY CHAIN TRACEABILITY</span>
             </div>
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#57534e', letterSpacing: '0.15em' }}>OPEN LEDGER ΓåÆ</span>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#57534e', letterSpacing: '0.15em' }}>OPEN LEDGER →</span>
           </div>
 
           {/* 4-step cycle */}
           <div className="grid grid-cols-4" style={{ borderBottom: '1px solid #1c1917' }}>
             {[
-              { step: '01', label: 'HARVEST', icon: '≡ƒî╛' },
-              { step: '02', label: 'MINT', icon: 'Γùå' },
-              { step: '03', label: 'QR CODE', icon: 'Γûú' },
-              { step: '04', label: 'VERIFY', icon: 'Γ£ô' },
+              { step: '01', label: 'HARVEST', icon: '🌾' },
+              { step: '02', label: 'MINT', icon: '△' },
+              { step: '03', label: 'QR CODE', icon: '▣' },
+              { step: '04', label: 'VERIFY', icon: '✓' },
             ].map((item, i) => (
               <div key={item.step}
                 className="py-3 flex flex-col items-center gap-1"
@@ -442,7 +442,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
           {/* Tagline */}
           <div className="px-4 py-2.5">
             <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#78716c', lineHeight: 1.6 }}>
-              Mint a harvest token after every crop cycle. Buyers scan a QR to verify your crop's carbon footprint, chemical inputs &amp; origin ΓÇö CBAM compliant.
+              Mint a harvest token after every crop cycle. Buyers scan a QR to verify your crop's carbon footprint, chemical inputs &amp; origin — CBAM compliant.
             </p>
           </div>
         </div>

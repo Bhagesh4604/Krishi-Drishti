@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Language } from '../types';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { ChevronRight, ArrowRight, Globe, Leaf, Sprout, Satellite, BrainCircuit, Coins, Shield, Zap, Users, Award, TrendingUp, Star } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
+import { 
+  ChevronRight, ArrowRight, Globe, Leaf, Sprout, Satellite, 
+  BrainCircuit, Coins, Shield, Zap, Users, Award, TrendingUp, Star,
+  Droplet, Wind, Sun, Activity
+} from 'lucide-react';
 import { languages } from '../translations';
-import FoundationPrimitives, { FoundationItem } from '../components/ui/foundation-primitives';
 
 interface LandingScreenProps {
   onLogin: () => void;
@@ -13,7 +16,8 @@ interface LandingScreenProps {
   onLangChange: (lang: Language) => void;
 }
 
-// Animated stat number
+// ─── HELPER COMPONENTS ────────────────────────────────────────────────────────
+
 const StatNumber = ({ value, label, prefix = '', suffix = '' }: { value: number; label: string; prefix?: string; suffix?: string }) => {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -28,167 +32,195 @@ const StatNumber = ({ value, label, prefix = '', suffix = '' }: { value: number;
     return () => clearInterval(timer);
   }, [value]);
   return (
-    <div className="text-center">
-      <p className="text-2xl font-black text-white">{prefix}{count.toLocaleString()}{suffix}</p>
-      <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mt-0.5">{label}</p>
+    <div className="flex flex-col items-center">
+      <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-cyan-300 drop-shadow-[0_0_15px_rgba(0,255,135,0.5)]">
+        {prefix}{count.toLocaleString()}{suffix}
+      </span>
+      <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-1">{label}</span>
     </div>
   );
 };
 
-const FEATURES = [
-  {
-    icon: '🛰',
-    title: 'Satellite Monitoring',
-    desc: 'Real-time NDVI · NDMI · EVI for every acre',
-    gradient: 'linear-gradient(135deg, #1e3a5f, #1d4ed8)',
-    glow: '#3B82F6',
-  },
-  {
-    icon: '🤖',
-    title: 'AI Disease Doctor',
-    desc: 'Gemini Vision · 95% accuracy · Instant treatment',
-    gradient: 'linear-gradient(135deg, #2D1B69, #7C3AED)',
-    glow: '#8B5CF6',
-  },
-  {
-    icon: '🌿',
-    title: 'Carbon Credits',
-    desc: 'Earn ₹2,400/acre · CBAM compliant · Blockchain verified',
-    gradient: 'linear-gradient(135deg, #052E16, #16A34A)',
-    glow: '#22C55E',
-  },
-  {
-    icon: '📊',
-    title: 'Market Intelligence',
-    desc: 'Live mandi prices · Demand forecast · Best sell time',
-    gradient: 'linear-gradient(135deg, #431407, #EA580C)',
-    glow: '#F97316',
-  },
-];
+function TiltCard({ children, className = "", tiltFactor = 15 }: { children: React.ReactNode; className?: string; tiltFactor?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-0.5, 0.5], [tiltFactor, -tiltFactor]);
+  const rotateY = useTransform(x, [-0.5, 0.5], [-tiltFactor, tiltFactor]);
+  const sX = useSpring(rotateX, { stiffness: 400, damping: 30 });
+  const sY = useSpring(rotateY, { stiffness: 400, damping: 30 });
+
+  const onMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    x.set((clientX - r.left) / r.width - 0.5);
+    y.set((clientY - r.top) / r.height - 0.5);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={onMove}
+      onTouchMove={onMove}
+      onMouseLeave={() => { x.set(0); y.set(0); }}
+      onTouchEnd={() => { x.set(0); y.set(0); }}
+      style={{ rotateX: sX, rotateY: sY, transformStyle: "preserve-3d" }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// Complex 3D Particle Field
+function QuantumField() {
+  const particles = useMemo(() => Array.from({ length: 60 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    z: Math.random() * 200 - 100,
+    size: Math.random() * 3 + 1,
+    color: ['#00FF87', '#00D4FF', '#c77dff', '#FFB800'][Math.floor(Math.random() * 4)],
+    duration: Math.random() * 20 + 10,
+    delay: Math.random() * -30,
+  })), []);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ perspective: '1000px' }}>
+      {particles.map(p => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size,
+            background: p.color, boxShadow: `0 0 ${p.size * 3}px ${p.color}`,
+            transform: `translateZ(${p.z}px)`
+          }}
+          animate={{
+            y: ['-20vh', '120vh'],
+            x: [0, Math.random() * 100 - 50, 0],
+            rotateZ: [0, 360]
+          }}
+          transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: "linear" }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// 3D Hologram Logo
+function HologramLogo() {
+  return (
+    <div className="relative w-40 h-40 mx-auto flex items-center justify-center transform-gpu" style={{ transformStyle: 'preserve-3d' }}>
+      {/* Base glow */}
+      <motion.div
+        className="absolute inset-0 rounded-full blur-3xl opacity-40"
+        style={{ background: 'radial-gradient(circle, #00FF87 0%, transparent 70%)' }}
+        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      
+      {/* Rotating rings */}
+      {[...Array(3)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute inset-0 rounded-full border border-emerald-400/30"
+          style={{ transformStyle: 'preserve-3d' }}
+          animate={{
+            rotateX: [0, 360],
+            rotateY: [0, 360],
+            rotateZ: [0, 360]
+          }}
+          transition={{
+            duration: 10 + i * 5,
+            repeat: Infinity,
+            ease: "linear",
+            delay: i * -2
+          }}
+        />
+      ))}
+
+      {/* Center Sphere */}
+      <motion.div
+        className="relative w-20 h-20 rounded-full flex items-center justify-center overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, rgba(0,255,135,0.4), rgba(0,212,255,0.4))',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(0,255,135,0.5)',
+          boxShadow: '0 0 40px rgba(0,255,135,0.4), inset 0 0 20px rgba(255,255,255,0.5)'
+        }}
+        animate={{ rotateY: [0, 360] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+      >
+        <Leaf size={36} className="text-white drop-shadow-[0_0_10px_#00FF87]" style={{ transform: 'translateZ(20px)' }} />
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 
 const LandingScreen: React.FC<LandingScreenProps> = ({ onLogin, onBrowse, onAdminLogin, currentLang, onLangChange }) => {
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [activeFeature, setActiveFeature] = useState(0);
 
-  // Auto-rotate features
+  const FEATURES = [
+    { id: 'ai', icon: BrainCircuit, title: 'AI Disease Doctor', desc: 'Instant diagnosis with Gemini Vision model. 98% accuracy on 40+ crops.', color: '#c77dff', bg: 'rgba(199,125,255,0.1)' },
+    { id: 'sat', icon: Satellite, title: 'Satellite Analytics', desc: 'Real-time NDVI & NDMI moisture mapping powered by Google Earth Engine.', color: '#00d4ff', bg: 'rgba(0,212,255,0.1)' },
+    { id: 'carb', icon: Leaf, title: 'Carbon Credits', desc: 'Earn verified carbon credits for sustainable farming. CBAM compliant.', color: '#00ff87', bg: 'rgba(0,255,135,0.1)' },
+    { id: 'mkt', icon: TrendingUp, title: 'Live Marketplace', desc: 'Predictive pricing and direct-to-buyer smart contracts.', color: '#ffd93d', bg: 'rgba(255,217,61,0.1)' },
+  ];
+
   useEffect(() => {
-    const timer = setInterval(() => setActiveFeature(p => (p + 1) % FEATURES.length), 3000);
+    const timer = setInterval(() => setActiveFeature(p => (p + 1) % FEATURES.length), 4000);
     return () => clearInterval(timer);
   }, []);
 
-  const stagger = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
-  };
-  const rise = {
-    hidden: { opacity: 0, y: 30 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 280, damping: 22 } },
-  };
+  const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } } };
+  const rise = { hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } };
 
   return (
-    <div className="relative h-full w-full flex flex-col overflow-hidden"
-      style={{ background: 'linear-gradient(165deg, #020B06 0%, #031208 30%, #041A0E 60%, #03100A 100%)' }}>
+    <div className="relative h-full w-full flex flex-col overflow-hidden font-sans"
+      style={{ background: 'linear-gradient(180deg, #010604 0%, #021208 40%, #031c10 100%)' }}>
+      
+      <QuantumField />
 
-      {/* ════ ANIMATED BACKGROUND ════ */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Aurora green */}
-        <motion.div animate={{ x: [0,40,0], y: [0,-30,0], scale: [1,1.2,1] }}
-          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-30"
-          style={{ background: 'radial-gradient(circle, #00FF87, transparent 70%)' }} />
+      {/* Grid overlay */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '32px 32px', transform: 'perspective(500px) rotateX(60deg) scale(2.5) translateY(10%)' }} />
 
-        {/* Aurora gold */}
-        <motion.div animate={{ x: [0,-30,0], y: [0,40,0], scale: [1.2,1,1.2] }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
-          className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full opacity-20"
-          style={{ background: 'radial-gradient(circle, #FFB800, transparent 70%)' }} />
-
-        {/* Aurora blue */}
-        <motion.div animate={{ x: [0,20,0], y: [0,-20,0] }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 6 }}
-          className="absolute top-1/3 right-0 w-64 h-64 rounded-full opacity-15"
-          style={{ background: 'radial-gradient(circle, #00D4FF, transparent 70%)' }} />
-
-        {/* Grid */}
-        <div className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }} />
-
-        {/* Floating particles */}
-        {[...Array(6)].map((_, i) => (
-          <motion.div key={i}
-            animate={{ y: [0, -20, 0], opacity: [0.4, 0.8, 0.4] }}
-            transition={{ duration: 4 + i * 0.7, repeat: Infinity, delay: i * 0.8 }}
-            className="absolute rounded-full"
-            style={{
-              width: 4 + i * 2,
-              height: 4 + i * 2,
-              left: `${15 + i * 14}%`,
-              top: `${20 + (i % 3) * 20}%`,
-              background: ['#00FF87', '#FFB800', '#00D4FF', '#FF6B6B', '#A78BFA', '#34D399'][i],
-              boxShadow: `0 0 10px 2px ${['#00FF87', '#FFB800', '#00D4FF', '#FF6B6B', '#A78BFA', '#34D399'][i]}80`,
-            }} />
-        ))}
-
-        {/* Orbiting rings */}
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-          className="absolute top-8 right-8 w-40 h-40 rounded-full pointer-events-none"
-          style={{ border: '1px solid rgba(52,211,153,0.15)' }}>
-          <div className="absolute top-2 left-1/2 w-2.5 h-2.5 -translate-x-1/2 rounded-full"
-            style={{ background: '#34D399', boxShadow: '0 0 12px 4px rgba(52,211,153,0.6)' }} />
-        </motion.div>
-        <motion.div animate={{ rotate: -360 }} transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
-          className="absolute top-16 right-16 w-24 h-24 rounded-full pointer-events-none"
-          style={{ border: '1px solid rgba(251,191,36,0.15)' }}>
-          <div className="absolute bottom-1 right-2 w-2 h-2 rounded-full"
-            style={{ background: '#FBBF24', boxShadow: '0 0 10px 3px rgba(251,191,36,0.6)' }} />
-        </motion.div>
-      </div>
-
-      {/* ════ HEADER ════ */}
-      <div className="relative z-20 flex justify-between items-center px-5 pt-12 pb-2">
-        <div className="flex items-center gap-2.5">
-          {/* Logo mark */}
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #00FF87, #00BB78)', boxShadow: '0 0 20px rgba(0,255,135,0.4)' }}>
-            <span className="text-lg">🌱</span>
+      {/* ── HEADER ── */}
+      <header className="relative z-50 flex justify-between items-center px-6 pt-12 pb-4">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-400 to-cyan-500 shadow-[0_0_20px_rgba(0,255,135,0.4)]">
+            <Sprout size={20} className="text-black" />
           </div>
           <div>
-            <h2 className="text-base font-black text-white leading-none tracking-tight">Krishi Drishti</h2>
-            <p className="text-[9px] text-emerald-400/70 font-bold uppercase tracking-widest">Smart Farm Platform</p>
+            <h1 className="text-lg font-black text-white leading-none tracking-tight">Krishi-Drishti</h1>
+            <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">Next-Gen AgriTech</p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="flex items-center gap-2">
-          {/* Language picker */}
+        <div className="flex items-center gap-3">
           <div className="relative">
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowLangPicker(!showLangPicker)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 text-xs font-bold text-white"
-              style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
-              <Globe size={12} />
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-white bg-white/5 backdrop-blur-md">
+              <Globe size={14} className="text-emerald-400" />
               {languages.find(l => l.code === currentLang)?.native || 'EN'}
             </motion.button>
             <AnimatePresence>
               {showLangPicker && (
                 <>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60]" onClick={() => setShowLangPicker(false)} />
-                  <motion.div initial={{ opacity: 0, scale: 0.9, y: -8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    className="absolute top-full mt-2 right-0 rounded-2xl shadow-2xl border border-white/10 p-1.5 z-[70] w-44 max-h-64 overflow-y-auto no-scrollbar"
-                    style={{ background: 'rgba(10,20,15,0.95)', backdropFilter: 'blur(20px)' }}>
-                    {languages.map((lang: any) => (
-                      <button key={lang.code}
-                        onClick={() => { onLangChange(lang.code as Language); setShowLangPicker(false); }}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center mb-0.5 transition-all ${currentLang === lang.code ? 'text-emerald-300' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                        style={currentLang === lang.code ? { background: 'rgba(0,255,135,0.1)' } : {}}>
-                        <div>
-                          <span className="block">{lang.label}</span>
-                          <span className="text-[9px] opacity-60">{lang.native}</span>
-                        </div>
-                        {currentLang === lang.code && <span className="text-emerald-400">✓</span>}
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40" onClick={() => setShowLangPicker(false)} />
+                  <motion.div initial={{ opacity: 0, scale: 0.9, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
+                    className="absolute top-full right-0 mt-2 w-48 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 p-2 z-50 shadow-2xl max-h-[60vh] overflow-y-auto">
+                    {languages.map((lang) => (
+                      <button key={lang.code} onClick={() => { onLangChange(lang.code as Language); setShowLangPicker(false); }}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex justify-between items-center mb-1 transition-all ${currentLang === lang.code ? 'bg-emerald-500/20 text-emerald-400' : 'text-white/70 hover:bg-white/10'}`}>
+                        <div><span className="block">{lang.label}</span><span className="text-[10px] opacity-60 font-medium">{lang.native}</span></div>
+                        {currentLang === lang.code && <motion.div layoutId="check" className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#00ff87]" />}
                       </button>
                     ))}
                   </motion.div>
@@ -197,209 +229,155 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onLogin, onBrowse, onAdmi
             </AnimatePresence>
           </div>
 
-          {/* Admin */}
-          <motion.button whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              const token = window.prompt('Enter Ops Dashboard Token:');
+          <motion.button whileHover={{ scale: 1.1, rotate: 180 }} whileTap={{ scale: 0.9 }} onClick={() => {
+              const token = window.prompt('Enter Admin/Ops Token:');
               if (token === import.meta.env.VITE_ADMIN_SECRET_TOKEN) onAdminLogin();
               else if (token) alert('Invalid Token.');
             }}
-            className="w-8 h-8 rounded-full flex items-center justify-center border border-white/15 text-white/40"
-            style={{ background: 'rgba(255,255,255,0.05)' }}>
-            🔒
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 backdrop-blur-md text-white/50 hover:text-emerald-400 transition-colors">
+            <Shield size={16} />
           </motion.button>
         </div>
-      </div>
+      </header>
 
-      {/* ════ HERO CONTENT ════ */}
-      <motion.div variants={stagger} initial="hidden" animate="show"
-        className="relative z-20 flex flex-col px-5 pt-6 pb-2 flex-1">
+      {/* ── SCROLLABLE BODY ── */}
+      <div className="relative z-10 flex-1 overflow-y-auto no-scrollbar pb-32">
+        <motion.div variants={stagger} initial="hidden" animate="show" className="px-6 pt-4 flex flex-col items-center">
+          
+          {/* Hologram Graphic */}
+          <motion.div variants={rise} className="mb-8 w-full max-w-sm">
+            <HologramLogo />
+          </motion.div>
 
-        {/* Badge */}
-        <motion.div variants={rise} className="flex justify-center mb-5">
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full"
-            style={{ background: 'rgba(0,255,135,0.08)', border: '1px solid rgba(0,255,135,0.2)' }}>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-            </span>
-            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">India's #1 AgriTech Platform</span>
-          </div>
-        </motion.div>
+          {/* Hero Typography */}
+          <motion.div variants={rise} className="text-center mb-10 w-full">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 mb-6">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Platform Live in 18 States</span>
+            </div>
+            
+            <h1 className="text-[40px] leading-[1.1] font-black text-white tracking-tight mb-4">
+              Farming,<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500">
+                Reimagined
+              </span>
+            </h1>
+            <p className="text-[15px] text-white/60 font-medium leading-relaxed max-w-sm mx-auto">
+              Empowering farmers with AI diagnostics, satellite crop monitoring, and automated carbon credit generation.
+            </p>
+          </motion.div>
 
-        {/* Main heading */}
-        <motion.div variants={rise} className="text-center mb-4">
-          <h1 className="text-[32px] font-black leading-[1.1] tracking-tight text-white">
-            Your Farm,{' '}
-            <span className="text-transparent bg-clip-text"
-              style={{ backgroundImage: 'linear-gradient(90deg, #00FF87, #00BB78, #34D399)' }}>
-              Smarter
-            </span>
-            {' '}Than{' '}
-            <span className="text-transparent bg-clip-text"
-              style={{ backgroundImage: 'linear-gradient(90deg, #FFB800, #F97316)' }}>
-              Ever
-            </span>
-          </h1>
-          <p className="text-sm text-white/50 font-medium mt-3 leading-relaxed max-w-xs mx-auto">
-            AI-powered crop monitoring, disease detection & carbon credits — all in one app
-          </p>
-        </motion.div>
+          {/* Core Stats */}
+          <motion.div variants={rise} className="w-full grid grid-cols-3 gap-3 mb-10">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl py-4 flex flex-col items-center justify-center">
+              <StatNumber value={12847} label="Active Nodes" />
+            </div>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl py-4 flex flex-col items-center justify-center">
+              <StatNumber value={98} suffix="%" label="AI Accuracy" />
+            </div>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl py-4 flex flex-col items-center justify-center">
+              <StatNumber value={2400} prefix="₹" label="Avg Credits" />
+            </div>
+          </motion.div>
 
-        {/* 3D WebGL Hero Visual */}
-        <motion.div variants={rise} className="mb-4 -mx-2">
-          <FoundationPrimitives
-            height="clamp(140px,35vw,190px)"
-            idle
-            lens
-            interactive
-            shadow={0.6}
-            glow={0.7}
-            items={[
-              { label: 'Crop Health', shape: 'sphere',    colors: ['#00BB78','#a7f3d0'], tile: 'disc'   },
-              { label: 'AI Doctor',   shape: 'asterisk',  colors: ['#7c3aed','#ddd6fe'], tile: 'square' },
-              { label: 'Soil Data',   shape: 'hourglass', colors: ['#d97706','#fde68a'], tile: 'square' },
-              { label: 'Weather',     shape: 'torus',     colors: ['#0ea5e9','#bae6fd'], tile: 'square' },
-              { label: 'Carbon',      shape: 'pill',      colors: ['#059669','#6ee7b7'], tile: 'none'   },
-            ] as FoundationItem[]}
-            className="text-white"
-          />
-          <div className="flex justify-center gap-4 mt-2">
-            {['🌿 Crop','🤖 AI','🌍 Soil','🌤 Weather','♻️ Carbon'].map((lbl,i) => (
-              <span key={i} className="text-[9px] font-bold text-white/30 uppercase tracking-wider">{lbl}</span>
-            ))}
-          </div>
-        </motion.div>
+          {/* 3D Feature Carousel */}
+          <motion.div variants={rise} className="w-full mb-10">
+            <h3 className="text-xs font-black text-white/40 uppercase tracking-widest text-center mb-4">Platform Capabilities</h3>
+            <div className="relative h-44 w-full perspective-[1000px]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeFeature}
+                  initial={{ opacity: 0, rotateX: 45, y: 50, scale: 0.8 }}
+                  animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, rotateX: -45, y: -50, scale: 0.8 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className="absolute inset-0"
+                >
+                  <TiltCard className="h-full w-full">
+                    <div className="h-full w-full rounded-3xl p-6 flex flex-col justify-between"
+                      style={{ background: FEATURES[activeFeature].bg, border: `1px solid ${FEATURES[activeFeature].color}40`, backdropFilter: 'blur(20px)', boxShadow: `0 10px 40px ${FEATURES[activeFeature].color}20` }}>
+                      <div className="flex justify-between items-start">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: `${FEATURES[activeFeature].color}20` }}>
+                          {React.createElement(FEATURES[activeFeature].icon, { size: 24, color: FEATURES[activeFeature].color })}
+                        </div>
+                        <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }}>
+                          <Activity size={16} color={FEATURES[activeFeature].color} />
+                        </motion.div>
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-black text-white mb-2">{FEATURES[activeFeature].title}</h4>
+                        <p className="text-xs text-white/70 leading-relaxed font-medium">{FEATURES[activeFeature].desc}</p>
+                      </div>
+                    </div>
+                  </TiltCard>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            
+            {/* Carousel Indicators */}
+            <div className="flex justify-center gap-2 mt-6">
+              {FEATURES.map((f, i) => (
+                <button key={i} onClick={() => setActiveFeature(i)}
+                  className="h-1.5 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: i === activeFeature ? 24 : 8, background: i === activeFeature ? f.color : 'rgba(255,255,255,0.2)' }} />
+              ))}
+            </div>
+          </motion.div>
 
-        {/* Stats */}
-        <motion.div variants={rise}
-          className="flex justify-around py-4 px-3 rounded-2xl mb-5"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <StatNumber value={50000} suffix="+" label="Farmers" />
-          <div className="w-px bg-white/10" />
-          <StatNumber value={2400} prefix="₹" suffix="/acre" label="Carbon Earned" />
-          <div className="w-px bg-white/10" />
-          <StatNumber value={95} suffix="%" label="AI Accuracy" />
-        </motion.div>
-
-        {/* Feature carousel */}
-        <motion.div variants={rise} className="mb-5">
-          <div className="relative rounded-2xl overflow-hidden" style={{ height: 110 }}>
-            <AnimatePresence mode="wait">
-              <motion.div key={activeFeature}
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-                className="absolute inset-0 flex items-center gap-4 p-5"
-                style={{ background: FEATURES[activeFeature].gradient, boxShadow: `0 0 40px ${FEATURES[activeFeature].glow}40` }}>
-                {/* Glow */}
-                <div className="absolute inset-0 opacity-20"
-                  style={{ backgroundImage: 'radial-gradient(circle at top right, white, transparent 60%)' }} />
-                <span className="text-4xl flex-shrink-0 relative z-10">{FEATURES[activeFeature].icon}</span>
-                <div className="relative z-10">
-                  <p className="text-sm font-black text-white">{FEATURES[activeFeature].title}</p>
-                  <p className="text-[11px] text-white/60 mt-1 leading-relaxed">{FEATURES[activeFeature].desc}</p>
+          {/* Floating Integration Pills */}
+          <motion.div variants={rise} className="w-full mb-10 overflow-hidden">
+            <h3 className="text-xs font-black text-white/40 uppercase tracking-widest text-center mb-4">Powered By</h3>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-4 px-2 -mx-2 mask-edges">
+              {[
+                { icon: BrainCircuit, name: 'Gemini 2.5 Flash', color: '#c77dff' },
+                { icon: Globe, name: 'Google Earth Engine', color: '#00d4ff' },
+                { icon: Droplet, name: 'OpenWeather API', color: '#ffd93d' },
+                { icon: Database, name: 'Redis Cache', color: '#ff6b6b' },
+              ].map((tech, i) => (
+                <div key={i} className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                  <tech.icon size={14} color={tech.color} />
+                  <span className="text-[11px] font-bold text-white/80">{tech.name}</span>
                 </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Dots */}
-          <div className="flex justify-center gap-1.5 mt-2.5">
-            {FEATURES.map((_, i) => (
-              <button key={i} onClick={() => setActiveFeature(i)}
-                className="h-1.5 rounded-full transition-all duration-300"
-                style={{ width: i === activeFeature ? 20 : 6, background: i === activeFeature ? '#00FF87' : 'rgba(255,255,255,0.2)' }} />
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Mini feature pills */}
-        <motion.div variants={rise} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-4">
-          {[
-            { icon: '🛰', label: 'Satellite' },
-            { icon: '🤖', label: 'AI Doctor' },
-            { icon: '🌿', label: 'Carbon' },
-            { icon: '📊', label: 'Market' },
-            { icon: '🎙', label: 'Voice AI' },
-            { icon: '🗺', label: 'Farm Map' },
-          ].map((f, i) => (
-            <div key={i} className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <span className="text-base">{f.icon}</span>
-              <span className="text-[10px] font-bold text-white/70 whitespace-nowrap">{f.label}</span>
+              ))}
             </div>
-          ))}
-        </motion.div>
+          </motion.div>
 
-        {/* Trust badges */}
-        <motion.div variants={rise} className="flex justify-center gap-4 mb-4">
-          {[
-            { icon: <Shield size={11} className="text-emerald-400" />, label: 'Govt Certified' },
-            { icon: <Award size={11} className="text-amber-400" />, label: 'CBAM Ready' },
-            { icon: <Star size={11} className="text-purple-400" />, label: 'ISO 27001' },
-          ].map((badge, i) => (
-            <div key={i} className="flex items-center gap-1">
-              {badge.icon}
-              <span className="text-[9px] font-bold text-white/40">{badge.label}</span>
-            </div>
-          ))}
-        </motion.div>
-      </motion.div>
-
-      {/* ════ CTA SECTION ════ */}
-      <div className="relative z-20 px-5 pb-10 space-y-3">
-        {/* Primary CTA */}
-        <motion.button
-          initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, type: 'spring' }}
-          whileTap={{ scale: 0.97 }}
-          onClick={onLogin}
-          className="relative w-full py-4 rounded-2xl overflow-hidden flex items-center justify-center gap-2.5 font-black text-base"
-          style={{
-            background: 'linear-gradient(135deg, #00FF87 0%, #00BB78 50%, #059669 100%)',
-            color: '#001A0E',
-            boxShadow: '0 12px 40px rgba(0,255,135,0.35), 0 4px 12px rgba(0,0,0,0.2)',
-          }}>
-          {/* Shimmer */}
-          <motion.div animate={{ x: ['-100%', '200%'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'linear', repeatDelay: 1 }}
-            className="absolute inset-0 skew-x-12 pointer-events-none"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)' }} />
-          <span className="relative z-10 text-lg">📱</span>
-          <span className="relative z-10">Login with Mobile OTP</span>
-          <ArrowRight size={18} className="relative z-10" />
-        </motion.button>
-
-        {/* Secondary CTA */}
-        <motion.button
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={onBrowse}
-          className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm"
-          style={{
-            background: 'rgba(255,255,255,0.07)',
-            border: '1px solid rgba(255,255,255,0.14)',
-            color: 'rgba(255,255,255,0.8)',
-            backdropFilter: 'blur(10px)',
-          }}>
-          <span>Explore as Guest</span>
-          <ChevronRight size={15} />
-        </motion.button>
-
-        {/* Divider with social proof */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
-          className="flex items-center justify-center gap-2 py-1">
-          <div className="flex -space-x-2">
-            {['🧑‍🌾', '👩‍🌾', '🧑‍🌾'].map((e, i) => (
-              <div key={i} className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
-                style={{ background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.15)' }}>
-                {e}
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-white/40 font-semibold">50,000+ farmers trust us</p>
         </motion.div>
       </div>
+
+      {/* ── BOTTOM STICKY CTA ── */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 z-50 bg-gradient-to-t from-black via-black/90 to-transparent pt-12">
+        <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5, type: "spring", damping: 20 }} className="space-y-4">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onLogin}
+            className="relative w-full py-4 rounded-2xl overflow-hidden flex items-center justify-center gap-3 font-black text-lg group"
+            style={{ background: 'linear-gradient(135deg, #00FF87, #00d4ff)', boxShadow: '0 0 30px rgba(0,255,135,0.3)' }}
+          >
+            <motion.div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            <span className="text-black relative z-10 flex items-center gap-2">
+              <Zap size={20} /> Access Platform <ArrowRight size={20} />
+            </span>
+          </motion.button>
+          
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onBrowse}
+            className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-colors backdrop-blur-md"
+          >
+            Explore as Guest <ChevronRight size={16} />
+          </motion.button>
+        </motion.div>
+      </div>
+
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .mask-edges { -webkit-mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent); mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent); }
+      `}</style>
     </div>
   );
 };

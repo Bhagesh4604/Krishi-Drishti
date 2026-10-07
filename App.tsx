@@ -446,6 +446,9 @@ const AppContent: React.FC = () => {
     if (screen === 'field-monitor' && data?.plotId) {
       setScreenData({ plotId: data.plotId });
     }
+    if (screen === 'chat' && data?.initialMessage) {
+      setScreenData({ initialMessage: data.initialMessage });
+    }
     setCurrentScreen(screen);
     setFabMenuOpen(false);
   };
@@ -711,7 +714,7 @@ const AppContent: React.FC = () => {
       case 'admin':
         return <AgritechDashboardNew t={t} />;
       case 'chat':
-        return <ChatScreen navigateTo={navigateTo} language={language} t={t} onOpenVoiceAssistant={() => setIsVoiceActive(true)} />;
+        return <ChatScreen navigateTo={navigateTo} language={language} t={t} onOpenVoiceAssistant={() => setIsVoiceActive(true)} initialMessage={screenData?.initialMessage} />;
       case 'vision':
         return <VisionScreen navigateTo={navigateTo} t={t} />;
       case 'vision-result':

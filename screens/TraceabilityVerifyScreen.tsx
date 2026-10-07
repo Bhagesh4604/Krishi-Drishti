@@ -173,7 +173,7 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
             <Pair label="HARVEST DATE" value={new Date(token.harvest_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} />
             <Pair label="TOTAL YIELD" value={`${token.yield_kg.toLocaleString()} kg`} accent />
             <Pair label="AREA HARVESTED" value={`${token.area_harvested_acres} acres`} />
-            <Pair label="YIELD DENSITY" value={`${(token.yield_kg / Math.max(token.area_harvested_acres, 0.01)).toFixed(0)} kg / acre`} />
+            <Pair label="YIELD DENSITY" value={`${((token.yield_kg || 0) / Math.max(token.area_harvested_acres || 0.01, 0.01)).toFixed(0)} kg / acre`} />
             <Pair label="FARM REGION" value={`${token.farmer_district} District`} />
             <Pair label="FARMER" value={`${token.farmer_initials}. — identity protected`} />
           </div>
@@ -185,17 +185,17 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
           <div className="border-l-2 border-amber-400 pl-4 py-2 mb-4">
             <Lbl s="TOTAL CARBON FOOTPRINT" />
             <p className={`${mono()} text-amber-400 text-3xl font-bold leading-none`}>
-              {token.carbon_footprint_kg_co2e.toFixed(3)}
+              {(token.carbon_footprint_kg_co2e || 0).toFixed(3)}
               <span className="text-zinc-600 text-sm font-normal ml-2">kg CO₂e</span>
             </p>
             <p className={`${mono()} text-zinc-700 text-[10px] mt-1`}>
-              = {(token.carbon_footprint_kg_co2e / Math.max(token.yield_kg, 1)).toFixed(4)} kg CO₂e per kg yield
+              = {((token.carbon_footprint_kg_co2e || 0) / Math.max(token.yield_kg || 1, 1)).toFixed(4)} kg CO₂e per kg yield
             </p>
           </div>
 
           <Pair label="METHODOLOGY" value={token.farming_methodology || 'Conventional'} />
-          {token.ndvi_at_harvest != null && <Pair label="NDVI AT HARVEST" value={token.ndvi_at_harvest.toFixed(4)} accent />}
-          {token.carbon_credits_linked > 0 && <Pair label="CARBON CREDITS LINKED" value={`${token.carbon_credits_linked.toFixed(3)} ACT`} accent />}
+          {token.ndvi_at_harvest != null && <Pair label="NDVI AT HARVEST" value={(token.ndvi_at_harvest || 0).toFixed(4)} accent />}
+          {token.carbon_credits_linked > 0 && <Pair label="CARBON CREDITS LINKED" value={`${(token.carbon_credits_linked || 0).toFixed(3)} ACT`} accent />}
 
           {token.farming_methodology && (
             <div className="mt-3 border-l border-zinc-800 pl-3">
@@ -276,7 +276,7 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
 
                   <div className="flex items-center gap-1.5 mt-2 text-zinc-400">
                     <MapPin size={10} />
-                    <span className={`${mono()} text-[9px]`}>{e.lat?.toFixed(4)}, {e.lng?.toFixed(4)}</span>
+                    <span className={`${mono()} text-[9px]`}>{(e.lat || 0).toFixed(4)}, {(e.lng || 0).toFixed(4)}</span>
                   </div>
                   
                   <div className="mt-2 pt-2 border-t border-zinc-800/50">

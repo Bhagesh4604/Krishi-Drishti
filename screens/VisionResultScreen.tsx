@@ -1,16 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, Language, VisionMode } from '../types';
-import {
-  ArrowLeft,
-  Leaf,
-  ShieldCheck,
-  Droplets,
-  Share2,
-  ChevronDown,
-  ThermometerSun,
-  Calendar
-} from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
+import { ArrowLeft, Leaf, Droplets, ThermometerSun, AlertCircle, CheckCircle2, ChevronRight, Download, Share2 } from 'lucide-react';
 import { aiService } from '../src/services/api';
 
 interface VisionResultScreenProps {
@@ -25,7 +15,6 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<any>(null);
 
-  // Helper to convert DataURI to Blob
   const dataURItoBlob = (dataURI: string) => {
     const byteString = atob(dataURI.split(',')[1]);
     const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
@@ -40,145 +29,190 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
   useEffect(() => {
     const analyzeImage = async () => {
       if (!image) return;
-
       try {
         setLoading(true);
-        // Convert to file
         const blob = dataURItoBlob(image);
         const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
-
-        // Call API
         const data = await aiService.diagnose(file, mode);
+        
         setResult(data);
       } catch (e) {
-        console.error("Analysis Failed", e);
-        // Fallback or Error state
+        // Mock fallback on hard failure
         setResult({
-          diagnosis: "Error Analyzing",
+          diagnosis: 'Connection Failed',
           confidence: 0,
-          summary: "Could not connect to AI server.",
-          healthScore: 0,
+          summary: 'Could not connect to the Krishi-Drishti AI backend. Please ensure the server is running.',
+          health_score: 0,
           remedies: []
         });
       } finally {
         setLoading(false);
       }
     };
-
     analyzeImage();
   }, [image, mode]);
 
+  const isHealthy = result?.diagnosis?.toLowerCase().includes('healthy') || (result?.health_score && result?.health_score >= 80);
+
+  const handleDownload = () => {
+    if (!result) return;
+    const textContent = `Krishi-Drishti Analysis Report\nDate: ${new Date().toLocaleDateString()}\n\nDiagnosis: ${result.diagnosis}\nConfidence: ${result.confidence}%\nHealth Score: ${result.health_score}%\n\nSummary:\n${result.summary}\n\nRecommended Protocol:\n${result.remedies?.map((r: any, i: number) => `${i + 1}. ${r.title} (${r.type})\n${r.desc}`).join('\n\n') || 'None'}`;
+    const blob = new Blob([textContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `krishi-report-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    if (!result) return;
+    const text = `Krishi-Drishti detected ${result.diagnosis} with ${result.health_score}% health.`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Crop Analysis Report',
+          text: text,
+        });
+      } catch (err) {
+        console.error('Share failed:', err);
+      }
+    } else {
+      alert("Sharing is not supported on this browser.");
+    }
+  };
+
   return (
-    <div className="h-full bg-white font-sans relative overflow-y-auto">
-
-      {/* 1. Image Header Section */}
-      <div className="relative h-1/2 w-full bg-black rounded-b-[3rem] overflow-hidden shadow-2xl z-0">
-        {image && <img src={image} className="w-full h-full object-cover opacity-90" alt="Scanned" />}
-
-        {/* Header Controls */}
-        <div className="absolute top-0 left-0 w-full p-6 pt-12 flex justify-between items-center z-10">
+    <div className="min-h-screen bg-gray-50 font-sans flex flex-col text-gray-900 pb-24">
+      
+      {/* ── HEADER ── */}
+      <header className="bg-white px-4 pt-12 pb-4 shadow-sm flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigateTo('vision')}
-            className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
           >
             <ArrowLeft size={20} />
           </button>
-          <div className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white/80 text-[10px] font-bold uppercase tracking-widest">
-            AI Analysis
-          </div>
+          <h1 className="text-lg font-semibold text-gray-900">Analysis Report</h1>
         </div>
-
-        {/* Scanning Overlay (during loading) */}
-        {loading && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-20">
-            <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-green-400 font-bold tracking-widest text-xs uppercase animate-pulse">Analyzing Plant structure...</p>
-          </div>
-        )}
-      </div>
-
-      {/* 2. Content Card (Overlapping) */}
-      {!loading && (
-        <div className="relative z-10 -mt-20 px-6 pb-12 w-full animate-in slide-in-from-bottom duration-700">
-
-          {/* Result Summary Card */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 mb-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Issue Detected</span>
-                </div>
-                <h1 className="text-3xl font-black text-gray-800 leading-tight mb-1">{result?.diagnosis}</h1>
-                <p className="text-sm font-medium text-gray-400 max-w-[200px]">{result?.summary}</p>
-              </div>
-              <div className="relative w-16 h-16">
-                {/* Circular Progress (CSS only for demo) */}
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="32" cy="32" r="28" stroke="#f3f4f6" strokeWidth="4" fill="transparent" />
-                  <circle cx="32" cy="32" r="28" stroke="#ef4444" strokeWidth="4" fill="transparent" strokeDasharray="175.9" strokeDashoffset={175.9 * (1 - (result?.confidence || 0) / 100)} className="transition-all duration-1000 ease-out" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-black text-gray-800">{result?.confidence}%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <div className="bg-green-50 rounded-xl p-3 flex flex-col items-center gap-1">
-                <ShieldCheck size={18} className="text-green-600" />
-                <span className="text-[10px] font-bold text-gray-500 uppercase">Health</span>
-                <span className="text-sm font-black text-green-700">{result?.healthScore}%</span>
-              </div>
-              <div className="bg-blue-50 rounded-xl p-3 flex flex-col items-center gap-1">
-                <Droplets size={18} className="text-blue-500" />
-                <span className="text-[10px] font-bold text-gray-500 uppercase">Water</span>
-                <span className="text-sm font-black text-blue-700">Normal</span>
-              </div>
-              <div className="bg-orange-50 rounded-xl p-3 flex flex-col items-center gap-1">
-                <ThermometerSun size={18} className="text-orange-500" />
-                <span className="text-[10px] font-bold text-gray-500 uppercase">Temp</span>
-                <span className="text-sm font-black text-orange-700">High</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Instant Solutions Header */}
-          <div className="flex justify-between items-center mb-4 px-2">
-            <h2 className="text-lg font-black text-gray-800">Instant Solutions</h2>
-            <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">2 Steps</span>
-          </div>
-
-          {/* Remedies List */}
-          <div className="space-y-4">
-            {result?.remedies.map((remedy: any, idx: number) => (
-              <div key={idx} className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-gray-100 flex gap-4 active:scale-98 transition-transform">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${remedy.type === 'organic' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
-                  <Leaf size={24} fill="currentColor" className="opacity-80" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-bold text-gray-800 mb-1">{remedy.title}</h3>
-                  <p className="text-xs text-gray-500 font-medium leading-relaxed">{remedy.desc}</p>
-                </div>
-                <div className="flex items-center justify-center">
-                  <div className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center">
-                    <ChevronDown size={14} className="text-gray-400" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Complete Action Button */}
-          <button
-            onClick={() => navigateTo('home')}
-            className="w-full mt-8 bg-gray-900 text-white rounded-2xl py-5 font-bold text-sm shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2"
-          >
-            <Leaf size={16} /> Save to My Fields
+        <div className="flex items-center gap-2">
+          <button onClick={handleDownload} className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors">
+            <Download size={18} />
           </button>
+          <button onClick={handleShare} className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors">
+            <Share2 size={18} />
+          </button>
+        </div>
+      </header>
 
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="w-16 h-16 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin mb-6" />
+          <h2 className="text-xl font-semibold text-gray-900">Analyzing Sample</h2>
+          <p className="text-gray-500 mt-2 text-center max-w-xs">Our agronomy model is currently processing the image data to identify potential issues.</p>
+        </div>
+      ) : result && (
+        <div className="flex-1">
+          
+          {/* ── SCANNED IMAGE THUMBNAIL ── */}
+          <div className="p-4">
+            <div className="w-full h-48 bg-gray-200 rounded-2xl overflow-hidden shadow-sm relative">
+              {image && <img src={image} className="w-full h-full object-cover" alt="Scanned crop" />}
+              <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-md text-xs font-semibold shadow-sm">
+                Captured {new Date().toLocaleDateString()}
+              </div>
+            </div>
+          </div>
+
+          {/* ── DIAGNOSIS CARD ── */}
+          <div className="px-4 mb-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <div className="flex justify-between items-start mb-3">
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold ${isHealthy ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  {isHealthy ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                  {isHealthy ? 'Condition: Optimal' : 'Action Recommended'}
+                </div>
+                <div className="text-right">
+                  <span className="block text-2xl font-bold text-gray-900 leading-none">{result.confidence || 0}%</span>
+                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Confidence</span>
+                </div>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 leading-tight">
+                {result.diagnosis || 'Unknown Condition'}
+              </h2>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {result.summary || 'No detailed summary provided.'}
+              </p>
+            </div>
+          </div>
+
+          {/* ── METRICS GRID ── */}
+          <div className="px-4 mb-8 grid grid-cols-3 gap-3">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-2">
+                <Leaf size={20} />
+              </div>
+              <span className="text-xl font-bold text-gray-900">{result.health_score || 0}%</span>
+              <span className="text-xs font-medium text-gray-500 mt-0.5">Crop Health</span>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+                <Droplets size={20} />
+              </div>
+              <span className="text-lg font-bold text-gray-900">Fair</span>
+              <span className="text-xs font-medium text-gray-500 mt-0.5">Hydration</span>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-2">
+                <ThermometerSun size={20} />
+              </div>
+              <span className="text-lg font-bold text-gray-900">Optimal</span>
+              <span className="text-xs font-medium text-gray-500 mt-0.5">Climate</span>
+            </div>
+          </div>
+
+          {/* ── RECOMMENDED ACTIONS ── */}
+          {result.remedies && result.remedies.length > 0 && (
+            <div className="px-4">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Recommended Protocol</h3>
+              <div className="space-y-3">
+                {result.remedies.map((remedy: any, idx: number) => (
+                  <div key={idx} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-4">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold flex items-center justify-center shrink-0 mt-0.5 text-sm">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-gray-900 text-base">{remedy.title || remedy.name}</h4>
+                        <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md ${remedy.type === 'organic' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`}>
+                          {remedy.type || 'Standard'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {remedy.desc || remedy.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      {/* ── BOTTOM ACTION BAR ── */}
+      {!loading && result && (
+        <div className="sticky bottom-0 w-full p-4 bg-white border-t border-gray-200 z-30">
+          <button onClick={() => navigateTo('chat', { initialMessage: `I just scanned my crop and it was diagnosed with ${result.diagnosis} (Health: ${result.health_score}%). Can you explain exactly what causes this and what my immediate next steps should be?` })} className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors">
+            Consult Agronomist AI
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
+
     </div>
   );
 };

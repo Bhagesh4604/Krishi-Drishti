@@ -34,6 +34,7 @@ interface ChatScreenProps {
   language: Language;
   t: any;
   onOpenVoiceAssistant: () => void;
+  initialMessage?: string;
 }
 
 const LANG_MAP: Record<string, string> = {
@@ -57,7 +58,7 @@ const SUGGESTIONS = [
   { icon: Landmark, text: "PM-Kisan status check", color: 'from-purple-400 to-pink-500' },
 ];
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t, onOpenVoiceAssistant }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t, onOpenVoiceAssistant, initialMessage }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'model', text: `${t.namaste || 'Namaste!'} 🙏 I am your Agri-Tutor AI. I can help with crop lifecycle techniques, latest market prices, and Govt. Schemes. How can I assist you today?` }
   ]);
@@ -110,6 +111,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t, onOpen
       }
     };
   }, [language]);
+
+  const initialMessageSent = useRef(false);
+
+  useEffect(() => {
+    if (initialMessage && !initialMessageSent.current) {
+      initialMessageSent.current = true;
+      handleSend(initialMessage);
+    }
+  }, [initialMessage]);
 
   const toggleListening = () => {
     if (isListening) {
@@ -430,13 +440,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t, onOpen
                 </motion.div>
               ) : (
                 // ============ STANDARD MESSAGE ============
-                <div className={`flex items-end gap-2 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-start gap-2 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                   {/* Avatar */}
                   {msg.role === 'model' && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white bg-gradient-to-br ${theme.primary} shadow-md mb-1`}
+                      className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white bg-gradient-to-br ${theme.primary} shadow-md mt-1`}
                     >
                       {isDistressed ? <HeartHandshake size={12} /> :
                         isThinkingMode ? <BrainCircuit size={12} /> :
@@ -447,8 +457,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t, onOpen
                   <motion.div
                     whileHover={{ scale: 1.01 }}
                     className={`relative px-4 py-3 text-sm leading-relaxed shadow-md transition-all ${msg.role === 'user'
-                      ? `bg-gradient-to-br ${theme.primary} text-white rounded-3xl rounded-br-md`
-                      : `bg-white text-gray-900 border rounded-3xl rounded-bl-md font-medium ${isDistressed ? 'border-blue-100' :
+                      ? `bg-gradient-to-br ${theme.primary} text-white rounded-3xl rounded-tr-md`
+                      : `bg-white text-gray-900 border rounded-3xl rounded-tl-md font-medium ${isDistressed ? 'border-blue-100' :
                         isThinkingMode ? 'border-indigo-100 ring-1 ring-indigo-50' :
                           'border-gray-100'
                       }`
@@ -643,7 +653,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigateTo, language, t, onOpen
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         transition={{ type: 'spring', damping: 20 }}
-        className={`relative z-20 p-3 border-t backdrop-blur-xl ${isDistressed ? 'bg-blue-50/80 border-blue-100' : 'bg-white/80 border-gray-100'
+        className={`relative z-20 p-3 pb-8 sm:pb-12 border-t backdrop-blur-xl ${isDistressed ? 'bg-blue-50/80 border-blue-100' : 'bg-white/80 border-gray-100'
           }`}
       >
         {/* Listening Overlay */}

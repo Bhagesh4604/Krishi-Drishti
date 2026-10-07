@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Screen, VisionMode } from '../types';
-import { ArrowLeft, Zap, Camera as CameraIcon, Image as ImageIcon, ScanLine, X } from 'lucide-react';
+import { ArrowLeft, Zap, Image as ImageIcon, ScanLine, X, Leaf, Sparkles, Crosshair, Camera } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface VisionScreenProps {
   navigateTo: (screen: Screen, data?: any) => void;
@@ -12,7 +13,8 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [imageDetails, setImageDetails] = useState<string | null>(null); // To show preview if file uploaded
+  const [flash, setFlash] = useState(false);
+  const [isScanning, setIsScanning] = useState(true);
 
   // Camera Setup
   useEffect(() => {
@@ -40,16 +42,19 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
 
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
+      // Create flash effect
+      setIsScanning(false);
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      // Capture square
       const size = Math.min(video.videoWidth, video.videoHeight);
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, (video.videoWidth - size) / 2, (video.videoHeight - size) / 2, size, size, 0, 0, size, size);
-        navigateTo('vision-result', { image: canvas.toDataURL('image/jpeg', 0.8), mode: 'diagnosis' });
+        setTimeout(() => {
+          navigateTo('vision-result', { image: canvas.toDataURL('image/jpeg', 0.8), mode: 'diagnosis' });
+        }, 500);
       }
     }
   };
@@ -68,121 +73,148 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
   };
 
   return (
-    <div className="relative h-full bg-black flex flex-col items-center justify-between text-white overflow-hidden font-sans">
+    <div className="relative h-[100dvh] bg-black flex flex-col items-center justify-between text-white overflow-hidden font-sans">
       <canvas ref={canvasRef} className="hidden" />
       <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileUpload} />
 
       {/* Video Feed Layer */}
       <div className="absolute inset-0 z-0">
         {hasPermission === false ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center bg-gray-900">
-            <span className="text-gray-400">Camera permission denied.</span>
-            <button onClick={() => fileInputRef.current?.click()} className="text-green-400 font-bold underline">Upload Image</button>
+          <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center bg-[#020B06]">
+            <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center border border-white/10 mb-4">
+              <Camera size={32} className="text-white/40" />
+            </div>
+            <span className="text-gray-400 font-medium">Camera access is restricted.</span>
+            <button onClick={() => fileInputRef.current?.click()} className="px-6 py-3 bg-[#00BB78] rounded-2xl text-white font-bold shadow-lg shadow-[#00BB78]/20">
+              Upload from Gallery
+            </button>
           </div>
         ) : (
-          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-105" />
         )}
       </div>
 
-      {/* Deep Green Gradient Overlay (Top) */}
-      <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-green-950/90 via-green-900/60 to-transparent z-10 pointer-events-none" />
-
-      {/* Custom Scan Overlay (SVG Mask for "Medical Scanner" Look) */}
-      <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-        {/* The dark overlay with a "Soft Rect" hole */}
-        <svg className="absolute w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <mask id="scan-mask">
-              <rect width="100%" height="100%" fill="white" />
-              <rect x="15%" y="25%" width="70%" height="45%" rx="40" fill="black" />
-            </mask>
-          </defs>
-          <rect width="100%" height="100%" fill="rgba(10, 40, 20, 0.75)" mask="url(#scan-mask)" />
-
-          {/* Animated Scanner Bar */}
-          <rect x="15%" y="25%" width="70%" height="2" fill="#4ade80" className="animate-scan-line opacity-80" />
-        </svg>
-
-        {/* Decorative Corners */}
-        <div className="w-[70%] h-[45%] border border-white/20 rounded-[42px] absolute pointer-events-none">
-          {/* Corners */}
-          <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-3xl" />
-          <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-3xl" />
-          <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-3xl" />
-          <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-3xl" />
-        </div>
-
-        <div className="absolute top-[20%] text-center">
-          <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 inline-flex items-center gap-2">
-            <ScanLine size={14} className="text-green-400" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-green-100">AI Plant Doctor</span>
-          </div>
-        </div>
+      {/* Overlays */}
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        {/* Top Gradient */}
+        <div className="absolute top-0 w-full h-40 bg-gradient-to-b from-black/80 via-black/40 to-transparent" />
+        {/* Bottom Gradient */}
+        <div className="absolute bottom-0 w-full h-64 bg-gradient-to-t from-black via-black/80 to-transparent" />
       </div>
 
-      {/* UI Controls Layer */}
-      <div className="relative z-20 w-full flex flex-col h-full justify-between p-6 pt-12">
+      {/* Header UI */}
+      <div className="relative z-20 w-full flex justify-between items-start p-5 pt-12 pointer-events-auto">
+        <button onClick={() => navigateTo('home')} className="w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all">
+          <ArrowLeft size={22} className="text-white" />
+        </button>
 
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <button onClick={() => navigateTo('home')} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
-            <ArrowLeft size={20} />
-          </button>
-          <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
-            <Zap size={20} strokeWidth={1.5} className={hasPermission ? "text-yellow-400 fill-yellow-400/20" : "text-gray-400"} />
-          </button>
-        </div>
-
-        {/* Bottom Actions */}
-        <div className="flex flex-col items-center gap-8 mb-6">
-          <p className="text-white/80 text-sm font-medium text-center max-w-[200px] leading-relaxed">
-            Scan leaves, fruits, or stems to detect diseases instantly.
-          </p>
-
-          <div className="flex items-center justify-center gap-8 w-full px-4">
-            {/* Gallery Button */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex flex-col items-center gap-2 group"
-            >
-              <div className="w-12 h-12 rounded-full border border-white/30 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                <ImageIcon size={20} />
-              </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">Upload</span>
-            </button>
-
-            {/* Shutter Button */}
-            <button
-              onClick={handleCapture}
-              className="w-20 h-20 rounded-full border-4 border-white/30 p-1 flex items-center justify-center active:scale-95 transition-transform"
-            >
-              <div className="w-full h-full bg-white rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.4)]">
-                <div className="w-14 h-14 bg-green-500 rounded-full border-4 border-white"></div>
-              </div>
-            </button>
-
-            {/* History / Info Button */}
-            <button className="flex flex-col items-center gap-2 group">
-              <div className="w-12 h-12 rounded-full border border-white/30 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                <X size={20} />
-              </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">Cancel</span>
-            </button>
+        <div className="flex flex-col items-center gap-1.5 mt-1">
+          <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center gap-2">
+            <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}>
+              <div className="w-2 h-2 rounded-full bg-[#00FF87] shadow-[0_0_10px_#00FF87]" />
+            </motion.div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#00FF87]">AI Scanner</span>
           </div>
         </div>
+
+        <button onClick={() => setFlash(!flash)} className={`w-12 h-12 rounded-2xl backdrop-blur-xl border flex items-center justify-center active:scale-90 transition-all ${flash ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-400' : 'bg-black/40 border-white/10 text-white'}`}>
+          <Zap size={20} strokeWidth={2} className={flash ? 'fill-yellow-400' : ''} />
+        </button>
       </div>
 
-      <style>{`
-        @keyframes scan-line {
-          0% { y: 25%; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { y: 70%; opacity: 0; }
-        }
-        .animate-scan-line {
-          animation: scan-line 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-      `}</style>
+      {/* Center Targeting Reticle */}
+      <div className="relative z-10 flex-1 w-full flex items-center justify-center pointer-events-none">
+        {isScanning && (
+          <div className="relative w-[280px] h-[280px]">
+            {/* Corner brackets */}
+            <div className="absolute -top-1 -left-1 w-12 h-12 border-t-4 border-l-4 border-[#00FF87] rounded-tl-3xl opacity-80" />
+            <div className="absolute -top-1 -right-1 w-12 h-12 border-t-4 border-r-4 border-[#00FF87] rounded-tr-3xl opacity-80" />
+            <div className="absolute -bottom-1 -left-1 w-12 h-12 border-b-4 border-l-4 border-[#00FF87] rounded-bl-3xl opacity-80" />
+            <div className="absolute -bottom-1 -right-1 w-12 h-12 border-b-4 border-r-4 border-[#00FF87] rounded-br-3xl opacity-80" />
+            
+            {/* Scanning Laser */}
+            <motion.div 
+              animate={{ y: [0, 276, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+              className="absolute left-0 right-0 h-1 bg-[#00FF87] shadow-[0_0_20px_#00FF87]"
+            />
+            
+            {/* Center Crosshair */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-30">
+              <Crosshair size={40} className="text-[#00FF87]" strokeWidth={1} />
+            </div>
+            
+            {/* Scanning Box pulse */}
+            <motion.div 
+              animate={{ opacity: [0, 0.1, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="absolute inset-0 bg-[#00FF87]"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Helper Text */}
+      <div className="relative z-20 text-center mb-8 pointer-events-none px-6">
+        <h2 className="text-xl font-black text-white mb-2 tracking-tight">Scan Crop Disease</h2>
+        <p className="text-sm font-medium text-white/60">Position the affected leaf or fruit<br/>within the frame to analyze.</p>
+      </div>
+
+      {/* Bottom Controls Panel */}
+      <div className="relative z-20 w-full px-8 pb-12 pt-6 flex items-center justify-between">
+        
+        {/* Upload Button */}
+        <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 group active:scale-90 transition-transform">
+          <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white/80 group-hover:bg-white/20">
+            <ImageIcon size={24} strokeWidth={1.5} />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Upload</span>
+        </button>
+
+        {/* Shutter Button with Radar Ripple */}
+        <div className="relative flex justify-center items-center">
+          <motion.div 
+            animate={{ scale: [1, 1.5], opacity: [0.5, 0] }} 
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+            className="absolute w-20 h-20 rounded-full border border-[#00FF87]"
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.8], opacity: [0.3, 0] }} 
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeOut', delay: 0.4 }}
+            className="absolute w-20 h-20 rounded-full border border-[#00BB78]"
+          />
+          <button 
+            onClick={handleCapture}
+            className="relative w-24 h-24 rounded-full border-4 border-white/20 p-1.5 flex items-center justify-center active:scale-90 transition-all bg-black/20 backdrop-blur-xl"
+          >
+            <div className="w-full h-full rounded-full bg-gradient-to-br from-[#00FF87] to-[#00BB78] flex items-center justify-center shadow-[0_0_40px_rgba(0,255,135,0.4)]">
+              <ScanLine size={32} className="text-[#001A11]" />
+            </div>
+          </button>
+        </div>
+
+        {/* Cancel Button */}
+        <button onClick={() => navigateTo('home')} className="flex flex-col items-center gap-2 group active:scale-90 transition-transform">
+          <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white/80 group-hover:bg-[#FF3B30]/20 group-hover:text-[#FF3B30] group-hover:border-[#FF3B30]/50 transition-all">
+            <X size={24} strokeWidth={1.5} />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Cancel</span>
+        </button>
+
+      </div>
+      
+      {/* Screen Flash Overlay on Capture */}
+      <AnimatePresence>
+        {!isScanning && (
+          <motion.div 
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 bg-white z-50 pointer-events-none"
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

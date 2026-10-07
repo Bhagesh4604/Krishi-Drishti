@@ -58,15 +58,12 @@ def _get_embeddings(texts: list[str]) -> list[list[float]]:
 
     try:
         from google import genai
-        from google.genai import types
         client = genai.Client(api_key=api_key)
         embeddings = []
-        # Gemini embed_content accepts one text at a time
         for text in texts:
             result = client.models.embed_content(
-                model="models/embedding-001",
-                contents=text,
-                config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
+                model="text-embedding-004",
+                contents=text
             )
             embeddings.append(result.embeddings[0].values)
         return embeddings

@@ -3,6 +3,7 @@ import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { X, Mic, MicOff, Loader2, Globe, Sparkles, Keyboard } from 'lucide-react';
 import { languages } from '../translations';
 import { Language } from '../types';
+import MorphOrb from '../src/components/MorphOrb';
 
 interface VoiceAssistantModalProps {
     isOpen: boolean;
@@ -22,6 +23,7 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
 
     // Visualization State
     const [volume, setVolume] = useState(0);
+    const orbRef = useRef<any>(null);
 
     const sessionRef = useRef<any>(null);
     const isActiveRef = useRef(false);
@@ -220,11 +222,22 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
     useEffect(() => {
         if (isOpen && !isActive && !isConnecting) {
             startSession();
+            // Start the MorphOrb animation
+            setTimeout(() => {
+                orbRef.current?.start("Listening to you...");
+            }, 500);
         } else if (!isOpen) {
             stopSession();
         }
         return () => stopSession();
     }, [isOpen]);
+
+    // Send volume updates to MorphOrb
+    useEffect(() => {
+        if (isActive) {
+            orbRef.current?.setVolume?.(volume);
+        }
+    }, [volume, isActive]);
 
     // Restart session if language changes while active
     useEffect(() => {
@@ -240,7 +253,7 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 text-white animate-in fade-in duration-300">
+        <div className="absolute inset-0 z-[100] flex flex-col bg-black/95 text-white animate-in fade-in duration-300 rounded-[2.5rem] overflow-hidden">
 
             {/* Header */}
             <div className="flex justify-between items-center p-6">
@@ -287,42 +300,23 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
             {/* Main Visualizer Area */}
             <div className="flex-1 flex flex-col items-center justify-center relative">
 
-                {/* Perplexity-style Orb Animation */}
-                <div className="relative w-64 h-64 flex items-center justify-center">
-
-                    {/* Animated Container for Circular Motion */}
-                    <div
-                        className="relative flex items-center justify-center transition-transform duration-100 ease-linear"
-                        style={{
-                            transform: `scale(${orbScale}) rotate(${Date.now() / 1000 * 20}deg)`,
+                {/* Morph Orb Component */}
+                <div className="w-full h-80 relative flex items-center justify-center pointer-events-none scale-110">
+                    <MorphOrb 
+                        ref={orbRef}
+                        onSubmit={async (text) => {
+                            if (sessionRef.current) {
+                                sessionRef.current.then((session: any) => {
+                                    session.send({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }] } });
+                                });
+                            }
+                            // Return a promise that never resolves, so MorphOrb stays in the "think" (orb) phase forever!
+                            return new Promise<string>(() => {});
                         }}
-                    >
-                        {/* Core Orb */}
-                        <div className={`w-32 h-32 rounded-full bg-teal-500 blur-2xl opacity-40 transition-all duration-75`} />
-                        <div className={`absolute w-24 h-24 rounded-full bg-teal-400 blur-xl opacity-60 transition-all duration-75`} />
-                        <div className="absolute w-20 h-20 rounded-full bg-white blur-lg opacity-30" />
-                    </div>
-
-                    {/* Orbiting Particles (Simulated) */}
-                    {isActive && (
-                        <div className="absolute inset-0 animate-[spin_10s_linear_infinite]" style={{ animationDuration: `${Math.max(0.5, 5 - volume * 4)}s` }}>
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-teal-200 rounded-full blur-[1px]"></div>
-                            <div className="absolute bottom-10 right-10 w-1.5 h-1.5 bg-teal-300 rounded-full blur-[1px]"></div>
-                        </div>
-                    )}
-
-
-                    {/* Icon Center */}
-                    <div className="absolute z-10">
-                        {isConnecting ? (
-                            <Loader2 className="animate-spin text-white" size={32} />
-                        ) : isActive ? (
-                            <Mic className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" size={32} />
-                        ) : (
-                            <MicOff className="text-gray-400" size={32} />
-                        )}
-                    </div>
+                    />
                 </div>
+
+
 
                 {/* Status Text */}
                 <p className="mt-8 text-sm font-bold text-teal-200 uppercase tracking-[0.2em] animate-pulse">

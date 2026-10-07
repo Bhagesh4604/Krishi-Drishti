@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import axios from 'axios';
 import AgritechDashboard from './AgritechDashboard';
 import {
@@ -7,8 +7,13 @@ import {
   ShieldCheck, LogOut, RefreshCw, Search, Download,
   ChevronUp, ChevronDown, AlertTriangle, CheckCircle2,
   Clock, Sprout, MapPin, TrendingUp, Database, Wifi, WifiOff,
-  Eye, Filter, X, ChevronRight, BarChart3, Globe
+  Eye, Filter, X, ChevronRight, BarChart3, Globe, Server, Bot
 } from 'lucide-react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  BarChart, Bar, Cell,
+} from 'recharts';
 
 const TOKEN = 'kd_admin_KrishiDrishti2026';
 const API = (path: string) => `/api/admin/${path}?token=${TOKEN}`;
@@ -57,82 +62,145 @@ function useApi<T>(url: string, deps: any[] = []) {
   return { data, loading, error, refetch: fetch };
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
-const KpiCard = ({ icon: Icon, label, value, sub, color, trend }: any) => (
-  <motion.div
-    whileHover={{ y: -2, borderColor: 'var(--border-light)' }}
-    transition={{ type: 'spring', stiffness: 400 }}
-    style={{
-      background: 'var(--bg-card)', border: '1px solid var(--border)',
-      borderRadius: 16, padding: '24px', display: 'flex',
-      flexDirection: 'column', gap: 12, cursor: 'default'
-    }}
-  >
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div style={{ padding: 10, background: color + '20', borderRadius: 10 }}>
-        <Icon size={20} color={color} />
-      </div>
-      {trend !== undefined && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: trend >= 0 ? 'var(--green)' : 'var(--red)' }}>
-          {trend >= 0 ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          {Math.abs(trend)}%
-        </div>
-      )}
-    </div>
-    <div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
-    </div>
-  </motion.div>
-);
+// ─── Visual Components (3D & Animations) ─────────────────────────────────────
+const glassCard = {
+  background: 'rgba(2,15,8,0.7)',
+  border: '1px solid rgba(0,255,135,0.1)',
+  backdropFilter: 'blur(20px)',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+};
 
-const StatusBadge = ({ status }: { status: string }) => {
-  const map: Record<string, {color: string; bg: string}> = {
-    'Verified': { color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
-    'Issued': { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-    'Evidence_Pending': { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-    'Draft': { color: '#888', bg: 'rgba(136,136,136,0.1)' },
-    'Rejected': { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+function TiltCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-0.5, 0.5], [8, -8]);
+  const rotateY = useTransform(x, [-0.5, 0.5], [-8, 8]);
+  const sX = useSpring(rotateX, { stiffness: 300, damping: 30 });
+  const sY = useSpring(rotateY, { stiffness: 300, damping: 30 });
+
+  const onMove = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    x.set((e.clientX - r.left) / r.width - 0.5);
+    y.set((e.clientY - r.top) / r.height - 0.5);
   };
-  const s = map[status] || { color: '#888', bg: 'rgba(136,136,136,0.1)' };
+
   return (
-    <span style={{
-      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-      color: s.color, background: s.bg, letterSpacing: '0.05em', whiteSpace: 'nowrap'
-    }}>
-      {status.replace('_', ' ')}
-    </span>
+    <motion.div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseLeave={() => { x.set(0); y.set(0); }}
+      style={{ rotateX: sX, rotateY: sY, transformStyle: "preserve-3d" }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function AnimatedCounter({ end, suffix = "" }: { end: number; suffix?: string }) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let cur = 0;
+    const step = end / 60;
+    const t = setInterval(() => {
+      cur += step;
+      if (cur >= end) { setCount(end); clearInterval(t); }
+      else setCount(Math.floor(cur));
+    }, 16);
+    return () => clearInterval(t);
+  }, [end]);
+  return <span>{count.toLocaleString()}{suffix}</span>;
+}
+
+function ParticleField() {
+  const pts = useMemo(() => Array.from({ length: 40 }, (_, i) => ({
+    id: i, x: Math.random() * 100, y: Math.random() * 100,
+    s: Math.random() * 2 + 1, d: Math.random() * 18 + 8, delay: Math.random() * -18,
+  })), []);
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
+      {pts.map(p => (
+        <motion.div
+          key={p.id}
+          style={{ position: 'absolute', left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s, borderRadius: '50%', background: 'rgba(0,255,135,0.4)' }}
+          animate={{ y: [0, -100, 0], opacity: [0, 0.8, 0] }}
+          transition={{ duration: p.d, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function OrbitGlobe() {
+  const dots = useMemo(() => Array.from({ length: 8 }, (_, i) => ({
+    angle: (i / 8) * 360,
+    color: ["#00ff87", "#00d4ff", "#c77dff", "#ffd93d", "#ff6b6b", "#ff9f43", "#00ff87", "#00d4ff"][i],
+  })), []);
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 140, height: 140 }}>
+      <motion.div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1px solid rgba(0,255,135,0.2)' }} animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} />
+      <motion.div style={{ position: 'absolute', width: 100, height: 100, borderRadius: '50%', border: '1px solid rgba(0,212,255,0.3)' }} animate={{ rotate: -360 }} transition={{ duration: 14, repeat: Infinity, ease: "linear" }} />
+      <div style={{
+        position: 'relative', width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: "radial-gradient(ellipse at 35% 35%, rgba(0,255,135,0.5) 0%, rgba(0,40,20,0.9) 70%)",
+        boxShadow: "0 0 30px rgba(0,255,135,0.4), inset 0 0 20px rgba(0,0,0,0.5)",
+        border: "1px solid rgba(0,255,135,0.3)", overflow: 'hidden'
+      }}>
+        <Globe size={24} color="rgba(0,255,135,0.8)" />
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.2 }}>
+          {[30, 50, 70].map(yp => (
+            <div key={yp} style={{ position: 'absolute', width: '100%', borderTop: '1px solid #00ff87', top: `${yp}%` }} />
+          ))}
+        </div>
+      </div>
+      {dots.map((dot, i) => (
+        <motion.div key={i} style={{ position: 'absolute', width: 140, height: 140 }} animate={{ rotate: [dot.angle, dot.angle + 360] }} transition={{ duration: 12 + i * 0.5, repeat: Infinity, ease: "linear" }}>
+          <motion.div style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: dot.color, boxShadow: `0 0 10px ${dot.color}`, top: 0, left: "50%", transform: "translateX(-50%)" }} animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 2, repeat: Infinity, delay: i * 0.25 }} />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+const GlowTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ padding: '12px 16px', borderRadius: 16, background: "rgba(2,11,6,0.95)", border: "1px solid rgba(0,255,135,0.3)", backdropFilter: "blur(20px)", boxShadow: "0 0 20px rgba(0,255,135,0.2)" }}>
+      <p style={{ fontSize: 10, color: '#00ff87', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{label}</p>
+      {payload.map((p: any, i: number) => (
+        <p key={i} style={{ fontSize: 12, fontWeight: 700, color: p.color }}>{p.name}: {p.value.toLocaleString()}</p>
+      ))}
+    </div>
   );
 };
 
 const Skeleton = ({ w = '100%', h = 20 }: any) => (
-  <div style={{ width: w, height: h, background: 'var(--border)', borderRadius: 6, animation: 'pulse 1.5s ease-in-out infinite' }} />
+  <div style={{ width: w, height: h, background: 'rgba(255,255,255,0.05)', borderRadius: 6, animation: 'pulse 1.5s ease-in-out infinite' }} />
 );
 
 // ─── Farmer Detail Modal ──────────────────────────────────────────────────────
 const FarmerModal = ({ farmer, onClose }: { farmer: Farmer; onClose: () => void }) => (
   <AnimatePresence>
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, backdropFilter: 'blur(8px)' }}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
         onClick={e => e.stopPropagation()}
-        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, padding: 36, width: '100%', maxWidth: 520 }}
+        style={{ ...glassCard, borderRadius: 24, padding: 36, width: '100%', maxWidth: 520 }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{farmer.name}</h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Farmer ID #{farmer.id}</p>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: '#fff' }}>{farmer.name}</h2>
+            <p style={{ fontSize: 13, color: '#00ff87', fontWeight: 600 }}>Farmer ID #{farmer.id}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'var(--border)', border: 'none', borderRadius: 8, padding: '8px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 12, padding: 8, cursor: 'pointer', color: '#aaa' }}>
             <X size={18} />
           </button>
         </div>
@@ -149,24 +217,11 @@ const FarmerModal = ({ farmer, onClose }: { farmer: Farmer; onClose: () => void 
             { label: 'Carbon Projects', value: farmer.carbon_projects },
             { label: 'Total Credits', value: (farmer.total_credits || 0).toFixed(2) + ' tCO₂' },
           ].map(({ label, value }) => (
-            <div key={label} style={{ padding: '12px 16px', background: 'var(--bg-main)', borderRadius: 10, border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 4 }}>{label.toUpperCase()}</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{value}</div>
+            <div key={label} style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ fontSize: 10, color: '#aaa', fontWeight: 700, letterSpacing: '0.05em', marginBottom: 4 }}>{label.toUpperCase()}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{value}</div>
             </div>
           ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-          <button
-            style={{ flex: 1, padding: '12px', background: 'var(--green-dim)', border: '1px solid var(--green)', borderRadius: 10, color: 'var(--green)', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
-          >
-            ✓ Verify Farmer
-          </button>
-          <button
-            style={{ flex: 1, padding: '12px', background: 'var(--red-dim)', border: '1px solid var(--red)', borderRadius: 10, color: 'var(--red)', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
-          >
-            ✕ Flag for Review
-          </button>
         </div>
       </motion.div>
     </motion.div>
@@ -176,69 +231,144 @@ const FarmerModal = ({ farmer, onClose }: { farmer: Farmer; onClose: () => void 
 // ─── Views ───────────────────────────────────────────────────────────────────
 const OverviewView = () => {
   const { data: stats, loading } = useApi<Stats>(API('stats'));
-  
+
+  // Dummy fallback data for charts if API doesn't have it
+  const areaData = stats?.monthly_credits?.length ? stats.monthly_credits : [
+    { name: "Jan", users: 400, revenue: 240, health: 80 },
+    { name: "Feb", users: 620, revenue: 398, health: 85 },
+    { name: "Mar", users: 500, revenue: 300, health: 78 },
+    { name: "Apr", users: 780, revenue: 480, health: 92 },
+    { name: "May", users: 1100, revenue: 700, health: 88 },
+  ];
+
+  const radarData = [
+    { metric: "Crop Yield", value: 88 },
+    { metric: "Water Usage", value: 72 },
+    { metric: "Pest Control", value: 90 },
+    { metric: "Soil Health", value: 65 },
+    { metric: "AI Accuracy", value: 95 },
+    { metric: "Market Price", value: 78 },
+  ];
+
   return (
-    <div style={{ padding: '32px 36px' }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800 }}>Platform Overview</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 4 }}>Real-time metrics across all registered farmers and fields</p>
+    <div style={{ padding: '32px 36px', position: 'relative', zIndex: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
+        <div>
+          <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 12 }}>
+            Platform Overview
+            <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} style={{ fontSize: 11, padding: '4px 10px', background: 'rgba(0,255,135,0.1)', border: '1px solid rgba(0,255,135,0.3)', borderRadius: 20, color: '#00ff87', fontWeight: 900, letterSpacing: '0.1em' }}>LIVE</motion.span>
+          </h1>
+          <p style={{ color: '#888', fontSize: 15, marginTop: 6 }}>Real-time metrics across all registered farmers and fields</p>
+        </div>
       </div>
 
       {/* KPI Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-        {loading ? Array(4).fill(0).map((_, i) => <Skeleton key={i} h={140} />) : stats && (<>
-          <KpiCard icon={Users} label="Registered Farmers" value={stats.total_farmers.toLocaleString()} color="var(--blue)" trend={12} />
-          <KpiCard icon={MapPin} label="Total Farm Plots" value={stats.total_plots.toLocaleString()} color="var(--green)" trend={8} />
-          <KpiCard icon={Sprout} label="Carbon Projects" value={stats.total_projects.toLocaleString()} sub={`${stats.pending_queue} pending review`} color="var(--purple)" />
-          <KpiCard icon={Leaf} label="Credits Issued" value={`${stats.total_credits_issued.toFixed(0)} tCO₂`} sub={`₹${stats.total_payout_inr.toLocaleString()} payout`} color="var(--amber)" trend={5} />
-        </>)}
-      </div>
-
-      {/* Bottom Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {/* District Breakdown */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24 }}>
-          <h3 style={{ fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>Farmers by District</h3>
-          {loading ? <Skeleton h={200} /> : stats?.districts.slice(0, 6).map((d, i) => {
-            const max = stats.districts[0]?.count || 1;
-            return (
-              <div key={d.district} style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{d.district}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{d.count}</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { label: 'Registered Farmers', value: stats?.total_farmers || 0, icon: Users, color: '#00ff87' },
+          { label: 'Total Farm Plots', value: stats?.total_plots || 0, icon: MapPin, color: '#00d4ff' },
+          { label: 'Carbon Projects', value: stats?.total_projects || 0, icon: Sprout, color: '#c77dff' },
+          { label: 'Credits Issued', value: stats?.total_credits_issued || 0, icon: Leaf, color: '#ffd93d', suffix: ' tCO₂' },
+        ].map((m, i) => (
+          <TiltCard key={i}>
+            <div style={{ ...glassCard, padding: 24, borderRadius: 20, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: '50%', background: m.color, filter: 'blur(40px)', opacity: 0.15 }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 900, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{m.label}</p>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>
+                    {loading ? <Skeleton w={80} h={30} /> : <AnimatedCounter end={m.value} suffix={m.suffix} />}
+                  </div>
                 </div>
-                <div style={{ height: 6, background: 'var(--border)', borderRadius: 3 }}>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(d.count / max) * 100}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.08 }}
-                    style={{ height: '100%', background: 'var(--green)', borderRadius: 3 }}
-                  />
+                <div style={{ width: 44, height: 44, borderRadius: 14, background: `${m.color}20`, border: `1px solid ${m.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <m.icon size={20} color={m.color} />
                 </div>
               </div>
-            );
-          })}
+            </div>
+          </TiltCard>
+        ))}
+      </div>
+
+      {/* Main Charts Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+        {/* Area Chart */}
+        <div style={{ ...glassCard, padding: 24, borderRadius: 20 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 20 }}>Platform Analytics</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={areaData}>
+              <defs>
+                <linearGradient id="gU" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00ff87" stopOpacity={0.3}/><stop offset="95%" stopColor="#00ff87" stopOpacity={0}/></linearGradient>
+                <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00d4ff" stopOpacity={0.3}/><stop offset="95%" stopColor="#00d4ff" stopOpacity={0}/></linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="name" tick={{ fill: "#888", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#888", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<GlowTooltip />} />
+              <Area type="monotone" dataKey="users" stroke="#00ff87" strokeWidth={3} fill="url(#gU)" name="Metric 1" />
+              <Area type="monotone" dataKey="revenue" stroke="#00d4ff" strokeWidth={3} fill="url(#gR)" name="Metric 2" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Orbit Globe */}
+        <TiltCard>
+          <div style={{ ...glassCard, padding: 24, borderRadius: 20, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 16, left: 24 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 900, color: '#fff' }}>Coverage Map</h3>
+              <p style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Live node connections</p>
+            </div>
+            <div style={{ marginTop: 20 }}><OrbitGlobe /></div>
+          </div>
+        </TiltCard>
+      </div>
+
+      {/* Bottom Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        {/* Radar */}
+        <div style={{ ...glassCard, padding: 24, borderRadius: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 16 }}>AI Performance Model</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <RadarChart data={radarData}>
+              <PolarGrid stroke="rgba(199,125,255,0.2)" />
+              <PolarAngleAxis dataKey="metric" tick={{ fill: "#888", fontSize: 10, fontWeight: 700 }} />
+              <PolarRadiusAxis tick={false} domain={[0, 100]} axisLine={false} />
+              <Radar dataKey="value" stroke="#c77dff" fill="#c77dff" fillOpacity={0.2} strokeWidth={2} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Districts Bar Chart */}
+        <div style={{ ...glassCard, padding: 24, borderRadius: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 16 }}>Farmers by District</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={stats?.districts || []} barSize={16}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="district" tick={{ fill: "#888", fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#888", fontSize: 10 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<GlowTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]} name="Farmers" fill="#00ff87" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Project Status */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24 }}>
-          <h3 style={{ fontWeight: 700, marginBottom: 20, color: 'var(--text-primary)' }}>Carbon Project Status</h3>
-          {loading ? <Skeleton h={200} /> : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {stats?.project_statuses.map(ps => {
-                const colors: Record<string, string> = { Verified: 'var(--green)', Issued: 'var(--blue)', Evidence_Pending: 'var(--amber)', Rejected: 'var(--red)', Draft: 'var(--text-muted)' };
-                return (
-                  <div key={ps.status} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: colors[ps.status] || 'var(--text-muted)' }} />
-                      <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{ps.status.replace('_', ' ')}</span>
-                    </div>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{ps.count}</span>
+        <div style={{ ...glassCard, padding: 24, borderRadius: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 20 }}>Project Status Overview</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {loading ? Array(4).fill(0).map((_, i) => <Skeleton key={i} h={40} />) : stats?.project_statuses.map(ps => {
+              const colors: Record<string, string> = { Verified: '#00ff87', Issued: '#00d4ff', Evidence_Pending: '#ffd93d', Rejected: '#ff6b6b', Draft: '#888' };
+              const c = colors[ps.status] || '#888';
+              return (
+                <div key={ps.status} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: c, boxShadow: `0 0 10px ${c}` }} />
+                    <span style={{ fontSize: 12, color: '#ddd', fontWeight: 600 }}>{ps.status.replace('_', ' ')}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <span style={{ fontSize: 14, fontWeight: 900, color: '#fff' }}>{ps.count}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -251,113 +381,73 @@ const FarmersView = () => {
   const [selectedFarmer, setSelectedFarmer] = useState<Farmer | null>(null);
   const limit = 20;
 
-  const { data, loading, refetch } = useApi<{ farmers: Farmer[]; total: number }>(
+  const { data, loading } = useApi<{ farmers: Farmer[]; total: number }>(
     `${API('farmers')}&search=${search}&skip=${page * limit}&limit=${limit}`,
     [search, page]
   );
 
   return (
-    <div style={{ padding: '32px 36px' }}>
+    <div style={{ padding: '32px 36px', position: 'relative', zIndex: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800 }}>Farmer Registry</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 4 }}>
-            {data ? `${data.total} registered farmers` : 'Loading...'}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <a href={`/api/admin/export/farmers?token=${TOKEN}`} download>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
-              <Download size={15} /> Export CSV
-            </button>
-          </a>
+          <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>Farmer Registry</h1>
+          <p style={{ color: '#888', fontSize: 15, marginTop: 4 }}>{data ? `${data.total} registered farmers` : 'Loading...'}</p>
         </div>
       </div>
 
-      {/* Search */}
       <div style={{ position: 'relative', marginBottom: 24 }}>
-        <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+        <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
         <input
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(0); }}
+          value={search} onChange={e => { setSearch(e.target.value); setPage(0); }}
           placeholder="Search by name, phone, district..."
-          style={{
-            width: '100%', padding: '12px 12px 12px 40px', background: 'var(--bg-card)',
-            border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-primary)',
-            fontSize: 14, outline: 'none', fontFamily: 'Inter, sans-serif'
-          }}
+          style={{ width: '100%', padding: '16px 16px 16px 48px', ...glassCard, borderRadius: 16, color: '#fff', fontSize: 15, outline: 'none' }}
         />
       </div>
 
-      {/* Table */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ ...glassCard, borderRadius: 20, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Farmer', 'Location', 'Plots', 'Carbon Projects', 'Credits (tCO₂)', 'Joined', 'Action'].map(h => (
-                <th key={h} style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', background: 'var(--bg-main)' }}>{h.toUpperCase()}</th>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.4)' }}>
+              {['Farmer', 'Location', 'Plots', 'Carbon Projects', 'Credits', 'Joined', 'Action'].map(h => (
+                <th key={h} style={{ padding: '16px 24px', textAlign: 'left', fontSize: 11, fontWeight: 900, color: '#888', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? Array(8).fill(0).map((_, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                {Array(7).fill(0).map((_, j) => (
-                  <td key={j} style={{ padding: '16px 20px' }}><Skeleton h={16} w="80%" /></td>
-                ))}
+              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                {Array(7).fill(0).map((_, j) => <td key={j} style={{ padding: '16px 24px' }}><Skeleton h={16} w="80%" /></td>)}
               </tr>
             )) : data?.farmers.map((f, i) => (
               <motion.tr
-                key={f.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-                style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card-hover)')}
+                key={f.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <td style={{ padding: '16px 20px' }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>{f.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>ID #{f.id}</div>
+                <td style={{ padding: '16px 24px' }}>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: '#fff' }}>{f.name}</div>
+                  <div style={{ fontSize: 12, color: '#00ff87', marginTop: 4 }}>ID #{f.id}</div>
                 </td>
-                <td style={{ padding: '16px 20px' }}>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{f.district || '—'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{f.state || ''}</div>
+                <td style={{ padding: '16px 24px' }}>
+                  <div style={{ fontSize: 13, color: '#ddd' }}>{f.district || '—'}</div>
+                  <div style={{ fontSize: 12, color: '#888' }}>{f.state || ''}</div>
                 </td>
-                <td style={{ padding: '16px 20px', fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{f.plot_count}</td>
-                <td style={{ padding: '16px 20px', fontWeight: 700, fontSize: 16, color: 'var(--blue)' }}>{f.carbon_projects}</td>
-                <td style={{ padding: '16px 20px', fontWeight: 700, fontSize: 16, color: 'var(--green)' }}>{(f.total_credits || 0).toFixed(2)}</td>
-                <td style={{ padding: '16px 20px', fontSize: 13, color: 'var(--text-secondary)' }}>
-                  {f.joined_at ? new Date(f.joined_at).toLocaleDateString() : '—'}
-                </td>
-                <td style={{ padding: '16px 20px' }}>
-                  <button
-                    onClick={() => setSelectedFarmer(f)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--blue-dim)', border: '1px solid var(--blue)', borderRadius: 8, color: 'var(--blue)', cursor: 'pointer', fontWeight: 600, fontSize: 12 }}
-                  >
-                    <Eye size={13} /> View
+                <td style={{ padding: '16px 24px', fontWeight: 800, fontSize: 16, color: '#fff' }}>{f.plot_count}</td>
+                <td style={{ padding: '16px 24px', fontWeight: 800, fontSize: 16, color: '#00d4ff' }}>{f.carbon_projects}</td>
+                <td style={{ padding: '16px 24px', fontWeight: 800, fontSize: 16, color: '#00ff87' }}>{(f.total_credits || 0).toFixed(2)}</td>
+                <td style={{ padding: '16px 24px', fontSize: 13, color: '#888' }}>{f.joined_at ? new Date(f.joined_at).toLocaleDateString() : '—'}</td>
+                <td style={{ padding: '16px 24px' }}>
+                  <button onClick={() => setSelectedFarmer(f)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: 10, color: '#00d4ff', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>
+                    <Eye size={14} /> View
                   </button>
                 </td>
               </motion.tr>
             ))}
           </tbody>
         </table>
-
-        {/* Pagination */}
-        {data && data.total > limit && (
-          <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              Showing {page * limit + 1}–{Math.min((page + 1) * limit, data.total)} of {data.total}
-            </span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ padding: '7px 16px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: 8, color: page === 0 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page === 0 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13 }}>Prev</button>
-              <button disabled={(page + 1) * limit >= data.total} onClick={() => setPage(p => p + 1)} style={{ padding: '7px 16px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: 8, color: (page + 1) * limit >= data.total ? 'var(--text-muted)' : 'var(--text-primary)', cursor: (page + 1) * limit >= data.total ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13 }}>Next</button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Farmer Modal */}
       {selectedFarmer && <FarmerModal farmer={selectedFarmer} onClose={() => setSelectedFarmer(null)} />}
     </div>
   );
@@ -365,63 +455,41 @@ const FarmersView = () => {
 
 const CarbonView = () => {
   const { data, loading, refetch } = useApi<{projects: CarbonProject[]; total: number}>(API('carbon-queue') + '&limit=50');
-
   const approve = async (id: number) => {
-    try {
-      await axios.post(`/api/admin/carbon/${id}/approve?token=${TOKEN}`, { credits_to_issue: 10, admin_note: 'Auto-approved from admin dashboard' });
-      refetch();
-    } catch (e) { alert('Approval failed'); }
+    try { await axios.post(`/api/admin/carbon/${id}/approve?token=${TOKEN}`, { credits_to_issue: 10, admin_note: 'Auto-approved from admin dashboard' }); refetch(); } catch (e) { alert('Approval failed'); }
   };
-
   return (
-    <div style={{ padding: '32px 36px' }}>
+    <div style={{ padding: '32px 36px', position: 'relative', zIndex: 10 }}>
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800 }}>Carbon Credit Queue</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 4 }}>Review and approve/reject farmer carbon credit submissions</p>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>Carbon Credit Queue</h1>
+        <p style={{ color: '#888', fontSize: 15, marginTop: 4 }}>Review and approve/reject farmer carbon credit submissions</p>
       </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {loading ? Array(5).fill(0).map((_, i) => <Skeleton key={i} h={100} />) :
           data?.projects.map((p, i) => (
-            <motion.div
-              key={p.project_id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 24 }}
-            >
+            <motion.div key={p.project_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+              style={{ ...glassCard, borderRadius: 16, padding: '24px', display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-                  <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{p.farmer_name}</span>
-                  <StatusBadge status={p.status} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+                  <span style={{ fontWeight: 900, fontSize: 18, color: '#fff' }}>{p.farmer_name}</span>
+                  <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 20, background: 'rgba(255,217,61,0.1)', color: '#ffd93d', border: '1px solid rgba(255,217,61,0.3)', fontWeight: 800 }}>{p.status.replace('_', ' ')}</span>
                 </div>
-                <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
+                <div style={{ display: 'flex', gap: 24, fontSize: 13, color: '#aaa', fontWeight: 600 }}>
                   <span>Plot #{p.plot_id}</span>
                   <span>Method: {p.methodology}</span>
-                  <span>Est: {p.estimated_credits?.toFixed(2)} tCO₂</span>
+                  <span>Est: <span style={{ color: '#00ff87' }}>{p.estimated_credits?.toFixed(2)} tCO₂</span></span>
                   <span>NDVI Δ: {((p.current_ndvi || 0) - (p.baseline_ndvi || 0)).toFixed(3)}</span>
                 </div>
               </div>
               {p.status === 'Evidence_Pending' && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => approve(p.project_id)} style={{ padding: '8px 18px', background: 'var(--green-dim)', border: '1px solid var(--green)', borderRadius: 8, color: 'var(--green)', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
-                    ✓ Approve
-                  </button>
-                  <button style={{ padding: '8px 18px', background: 'var(--red-dim)', border: '1px solid var(--red)', borderRadius: 8, color: 'var(--red)', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
-                    ✕ Reject
-                  </button>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button onClick={() => approve(p.project_id)} style={{ padding: '10px 20px', background: 'rgba(0,255,135,0.1)', border: '1px solid rgba(0,255,135,0.4)', borderRadius: 12, color: '#00ff87', cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>✓ Approve</button>
+                  <button style={{ padding: '10px 20px', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.4)', borderRadius: 12, color: '#ff6b6b', cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>✕ Reject</button>
                 </div>
               )}
             </motion.div>
           ))
         }
-        {!loading && (!data?.projects.length) && (
-          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
-            <CheckCircle2 size={40} style={{ marginBottom: 12, color: 'var(--green)' }} />
-            <div style={{ fontWeight: 700, fontSize: 16 }}>No Pending Projects</div>
-            <div style={{ fontSize: 13, marginTop: 4 }}>All carbon project submissions have been reviewed</div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -429,42 +497,33 @@ const CarbonView = () => {
 
 const AuditView = () => {
   const { data, loading } = useApi<{logs: any[]; total: number}>(API('audit-log') + '&limit=50');
-
   return (
-    <div style={{ padding: '32px 36px' }}>
+    <div style={{ padding: '32px 36px', position: 'relative', zIndex: 10 }}>
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800 }}>Operations Audit Log</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 4 }}>All farmer and field operations across the platform</p>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>Operations Audit Log</h1>
+        <p style={{ color: '#888', fontSize: 15, marginTop: 4 }}>All farmer and field operations across the platform</p>
       </div>
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ ...glassCard, borderRadius: 20, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.4)' }}>
               {['Time', 'Farmer', 'Operation', 'Plot', 'Detail'].map(h => (
-                <th key={h} style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', background: 'var(--bg-main)' }}>{h.toUpperCase()}</th>
+                <th key={h} style={{ padding: '16px 24px', textAlign: 'left', fontSize: 11, fontWeight: 900, color: '#888', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? Array(10).fill(0).map((_, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                {Array(5).fill(0).map((_, j) => <td key={j} style={{ padding: '14px 20px' }}><Skeleton h={14} w="80%" /></td>)}
+              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                {Array(5).fill(0).map((_, j) => <td key={j} style={{ padding: '16px 24px' }}><Skeleton h={14} w="80%" /></td>)}
               </tr>
-            )) : data?.logs.map((log, i) => (
-              <tr key={log.id} style={{ borderBottom: '1px solid var(--border)', fontSize: 13 }}>
-                <td style={{ padding: '14px 20px', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
-                  {new Date(log.created_at).toLocaleString()}
-                </td>
-                <td style={{ padding: '14px 20px', color: 'var(--text-secondary)' }}>ID #{log.user_id}</td>
-                <td style={{ padding: '14px 20px' }}>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--amber)', background: 'var(--amber-dim)', padding: '2px 8px', borderRadius: 6 }}>
-                    {log.operation}
-                  </span>
-                </td>
-                <td style={{ padding: '14px 20px', color: 'var(--text-muted)' }}>{log.plot_id ? `#${log.plot_id}` : '—'}</td>
-                <td style={{ padding: '14px 20px', color: 'var(--text-secondary)', fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {log.detail || '—'}
-                </td>
+            )) : data?.logs.map((log) => (
+              <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13 }}>
+                <td style={{ padding: '16px 24px', color: '#aaa', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{new Date(log.created_at).toLocaleString()}</td>
+                <td style={{ padding: '16px 24px', color: '#fff', fontWeight: 600 }}>ID #{log.user_id}</td>
+                <td style={{ padding: '16px 24px' }}><span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#ffd93d', background: 'rgba(255,217,61,0.1)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(255,217,61,0.2)', fontWeight: 800 }}>{log.operation}</span></td>
+                <td style={{ padding: '16px 24px', color: '#888' }}>{log.plot_id ? `#${log.plot_id}` : '—'}</td>
+                <td style={{ padding: '16px 24px', color: '#aaa', fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.detail || '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -474,7 +533,7 @@ const AuditView = () => {
   );
 };
 
-// ─── Sidebar ─────────────────────────────────────────────────────────────────
+// ─── Sidebar & Layout ────────────────────────────────────────────────────────
 const NAV = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'farmers', label: 'Farmer Registry', icon: Users },
@@ -483,300 +542,124 @@ const NAV = [
 ];
 
 const Sidebar = ({ active, setActive }: { active: string; setActive: (v: string) => void }) => (
-  <div style={{ width: 240, background: 'var(--bg-sidebar)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0 }}>
-    {/* Logo */}
-    <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 34, height: 34, background: 'var(--green)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Sprout size={18} color="#000" />
+  <div style={{ width: 260, background: 'rgba(2,11,6,0.85)', backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(0,255,135,0.15)', display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative', zIndex: 50 }}>
+    <div style={{ padding: '32px 24px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #00ff87, #00d4ff)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(0,255,135,0.4)' }}>
+          <Sprout size={22} color="#000" />
         </div>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.2 }}>Krishi-Drishti</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Admin Console</div>
+          <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', letterSpacing: '-0.02em' }}>Krishi-Drishti</div>
+          <div style={{ fontSize: 11, color: '#00ff87', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Admin Console</div>
         </div>
       </div>
     </div>
 
-    {/* Nav */}
-    <nav style={{ padding: '16px 12px', flex: 1 }}>
+    <nav style={{ padding: '24px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
       {NAV.map(({ id, label, icon: Icon }) => {
         const isActive = active === id;
         return (
-          <motion.button
-            key={id}
-            onClick={() => setActive(id)}
-            whileHover={{ x: 2 }}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-              padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              marginBottom: 2, textAlign: 'left', fontSize: 14, fontWeight: isActive ? 600 : 400,
-              background: isActive ? 'var(--green-dim)' : 'transparent',
-              color: isActive ? 'var(--green)' : 'var(--text-secondary)',
-              transition: 'all 0.15s',
-            }}
-          >
-            <Icon size={17} />
-            {label}
-            {isActive && <ChevronRight size={14} style={{ marginLeft: 'auto' }} />}
+          <motion.button key={id} onClick={() => setActive(id)} whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 14, border: '1px solid', borderColor: isActive ? 'rgba(0,255,135,0.3)' : 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: 14, fontWeight: isActive ? 800 : 600, background: isActive ? 'rgba(0,255,135,0.1)' : 'transparent', color: isActive ? '#00ff87' : '#888', transition: 'all 0.2s' }}>
+            <Icon size={18} /> {label}
+            {isActive && <motion.div layoutId="navIndicator" style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: '#00ff87', boxShadow: '0 0 10px #00ff87' }} />}
           </motion.button>
         );
       })}
     </nav>
-
-    {/* Footer */}
-    <div style={{ padding: '16px 12px', borderTop: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--green-dim)', borderRadius: 10, marginBottom: 8 }}>
-        <div style={{ width: 8, height: 8, background: 'var(--green)', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-        <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>Backend Live</span>
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '0 12px' }}>
-        Ops Token: {TOKEN.slice(0, 10)}...
-      </div>
-    </div>
   </div>
 );
 
-// ─── Header ──────────────────────────────────────────────────────────────────
 const Header = ({ view, onRefresh, onLogout }: { view: string; onRefresh: () => void; onLogout: () => void }) => {
   const [time, setTime] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
 
   return (
-    <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-sidebar)', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <ShieldCheck size={16} color="var(--green)" />
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>Admin Dashboard</span>
-        <ChevronRight size={14} color="var(--text-muted)" />
-        <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, textTransform: 'capitalize' }}>{view}</span>
-      </div>
+    <div style={{ padding: '16px 36px', borderBottom: '1px solid rgba(0,255,135,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2,11,6,0.6)', backdropFilter: 'blur(20px)', position: 'sticky', top: 0, zIndex: 100 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
-          {time.toLocaleTimeString()}
-        </span>
-        <button onClick={onRefresh} title="Refresh" style={{ padding: '7px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex' }}>
-          <RefreshCw size={14} />
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }}>
-          <Wifi size={13} color="var(--green)" />
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>localhost:8000</span>
+        <ShieldCheck size={18} color="#00ff87" />
+        <span style={{ fontSize: 14, color: '#888', fontWeight: 600 }}>Admin Dashboard</span>
+        <ChevronRight size={14} color="#555" />
+        <span style={{ fontSize: 14, color: '#fff', fontWeight: 800, textTransform: 'capitalize' }}>{view}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'rgba(0,255,135,0.05)', border: '1px solid rgba(0,255,135,0.2)', borderRadius: 12 }}>
+          <div style={{ width: 6, height: 6, background: '#00ff87', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+          <span style={{ fontSize: 12, color: '#00ff87', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>{time.toLocaleTimeString()}</span>
         </div>
-        {/* Back to landing page */}
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={onLogout}
-          title="Back to landing page & logout"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px',
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 8, cursor: 'pointer',
-            color: 'var(--red)', fontWeight: 600, fontSize: 12
-          }}
-        >
-          <LogOut size={13} />
-          Logout
-        </motion.button>
+        <button onClick={onRefresh} style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, cursor: 'pointer', color: '#fff' }}><RefreshCw size={16} /></button>
+        <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 12, cursor: 'pointer', color: '#ff6b6b', fontWeight: 800, fontSize: 13 }}><LogOut size={14} /> Logout</button>
       </div>
     </div>
   );
 };
 
-// ─── Login Modal Overlay ──────────────────────────────────────────────────────
 const LoginModal = ({ onLogin, onClose }: { onLogin: () => void; onClose: () => void }) => {
   const [token, setToken] = useState('');
-  const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
-
   const handleLogin = async () => {
-    setChecking(true); setError('');
-    try {
-      await axios.get(`/api/admin/stats?token=${token}`);
-      localStorage.setItem('kd_admin_token', token);
-      onLogin();
-    } catch {
-      setError('Invalid token. Please check your ADMIN_SECRET_TOKEN.');
-    } finally { setChecking(false); }
+    setChecking(true);
+    try { await axios.get(`/api/admin/stats?token=${token}`); localStorage.setItem('kd_admin_token', token); onLogin(); }
+    catch { alert('Invalid token'); } finally { setChecking(false); }
   };
-
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
-          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
-        }}
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          onClick={e => e.stopPropagation()}
-          style={{
-            background: '#111', border: '1px solid #2a2a2a', borderRadius: 24,
-            padding: '48px 40px', width: '100%', maxWidth: 420, position: 'relative'
-          }}
-        >
-          {/* Close */}
-          <button
-            onClick={onClose}
-            style={{ position: 'absolute', top: 16, right: 16, background: '#1e1e1e', border: '1px solid #333', borderRadius: 8, padding: 8, cursor: 'pointer', color: '#888', display: 'flex' }}
-          >
-            <X size={16} />
-          </button>
-
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }} onClick={e => e.stopPropagation()} style={{ ...glassCard, borderRadius: 32, padding: '48px 40px', width: '100%', maxWidth: 420 }}>
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
-            <div style={{ width: 56, height: 56, background: 'var(--green)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <ShieldCheck size={26} color="#000" />
-            </div>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>Admin Console</h2>
-            <p style={{ fontSize: 13, color: '#888', marginTop: 4 }}>Enter your secret token to proceed</p>
+            <div style={{ width: 64, height: 64, background: 'linear-gradient(135deg, #00ff87, #00d4ff)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 0 30px rgba(0,255,135,0.3)' }}><ShieldCheck size={32} color="#000" /></div>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: '#fff' }}>Secure Auth</h2>
+            <p style={{ fontSize: 13, color: '#888', marginTop: 8 }}>Enter admin token to proceed</p>
           </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#666', letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>ADMIN SECRET TOKEN</label>
-            <input
-              autoFocus
-              type="password"
-              value={token}
-              onChange={e => { setToken(e.target.value); setError(''); }}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              placeholder="kd_admin_••••••••••••••"
-              style={{
-                width: '100%', padding: '13px 16px', background: '#1a1a1a',
-                border: `1px solid ${error ? '#ef4444' : '#2a2a2a'}`, borderRadius: 12,
-                color: '#fff', fontSize: 14, outline: 'none',
-                fontFamily: 'JetBrains Mono, monospace'
-              }}
-            />
-            {error && <p style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>{error}</p>}
-          </div>
-
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={handleLogin}
-            disabled={checking || !token}
-            style={{
-              width: '100%', padding: '14px',
-              background: checking || !token ? '#222' : 'var(--green)',
-              border: 'none', borderRadius: 12,
-              color: checking || !token ? '#555' : '#000',
-              fontWeight: 800, fontSize: 15,
-              cursor: checking || !token ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-            }}
-          >
-            {checking
-              ? <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Verifying...</>
-              : <>Enter Admin Console <ChevronRight size={16} /></>}
-          </motion.button>
+          <input type="password" value={token} onChange={e => setToken(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="kd_admin_••••••••••••••" style={{ width: '100%', padding: '16px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(0,255,135,0.3)', borderRadius: 16, color: '#00ff87', fontSize: 14, outline: 'none', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center', marginBottom: 24 }} />
+          <motion.button whileTap={{ scale: 0.97 }} onClick={handleLogin} disabled={checking || !token} style={{ width: '100%', padding: '16px', background: checking || !token ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #00ff87, #00d4ff)', border: 'none', borderRadius: 16, color: checking || !token ? '#555' : '#000', fontWeight: 900, fontSize: 15, cursor: checking || !token ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>{checking ? 'Verifying...' : 'Authenticate'}</motion.button>
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 };
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [authed, setAuthed] = useState(() => !!localStorage.getItem('kd_admin_token'));
   const [showLogin, setShowLogin] = useState(false);
   const [view, setView] = useState('overview');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // ── Authenticated → full admin console ──────────────────────────────────────
-  const handleLogout = () => {
-    localStorage.removeItem('kd_admin_token');
-    setAuthed(false);
-  };
-
   if (authed) {
     const renderView = () => {
       switch (view) {
         case 'overview': return <OverviewView key={refreshKey} />;
-        case 'farmers':  return <FarmersView  key={refreshKey} />;
-        case 'carbon':   return <CarbonView   key={refreshKey} />;
-        case 'audit':    return <AuditView    key={refreshKey} />;
-        default:         return <OverviewView />;
+        case 'farmers': return <FarmersView key={refreshKey} />;
+        case 'carbon': return <CarbonView key={refreshKey} />;
+        case 'audit': return <AuditView key={refreshKey} />;
+        default: return <OverviewView />;
       }
     };
-
     return (
-      <div className="admin-console" style={{ display: 'flex', height: '100vh', overflow: 'hidden', width: '100%' }}>
+      <div style={{ display: 'flex', height: '100vh', width: '100%', background: 'linear-gradient(135deg, #010d06 0%, #020f08 40%, #041208 100%)', fontFamily: 'Inter, sans-serif' }}>
+        <ParticleField />
         <Sidebar active={view} setActive={setView} />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Header view={view} onRefresh={() => setRefreshKey(k => k + 1)} onLogout={handleLogout} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+          <Header view={view} onRefresh={() => setRefreshKey(k => k + 1)} onLogout={() => { localStorage.removeItem('kd_admin_token'); setAuthed(false); }} />
           <main style={{ flex: 1, overflowY: 'auto' }}>
             <AnimatePresence mode="wait">
-              <motion.div
-                key={view}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
+              <motion.div key={view} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }}>
                 {renderView()}
               </motion.div>
             </AnimatePresence>
           </main>
         </div>
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-          @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        `}</style>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } } * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
       </div>
     );
   }
 
-  // ── Public landing page ──────────────────────────────────────────────────────
   return (
     <div style={{ position: 'relative' }}>
-      {/* Floating Admin Login pill */}
-      <motion.button
-        id="admin-login-btn"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.97 }}
-        onClick={() => setShowLogin(true)}
-        style={{
-          position: 'fixed', top: 16, right: 20, zIndex: 1000,
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '10px 20px',
-          background: 'rgba(10,10,10,0.85)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(74,222,128,0.4)',
-          borderRadius: 50,
-          color: '#4ade80',
-          fontWeight: 700, fontSize: 13,
-          cursor: 'pointer',
-          boxShadow: '0 0 20px rgba(74,222,128,0.12)'
-        }}
-      >
-        <ShieldCheck size={15} />
-        Admin Login
-      </motion.button>
-
-      {/* AgritechDashboard as public landing */}
+      <motion.button initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} onClick={() => setShowLogin(true)} style={{ position: 'fixed', top: 16, right: 20, zIndex: 1000, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(12px)', border: '1px solid rgba(74,222,128,0.4)', borderRadius: 50, color: '#4ade80', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 0 20px rgba(74,222,128,0.12)' }}><ShieldCheck size={15} /> Admin Login</motion.button>
       <AgritechDashboard />
-
-      {/* Login modal */}
-      {showLogin && (
-        <LoginModal
-          onLogin={() => { setAuthed(true); setShowLogin(false); }}
-          onClose={() => setShowLogin(false)}
-        />
-      )}
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-      `}</style>
+      {showLogin && <LoginModal onLogin={() => { setAuthed(true); setShowLogin(false); }} onClose={() => setShowLogin(false)} />}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } } * { box-sizing: border-box; }`}</style>
     </div>
   );
 }

@@ -271,8 +271,8 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
 
       {/* Analysis Modal */}
       {showAnalysisModal && analysisResult && (
-        <div className="absolute inset-0 z-[500] bg-black/50 flex items-end justify-center backdrop-blur-sm">
-          <div className="bg-white w-full rounded-t-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[1000] bg-black/50 flex items-end justify-center backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
             <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: '#E0E0E0' }} />
             <button
               onClick={() => setShowAnalysisModal(false)}
@@ -312,12 +312,12 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-4 pb-12">
               {/* Yield Forecast */}
               <div className="p-4 rounded-2xl" style={{ background: '#F7F9F8', border: '1px solid #F0F0F0' }}>
                 <p className="text-[10px] uppercase font-black mb-1" style={{ color: '#616B68' }}>Predicted Yield</p>
-                <h4 className="text-2xl font-black" style={{ color: '#001A11' }}>{analysisResult.predicted_yield_tons_per_ha} <span className="text-sm font-semibold" style={{ color: '#616B68' }}>Tons/ha</span></h4>
-                <p className="text-xs font-bold mt-1" style={{ color: '#616B68' }}>Total: {analysisResult.total_estimated_yield_tons} Tons | Rev: ₹{analysisResult.estimated_revenue_inr?.toLocaleString()}</p>
+                <h4 className="text-2xl font-black" style={{ color: '#001A11' }}>{Number(analysisResult.predicted_yield_tons_per_ha || 0).toFixed(2)} <span className="text-sm font-semibold" style={{ color: '#616B68' }}>Tons/ha</span></h4>
+                <p className="text-xs font-bold mt-1" style={{ color: '#616B68' }}>Total: {Number(analysisResult.total_estimated_yield_tons || 0).toFixed(2)} Tons | Rev: ₹{Number(analysisResult.estimated_revenue_inr || 0).toLocaleString()}</p>
               </div>
 
               {/* Carbon Signal */}
@@ -347,11 +347,11 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-4 rounded-2xl text-center" style={{ background: '#F7F9F8', border: '1px solid #F0F0F0' }}>
                   <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Health Score</p>
-                  <p className="text-xl font-black mt-1" style={{ color: '#001A11' }}>{(analysisResult.ndvi_avg * 100).toFixed(0)}%</p>
+                  <p className="text-xl font-black mt-1" style={{ color: '#001A11' }}>{((analysisResult.ndvi_avg || 0) * 100).toFixed(0)}%</p>
                 </div>
                 <div className="p-4 rounded-2xl text-center" style={{ background: '#F7F9F8', border: '1px solid #F0F0F0' }}>
                   <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Moisture</p>
-                  <p className="text-xl font-black mt-1" style={{ color: '#001A11' }}>{(analysisResult.soil_moisture).toFixed(0)}%</p>
+                  <p className="text-xl font-black mt-1" style={{ color: '#001A11' }}>{Number(analysisResult.soil_moisture || 0).toFixed(0)}%</p>
                 </div>
               </div>
             </div>

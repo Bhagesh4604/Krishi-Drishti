@@ -93,7 +93,7 @@ const QRPanel: React.FC<{ token: HarvestToken; onClose: () => void }> = ({ token
               </div>
               <div className="p-3 rounded-xl" style={{ background: '#E8FBF3' }}>
                  <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>CO₂e</p>
-                 <p className="text-xs font-bold mt-0.5" style={{ color: '#00BB78' }}>{token.carbon_footprint_kg_co2e.toFixed(1)}kg</p>
+                 <p className="text-xs font-bold mt-0.5" style={{ color: '#00BB78' }}>{(token.carbon_footprint_kg_co2e || 0).toFixed(1)}kg</p>
               </div>
            </div>
         </div>
@@ -267,7 +267,7 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
                              <p className="text-sm font-bold" style={{ color: '#001A11' }}>{p.plot_name}</p>
                              <p className="text-[11px] font-medium mt-0.5" style={{ color: '#616B68' }}>{p.methodology}</p>
                           </div>
-                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-700">{p.available_credits?.toFixed(2)} ACT</span>
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-700">{(p.available_credits || 0).toFixed(2)} ACT</span>
                        </button>
                     ))}
                  </div>
@@ -305,7 +305,7 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
                  <div className="p-4 rounded-2xl bg-white border border-green-100 flex items-center justify-between shadow-sm">
                     <div>
                        <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Computed CO₂e</p>
-                       <p className="text-2xl font-black mt-1" style={{ color: '#00BB78' }}>{co2.toFixed(1)} <span className="text-sm font-medium">kg</span></p>
+                       <p className="text-2xl font-black mt-1" style={{ color: '#00BB78' }}>{(co2 || 0).toFixed(1)} <span className="text-sm font-medium">kg</span></p>
                     </div>
                     <div className="text-right">
                        <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Methodology</p>
@@ -359,7 +359,7 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
                     ['Plot', selectedPlot?.name],
                     ['Crop', `${cropType} ${variety}`],
                     ['Yield', `${yieldKg} kg`],
-                    ['Carbon Footprint', `${co2.toFixed(2)} kg CO₂e`],
+                    ['Carbon Footprint', `${(co2 || 0).toFixed(2)} kg CO₂e`],
                     ['Chemical Inputs', inputs.length > 0 ? `${inputs.length} items` : 'None (Organic)'],
                  ].map(([k, v], i) => (
                     <div key={i} className="flex justify-between text-sm">
@@ -444,7 +444,7 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
          <div className="flex justify-between items-start">
             <div>
                <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#616B68' }}>Total Yield Tracked</p>
-               <h3 className="text-4xl font-black text-white mt-0.5">{(totalYield / 1000).toFixed(1)}<span className="text-lg ml-1 text-gray-400">t</span></h3>
+               <h3 className="text-4xl font-black text-white mt-0.5">{((totalYield || 0) / 1000).toFixed(1)}<span className="text-lg ml-1 text-gray-400">t</span></h3>
             </div>
             <div className="text-right">
                <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#616B68' }}>Active</p>
@@ -458,7 +458,7 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
             </div>
             <div>
                <p className="text-[10px]" style={{ color: '#616B68' }}>Total CO₂e</p>
-               <p className="text-sm font-bold text-white">{totalCO2.toFixed(0)} kg</p>
+               <p className="text-sm font-bold text-white">{(totalCO2 || 0).toFixed(0)} kg</p>
             </div>
          </div>
          <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full" style={{ background: 'rgba(0,187,120,0.08)' }} />
@@ -511,7 +511,7 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
                           </div>
                           <div className="p-2.5 rounded-xl bg-gray-50">
                              <p className="text-[9px] uppercase font-black" style={{ color: '#616B68' }}>CO₂e</p>
-                             <p className="text-xs font-black mt-0.5" style={{ color: '#001A11' }}>{token.carbon_footprint_kg_co2e.toFixed(1)} kg</p>
+                             <p className="text-xs font-black mt-0.5" style={{ color: '#001A11' }}>{(token.carbon_footprint_kg_co2e || 0).toFixed(1)} kg</p>
                           </div>
                           <div className="p-2.5 rounded-xl bg-gray-50">
                              <p className="text-[9px] uppercase font-black" style={{ color: '#616B68' }}>Credits</p>

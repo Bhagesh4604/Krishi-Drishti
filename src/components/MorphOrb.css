@@ -1,0 +1,98 @@
+.mo-root {
+  --w: 100%;
+  --h: 60px;
+  --r: 30px;
+  --oCenter: 0;
+  --inScale: 1;
+  --sOp: 0;
+  --sTy: 6;
+  --oGlow: 1;
+  --oHalo: 0;
+  --oPill: 1;
+  --oBall: 0;
+  --oGreen: 0;
+  --oCard: 0;
+  --oRing: 1;
+  --oInput: 1;
+  --oAur: 1;
+  --gs: 0.55;
+  --cs: 1;
+  --hOp: 0;
+  --dotS: 0;
+  --bloom: 1;
+}
+
+.mo-actor {
+  transition: all 0.1s linear;
+}
+
+.mo-surface {
+  opacity: var(--oPill);
+}
+
+.mo-input {
+  opacity: var(--oInput);
+  transform: scale(var(--inScale));
+}
+
+.mo-orb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 220px;
+  opacity: 1;
+}
+
+.mo-status {
+  opacity: var(--sOp);
+  transform: translateY(calc(var(--sTy) * 1px));
+}
+
+.mo-lab {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.mo-lab.mo-out {
+  opacity: 0 !important;
+  transform: translateY(-10px);
+}
+
+.mo-lab.mo-in {
+  opacity: 1 !important;
+  transform: translateY(0);
+}
+
+.mo-dots i {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: currentColor;
+  margin: 0 2px;
+  animation: mo-dot 1.4s infinite ease-in-out both;
+}
+
+.mo-dots i:nth-child(1) { animation-delay: -0.32s; }
+.mo-dots i:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes mo-dot {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.mo-answer {
+  opacity: var(--oCard);
+}
+
+.mo-actor[data-shake] {
+  animation: mo-shake 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes mo-shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
