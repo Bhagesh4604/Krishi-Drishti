@@ -20,6 +20,7 @@ python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 
 # ── AI / ML ─────────────────────────────────────────────────────────────────
+google-genai
 google-generativeai==0.8.6
 scikit-learn<=1.7.2
 numpy<2.0.0
