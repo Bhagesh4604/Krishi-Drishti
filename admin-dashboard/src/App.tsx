@@ -31,7 +31,7 @@ interface Stats {
 interface Farmer {
   id: number; name: string; phone: string; email: string;
   district: string; state: string; village: string;
-  joined_at: string; plot_count: number; carbon_projects: number;
+  created_at: string; plots_count: number; projects_count: number;
   total_credits: number; status?: string;
 }
 
@@ -212,9 +212,9 @@ const FarmerModal = ({ farmer, onClose }: { farmer: Farmer; onClose: () => void 
             { label: 'District', value: farmer.district || '—' },
             { label: 'State', value: farmer.state || '—' },
             { label: 'Village', value: farmer.village || '—' },
-            { label: 'Joined', value: farmer.joined_at ? new Date(farmer.joined_at).toLocaleDateString() : '—' },
-            { label: 'Total Plots', value: farmer.plot_count },
-            { label: 'Carbon Projects', value: farmer.carbon_projects },
+            { label: 'Joined', value: farmer.created_at ? new Date(farmer.created_at).toLocaleDateString() : '—' },
+            { label: 'Total Plots', value: farmer.plots_count },
+            { label: 'Carbon Projects', value: farmer.projects_count },
             { label: 'Total Credits', value: (farmer.total_credits || 0).toFixed(2) + ' tCO₂' },
           ].map(({ label, value }) => (
             <div key={label} style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -232,13 +232,16 @@ const FarmerModal = ({ farmer, onClose }: { farmer: Farmer; onClose: () => void 
 const OverviewView = () => {
   const { data: stats, loading } = useApi<Stats>(API('stats'));
 
-  // Dummy fallback data for charts if API doesn't have it
-  const areaData = stats?.monthly_credits?.length ? stats.monthly_credits : [
-    { name: "Jan", users: 400, revenue: 240, health: 80 },
-    { name: "Feb", users: 620, revenue: 398, health: 85 },
-    { name: "Mar", users: 500, revenue: 300, health: 78 },
-    { name: "Apr", users: 780, revenue: 480, health: 92 },
-    { name: "May", users: 1100, revenue: 700, health: 88 },
+  // Normalize backend data to match expected chart keys or use fallback
+  const areaData = stats?.monthly_credits?.length ? stats.monthly_credits.map((m: any) => ({
+    name: m.month,
+    credits: m.credits
+  })) : [
+    { name: "Jan", credits: 2400 },
+    { name: "Feb", credits: 3908 },
+    { name: "Mar", credits: 3000 },
+    { name: "Apr", credits: 4800 },
+    { name: "May", credits: 7000 },
   ];
 
   const radarData = [
@@ -293,19 +296,17 @@ const OverviewView = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
         {/* Area Chart */}
         <div style={{ ...glassCard, padding: 24, borderRadius: 20 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 20 }}>Platform Analytics</h3>
+          <h3 style={{ fontSize: 16, fontWeight: 900, color: '#fff', marginBottom: 20 }}>Platform Analytics - Credits Issued</h3>
           <ResponsiveContainer width="100%" height={240}>
             <AreaChart data={areaData}>
               <defs>
-                <linearGradient id="gU" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00ff87" stopOpacity={0.3}/><stop offset="95%" stopColor="#00ff87" stopOpacity={0}/></linearGradient>
-                <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00d4ff" stopOpacity={0.3}/><stop offset="95%" stopColor="#00d4ff" stopOpacity={0}/></linearGradient>
+                <linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00ff87" stopOpacity={0.4}/><stop offset="95%" stopColor="#00ff87" stopOpacity={0}/></linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="name" tick={{ fill: "#888", fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#888", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#888", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(val) => Intl.NumberFormat('en', { notation: "compact" }).format(val)} width={50} />
               <Tooltip content={<GlowTooltip />} />
-              <Area type="monotone" dataKey="users" stroke="#00ff87" strokeWidth={3} fill="url(#gU)" name="Metric 1" />
-              <Area type="monotone" dataKey="revenue" stroke="#00d4ff" strokeWidth={3} fill="url(#gR)" name="Metric 2" />
+              <Area type="monotone" dataKey="credits" stroke="#00ff87" strokeWidth={3} fill="url(#gC)" name="Credits Issued (tCO₂)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -344,7 +345,7 @@ const OverviewView = () => {
             <BarChart data={stats?.districts || []} barSize={16}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="district" tick={{ fill: "#888", fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#888", fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#888", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(val) => Intl.NumberFormat('en', { notation: "compact" }).format(val)} width={40} />
               <Tooltip content={<GlowTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]} name="Farmers" fill="#00ff87" />
             </BarChart>
@@ -433,10 +434,10 @@ const FarmersView = () => {
                   <div style={{ fontSize: 13, color: '#ddd' }}>{f.district || '—'}</div>
                   <div style={{ fontSize: 12, color: '#888' }}>{f.state || ''}</div>
                 </td>
-                <td style={{ padding: '16px 24px', fontWeight: 800, fontSize: 16, color: '#fff' }}>{f.plot_count}</td>
-                <td style={{ padding: '16px 24px', fontWeight: 800, fontSize: 16, color: '#00d4ff' }}>{f.carbon_projects}</td>
+                <td style={{ padding: '16px 24px', fontWeight: 800, fontSize: 16, color: '#fff' }}>{f.plots_count}</td>
+                <td style={{ padding: '16px 24px', fontWeight: 800, fontSize: 16, color: '#00d4ff' }}>{f.projects_count}</td>
                 <td style={{ padding: '16px 24px', fontWeight: 800, fontSize: 16, color: '#00ff87' }}>{(f.total_credits || 0).toFixed(2)}</td>
-                <td style={{ padding: '16px 24px', fontSize: 13, color: '#888' }}>{f.joined_at ? new Date(f.joined_at).toLocaleDateString() : '—'}</td>
+                <td style={{ padding: '16px 24px', fontSize: 13, color: '#888' }}>{f.created_at ? new Date(f.created_at).toLocaleDateString() : '—'}</td>
                 <td style={{ padding: '16px 24px' }}>
                   <button onClick={() => setSelectedFarmer(f)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: 10, color: '#00d4ff', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>
                     <Eye size={14} /> View
@@ -454,7 +455,7 @@ const FarmersView = () => {
 };
 
 const CarbonView = () => {
-  const { data, loading, refetch } = useApi<{projects: CarbonProject[]; total: number}>(API('carbon-queue') + '&limit=50');
+  const { data, loading, refetch } = useApi<{projects: CarbonProject[]; total: number}>(API('carbon/queue') + '&limit=50');
   const approve = async (id: number) => {
     try { await axios.post(`/api/admin/carbon/${id}/approve?token=${TOKEN}`, { credits_to_issue: 10, admin_note: 'Auto-approved from admin dashboard' }); refetch(); } catch (e) { alert('Approval failed'); }
   };
@@ -496,7 +497,7 @@ const CarbonView = () => {
 };
 
 const AuditView = () => {
-  const { data, loading } = useApi<{logs: any[]; total: number}>(API('audit-log') + '&limit=50');
+  const { data, loading } = useApi<{logs: any[]; total: number}>(API('operations') + '&limit=50');
   return (
     <div style={{ padding: '32px 36px', position: 'relative', zIndex: 10 }}>
       <div style={{ marginBottom: 28 }}>
@@ -520,7 +521,7 @@ const AuditView = () => {
             )) : data?.logs.map((log) => (
               <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13 }}>
                 <td style={{ padding: '16px 24px', color: '#aaa', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{new Date(log.created_at).toLocaleString()}</td>
-                <td style={{ padding: '16px 24px', color: '#fff', fontWeight: 600 }}>ID #{log.user_id}</td>
+                <td style={{ padding: '16px 24px', color: '#fff', fontWeight: 600 }}>ID #{log.farmer_id}</td>
                 <td style={{ padding: '16px 24px' }}><span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#ffd93d', background: 'rgba(255,217,61,0.1)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(255,217,61,0.2)', fontWeight: 800 }}>{log.operation}</span></td>
                 <td style={{ padding: '16px 24px', color: '#888' }}>{log.plot_id ? `#${log.plot_id}` : '—'}</td>
                 <td style={{ padding: '16px 24px', color: '#aaa', fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.detail || '—'}</td>
