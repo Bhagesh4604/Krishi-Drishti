@@ -121,6 +121,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, Error
   }
 }
 
+import { Geolocation } from '@capacitor/geolocation';
+import { Camera } from '@capacitor/camera';
+
 const AppContent: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -128,6 +131,21 @@ const AppContent: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [visionMode, setVisionMode] = useState<VisionMode>('diagnosis');
+
+  // Request all permissions proactively on Android via Capacitor
+  useEffect(() => {
+    const requestPerms = async () => {
+      try {
+        if ('capacitor' in window) {
+          await Geolocation.requestPermissions().catch(() => {});
+          await Camera.requestPermissions().catch(() => {});
+        }
+      } catch (err) {
+        console.warn('Could not request permissions proactively', err);
+      }
+    };
+    requestPerms();
+  }, []);
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [language, setLanguage] = useState<Language>('en');
   const [loading, setLoading] = useState(true);
