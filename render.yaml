@@ -1,0 +1,22 @@
+services:
+  # 1. Main FastAPI Backend
+  - type: web
+    name: krishi-drishti-api
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: "cd backend && pip install -r requirements.txt && python -m alembic upgrade head || true"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        value: sqlite:///./krishi_drishti.db
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
