@@ -285,8 +285,8 @@ export default function AgritechDashboard() {
               { icon: Leaf, title: 'Additionality', desc: 'Credits are issued only when farmers implement verified practice changes that exceed baseline management. Third-party verification confirms the change before issuance.' }
             ].map((card, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }} style={{ background: '#fff', borderRadius: '16px', padding: '3rem 2rem', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-20px', right: '-20px', opacity: 0.05 }}><card.icon size={200} color={primaryTeal} /></div>
-                <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '12px', background: '#F1F5F9' }}><card.icon size={32} color={lightGreen} /></div>
+                <div style={{ position: 'absolute', bottom: '-20px', right: '-20px', opacity: 0.04 }}><card.icon size={200} color={primaryTeal} /></div>
+                <div style={{ position: 'relative', zIndex: 2, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '12px', background: '#F1F5F9' }}><card.icon size={32} color={lightGreen} /></div>
                 <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: primaryTeal, marginBottom: '1rem' }}>{card.title}</h3>
                 <p style={{ fontSize: '1.125rem', color: '#475569', lineHeight: 1.6 }}>{card.desc}</p>
               </motion.div>
