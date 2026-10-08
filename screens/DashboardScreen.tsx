@@ -29,6 +29,7 @@ import {
   ArrowUpRight,
   MessageCircle,
   Sun,
+  Moon,
   Plus,
   Link2,
   Building2,
@@ -61,7 +62,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
   const [userPlots, setUserPlots] = useState<any[]>([]);
   const [isLoadingPlots, setIsLoadingPlots] = useState(true);
   const [plotLocationNames, setPlotLocationNames] = useState<{ [key: number]: string }>({});
+  const [isDark, setIsDark] = useState(false);
   const hasFetched = React.useRef(false);
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark-theme-override');
+    } else {
+      document.documentElement.classList.remove('dark-theme-override');
+    }
+  }, [isDark]);
 
   // ΓöÇΓöÇ Location picker state ΓöÇΓöÇ
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -245,6 +255,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
 
         <div className="flex items-center gap-3 relative">
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.9 }}
@@ -572,34 +583,21 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
         </div>
 
         {/* ΓöÇΓöÇ ROW 1: Two featured large 3D cards ΓöÇΓöÇ */}
-        <div className="grid grid-cols-2 gap-3 mb-3" style={{ perspective: '900px' }}>
-          <Tilt3D maxTilt={10} onClick={() => navigateTo('market' as Screen)} className="rounded-3xl">
-            <div variants={itemVariants} className="relative flex flex-col justify-between p-4 rounded-3xl text-left h-full overflow-hidden shine"
-              style={{ minHeight: 138, background: 'linear-gradient(150deg, #0e3322 0%, #001A11 60%, #04240f 100%)', border: '1px solid rgba(52,211,153,0.25)', boxShadow: '0 14px 30px -8px rgba(0,26,17,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' }}
+        <div className="grid grid-cols-1 gap-3 mb-3" style={{ perspective: '900px' }}>
+          <Tilt3D maxTilt={5} onClick={() => navigateTo('market' as Screen)} className="rounded-3xl">
+            <div variants={itemVariants} className="relative flex flex-col justify-center p-5 rounded-3xl text-left overflow-hidden shine"
+              style={{ minHeight: 120, background: 'linear-gradient(150deg, #0e3322 0%, #001A11 60%, #04240f 100%)', border: '1px solid rgba(52,211,153,0.25)', boxShadow: '0 14px 30px -8px rgba(0,26,17,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' }}
             >
               {/* ambient glow blob */}
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full blur-2xl opacity-40 pointer-events-none" style={{ background: 'radial-gradient(circle, #00BB78, transparent 70%)' }} />
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center icon-chip-3d" style={{ background: 'linear-gradient(140deg, #34d399, #059669)', boxShadow: '0 6px 14px rgba(0,187,120,0.45), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
-                <TrendingUp size={20} className="text-white" />
-              </div>
-              <div className="mt-6 relative z-10">
-                <p className="text-[13px] font-bold text-white leading-tight">Market Prices</p>
-                <p className="text-[10px] mt-0.5" style={{ color: '#A5FFA7' }}>Live mandi rates</p>
-              </div>
-            </div>
-          </Tilt3D>
-
-          <Tilt3D maxTilt={10} onClick={() => navigateTo('vision' as Screen)} className="rounded-3xl">
-            <div variants={itemVariants} className="relative flex flex-col justify-between p-4 rounded-3xl text-left h-full overflow-hidden shine"
-              style={{ minHeight: 138, background: 'linear-gradient(150deg, #34d399 0%, #00BB78 50%, #059669 100%)', border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 14px 30px -8px rgba(0,187,120,0.5), inset 0 1px 0 rgba(255,255,255,0.5)' }}
-            >
-              <div className="absolute -bottom-10 -left-6 w-28 h-28 rounded-full blur-2xl opacity-50 pointer-events-none" style={{ background: 'radial-gradient(circle, #ffffff, transparent 70%)' }} />
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center icon-chip-3d" style={{ background: 'rgba(255,255,255,0.28)', backdropFilter: 'blur(6px)', boxShadow: '0 6px 14px rgba(4,120,87,0.35), inset 0 1px 0 rgba(255,255,255,0.7)' }}>
-                <ScanLine size={20} className="text-white" />
-              </div>
-              <div className="mt-6 relative z-10">
-                <p className="text-[13px] font-bold text-white leading-tight drop-shadow-sm">Crop Scanner</p>
-                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.85)' }}>AI disease detection</p>
+              <div className="absolute -top-16 -right-10 w-48 h-48 rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: 'radial-gradient(circle, #00BB78, transparent 70%)' }} />
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center icon-chip-3d flex-shrink-0" style={{ background: 'linear-gradient(140deg, #34d399, #059669)', boxShadow: '0 6px 14px rgba(0,187,120,0.45), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+                  <TrendingUp size={24} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[17px] font-black text-white leading-tight">Live Market Prices</p>
+                  <p className="text-[12px] mt-1" style={{ color: '#A5FFA7' }}>Check Mandi rates across India</p>
+                </div>
               </div>
             </div>
           </Tilt3D>

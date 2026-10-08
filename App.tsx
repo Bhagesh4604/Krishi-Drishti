@@ -789,14 +789,12 @@ const AppContent: React.FC = () => {
 
       {/* App Frame */}
       <div
-        className="flex flex-col w-full max-w-md h-[100dvh] sm:h-[94vh] sm:max-h-[920px] relative overflow-hidden rounded-none sm:rounded-[2.5rem]"
+        className="flex flex-col w-full h-[100dvh] relative overflow-hidden"
         style={{
           background: '#020B06',
-          boxShadow: '0 2px 6px rgba(0,40,20,0.5), 0 16px 40px rgba(0,40,20,0.6), 0 60px 120px -20px rgba(0,0,0,0.8), 0 0 80px rgba(0,255,135,0.08)',
-          border: '1px solid rgba(255,255,255,0.06)',
         }}
       >
-      <main className={`flex-1 overflow-y-auto mobile-container relative ${showNav ? 'pb-20' : 'pb-0'}`}>
+      <main className={`flex-1 overflow-y-auto relative ${showNav ? 'pb-20' : 'pb-0'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentScreen}
