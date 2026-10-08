@@ -11,6 +11,19 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    SplashScreen: {
+      launchShowDuration: 1500,
+      launchAutoHide: true,
+      backgroundColor: "#020B06",
+      androidSplashResourceName: "splash",
+      androidScaleType: "CENTER_CROP",
+      showSpinner: false,
+    },
+    StatusBar: {
+      style: "DARK",
+      backgroundColor: "#020B06",
+      overlaysWebView: false,
+    }
   },
 };
 
