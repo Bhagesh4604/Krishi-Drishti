@@ -152,9 +152,15 @@ def run_daily_disease_forecasting():
     finally:
         db.close()
 
+from .database import engine, Base
+
 # Start scheduler on startup
 @app.on_event("startup")
 def startup_event():
+    # Automatically create tables if they don't exist (fixes missing tables on Render)
+    api_logger.info("Ensuring database tables exist...")
+    Base.metadata.create_all(bind=engine)
+
     # --- Celery / Redis ---
     if is_redis_available():
         api_logger.info("Redis reachable — Celery async mode active.")
