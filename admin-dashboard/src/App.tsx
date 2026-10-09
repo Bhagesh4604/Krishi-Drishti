@@ -15,8 +15,8 @@ import {
   BarChart, Bar, Cell,
 } from 'recharts';
 
-const TOKEN = 'kd_admin_KrishiDrishti2026';
-const API = (path: string) => `/api/admin/${path}?token=${TOKEN}`;
+const API_BASE = import.meta.env.VITE_API_URL || 'https://krishi-drishti-api.onrender.com/api';
+const API = (path: string) => `${API_BASE}/admin/${path}?token=${localStorage.getItem('kd_admin_token')}`;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Stats {
@@ -600,7 +600,7 @@ const LoginModal = ({ onLogin, onClose }: { onLogin: () => void; onClose: () => 
   const [checking, setChecking] = useState(false);
   const handleLogin = async () => {
     setChecking(true);
-    try { await axios.get(`/api/admin/stats?token=${token}`); localStorage.setItem('kd_admin_token', token); onLogin(); }
+    try { await axios.get(`${API_BASE}/admin/stats?token=${token}`); localStorage.setItem('kd_admin_token', token); onLogin(); }
     catch { alert('Invalid token'); } finally { setChecking(false); }
   };
   return (
