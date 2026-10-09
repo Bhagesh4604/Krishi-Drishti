@@ -60,6 +60,18 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Dark mode toggle via filter inversion */
+html.dark-theme-override {
+  filter: invert(1) hue-rotate(180deg);
+  background-color: #000;
+}
+html.dark-theme-override img,
+html.dark-theme-override video,
+html.dark-theme-override canvas,
+html.dark-theme-override .no-invert {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 /* ── Glassmorphism ───────────────────────────────────────────── */
 .glass {
   background: linear-gradient(145deg, rgba(255,255,255,0.85), rgba(255,255,255,0.55));

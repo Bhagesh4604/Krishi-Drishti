@@ -393,20 +393,26 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
     }
   };
 
-  const mon = analysis?.monitoring;
+  const mon = analysis?.monitoring || analysis;
   const carbon = analysis?.carbon;
   const timeline = analysis?.timeline || [];
   const riskFlags = analysis?.risk_flags || [];
   const cloudAlert = mon?.cloud_interference;
-  const pestRisk = mon?.pest_risk_score || 0;
+  let pestRisk = mon?.pest_risk_score || mon?.pest_risk || 0;
+  if (typeof pestRisk === 'string') {
+    if (pestRisk.toLowerCase() === 'low') pestRisk = 20;
+    else if (pestRisk.toLowerCase() === 'medium') pestRisk = 50;
+    else if (pestRisk.toLowerCase() === 'high') pestRisk = 80;
+    else pestRisk = parseInt(pestRisk) || 0;
+  }
 
-  const currentNdvi = mon?.current_ndvi || 0;
-  const currentNdre = mon?.current_ndre || 0;
-  const currentNdmi = mon?.current_ndmi || 0;
-  const currentEvi = mon?.current_evi || 0;
-  const currentMsavi = mon?.current_msavi || 0;
-  const currentGndvi = mon?.current_gndvi || 0;
-  const currentNbr = mon?.current_nbr || 0;
+  const currentNdvi = mon?.current_ndvi || mon?.ndvi || 0;
+  const currentNdre = mon?.current_ndre || mon?.ndre || 0;
+  const currentNdmi = mon?.current_ndmi || mon?.ndmi || 0;
+  const currentEvi = mon?.current_evi || mon?.evi || 0;
+  const currentMsavi = mon?.current_msavi || mon?.msavi || 0;
+  const currentGndvi = mon?.current_gndvi || mon?.gndvi || 0;
+  const currentNbr = mon?.current_nbr || mon?.nbr || 0;
   const soilMoisture = mon?.soil_moisture || 0;
 
   const heroLevel = getLevel(currentNdvi);
@@ -440,12 +446,22 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
           >
             <Layers size={16} />
           </button>
-          <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1.5">
-            <Satellite size={12} className="text-emerald-400" />
-            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-              {analysis?.source?.includes('Earth Engine') ? 'GEE Live' : analysis ? 'Simulated' : '...'}
-            </span>
-          </div>
+          {(() => {
+            const isLive = analysis?.source?.includes('Earth Engine');
+            const hasData = !!analysis;
+            return (
+              <div className={`flex items-center gap-1.5 border rounded-full px-3 py-1.5 transition-colors ${isLive ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+                <div className="relative flex items-center justify-center">
+                  <Satellite size={12} className={isLive ? 'text-emerald-400 relative z-10' : 'text-amber-400 relative z-10'} />
+                  {isLive && <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20"></div>}
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${isLive ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
+                  {isLive ? 'GEE Live' : hasData ? 'Simulated' : '...'}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -535,8 +551,9 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
 
           {/* Plot info bar */}
           <div className="px-4 py-3 flex items-center gap-3" style={{ background: '#0d150d', borderBottom: '1px solid #1a2a1a' }}>
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-              <TreePine size={16} className="text-emerald-400" />
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-emerald-400/20 rounded-lg scale-0 group-hover:scale-100 transition-transform origin-center"></div>
+              <TreePine size={16} className="text-emerald-400 relative z-10 transition-transform group-hover:scale-110" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-white font-black text-sm truncate">{selectedPlot.name}</h2>
@@ -621,19 +638,22 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
                   >
                     {/* Image overlay */}
                     {analysis.image_url && (
-                      <img src={analysis.image_url} alt="NDVI" className="absolute inset-0 w-full h-full object-cover opacity-8 rounded-2xl" />
+                      <>
+                        <img src={analysis.image_url} alt="NDVI" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay rounded-2xl" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 rounded-2xl pointer-events-none"></div>
+                      </>
                     )}
                     <div className="relative z-10">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[0.2em]">Current NDVI Score</p>
+                          <p className="text-[9px] text-white/90 font-bold uppercase tracking-[0.2em] drop-shadow-md">Current NDVI Score</p>
                           <div className="flex items-end gap-3 mt-1">
-                            <span className="text-5xl font-black leading-none" style={{ color: heroLevel.color }}>
+                            <span className="text-5xl font-black leading-none drop-shadow-lg" style={{ color: heroLevel.color }}>
                               {(currentNdvi * 100).toFixed(0)}
                             </span>
-                            <div className="mb-1 space-y-0.5">
+                            <div className="mb-1 space-y-0.5 drop-shadow-md">
                               <Delta value={mon?.ndvi_change || 0} />
-                              <span className="block text-xs font-black uppercase" style={{ color: heroLevel.color }}>
+                              <span className="block text-xs font-black uppercase drop-shadow-md" style={{ color: heroLevel.color }}>
                                 {heroLevel.label}
                               </span>
                             </div>
@@ -648,11 +668,11 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
                       </div>
 
                       {/* Irrigation recommendation */}
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: '#ffffff08' }}>
-                        <Droplets size={14} style={{ color: irrigationRec.color }} />
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md shadow-lg" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <Droplets size={14} style={{ color: irrigationRec.color }} className="drop-shadow-md" />
                         <div>
-                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Irrigation Advisory</p>
-                          <p className="text-[11px] font-bold" style={{ color: irrigationRec.color }}>
+                          <p className="text-[9px] text-white/90 font-bold uppercase tracking-wider drop-shadow-sm">Irrigation Advisory</p>
+                          <p className="text-[11px] font-bold drop-shadow-md" style={{ color: irrigationRec.color }}>
                             {irrigationRec.icon} {irrigationRec.label}
                           </p>
                         </div>

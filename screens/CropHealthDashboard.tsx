@@ -647,21 +647,21 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
                     {/* Image overlay */}
                     {analysis.image_url && (
                       <>
-                        <img src={analysis.image_url} alt="NDVI" className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay rounded-2xl" />
-                        <div className="absolute inset-0 bg-gradient-to-tr from-[#080e08]/90 via-[#080e08]/40 to-transparent rounded-2xl pointer-events-none"></div>
+                        <img src={analysis.image_url} alt="NDVI" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay rounded-2xl" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 rounded-2xl pointer-events-none"></div>
                       </>
                     )}
                     <div className="relative z-10">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="text-[9px] text-white/70 font-bold uppercase tracking-[0.2em] drop-shadow-md">Current NDVI Score</p>
+                          <p className="text-[9px] text-white/90 font-bold uppercase tracking-[0.2em] drop-shadow-md">Current NDVI Score</p>
                           <div className="flex items-end gap-3 mt-1">
-                            <span className="text-5xl font-black leading-none" style={{ color: heroLevel.color }}>
+                            <span className="text-5xl font-black leading-none drop-shadow-lg" style={{ color: heroLevel.color }}>
                               {(currentNdvi * 100).toFixed(0)}
                             </span>
-                            <div className="mb-1 space-y-0.5">
+                            <div className="mb-1 space-y-0.5 drop-shadow-md">
                               <Delta value={mon?.ndvi_change || 0} />
-                              <span className="block text-xs font-black uppercase" style={{ color: heroLevel.color }}>
+                              <span className="block text-xs font-black uppercase drop-shadow-md" style={{ color: heroLevel.color }}>
                                 {heroLevel.label}
                               </span>
                             </div>
@@ -676,11 +676,11 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
                       </div>
 
                       {/* Irrigation recommendation */}
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-sm shadow-sm" style={{ background: '#00000030', border: '1px solid #ffffff10' }}>
-                        <Droplets size={14} style={{ color: irrigationRec.color }} />
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md shadow-lg" style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <Droplets size={14} style={{ color: irrigationRec.color }} className="drop-shadow-md" />
                         <div>
-                          <p className="text-[9px] text-white/70 font-bold uppercase tracking-wider">Irrigation Advisory</p>
-                          <p className="text-[11px] font-bold" style={{ color: irrigationRec.color }}>
+                          <p className="text-[9px] text-white/90 font-bold uppercase tracking-wider drop-shadow-sm">Irrigation Advisory</p>
+                          <p className="text-[11px] font-bold drop-shadow-md" style={{ color: irrigationRec.color }}>
                             {irrigationRec.icon} {irrigationRec.label}
                           </p>
                         </div>

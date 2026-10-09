@@ -45,31 +45,23 @@ def _run_gee_analysis_sync(task_id: str, plot_id: int, plot_coords: str, crop_ty
     Currently uses the deterministic simulation from satellite_engine.py.
     """
     try:
-        import hashlib
-        import math
-
-        seed = f"{plot_id}-{plot_coords[:20]}"
-        h = int(hashlib.md5(seed.encode()).hexdigest()[:8], 16)
-        norm = h / 0xFFFFFFFF
-
-        ndvi = round(0.35 + norm * 0.55, 3)
-        msavi = round(ndvi * 0.88, 3)
-        evi = round(ndvi * 0.95, 3)
-        ndmi = round(0.1 + norm * 0.4, 3)
-        pest_risk = "Low" if ndvi > 0.6 else ("Medium" if ndvi > 0.45 else "High")
-
-        result = {
-            "task_id": task_id,
-            "status": "COMPLETE",
-            "completed_at": datetime.utcnow().isoformat(),
-            "ndvi": ndvi,
-            "msavi": msavi,
-            "evi": evi,
-            "ndmi": ndmi,
-            "pest_risk": pest_risk,
-            "crop_health": "Excellent" if ndvi > 0.65 else ("Good" if ndvi > 0.5 else "Moderate"),
-            "irrigation_advisory": "No irrigation needed" if ndmi > 0.3 else "Irrigation recommended within 3 days",
-        }
+        from ..services.earth_engine import earth_engine_service
+        import json
+        
+        try:
+            ring = json.loads(plot_coords) if isinstance(plot_coords, str) else plot_coords
+        except Exception:
+            ring = []
+            
+        result = earth_engine_service.monitor_plot(
+            geometry_coords=ring,
+            crop_type=crop_type or "Mixed",
+            plot_name=f"Plot-{plot_id}",
+        )
+        
+        result["task_id"] = task_id
+        result["status"] = "COMPLETE"
+        result["completed_at"] = datetime.utcnow().isoformat()
 
         _task_results[task_id] = result
     except Exception as e:

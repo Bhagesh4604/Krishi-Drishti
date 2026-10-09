@@ -10,6 +10,8 @@ interface GeolocationHook {
   getCurrentLocation: () => Promise<Position | null>;
 }
 
+import { Capacitor } from '@capacitor/core';
+
 const useGeolocation = (): GeolocationHook => {
   const [position, setPosition] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,7 @@ const useGeolocation = (): GeolocationHook => {
 
   const requestPermissions = async (): Promise<boolean> => {
     try {
-      if (!('capacitor' in window)) {
+      if (!Capacitor.isNativePlatform()) {
         return true;
       }
       const permissionStatus = await Geolocation.requestPermissions();

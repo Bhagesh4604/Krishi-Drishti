@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Screen } from '../types';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, TrendingUp } from 'lucide-react';
+import api from '../src/services/api';
 
 interface MarketScreenProps {
   navigateTo: (screen: Screen, data?: any) => void;
@@ -20,11 +21,9 @@ const LiveMandiPrices = () => {
     const fetchLivePrices = async () => {
       try {
         setLoading(true);
-        // Using our new local backend proxy to entirely bypass browser CORS and ad-blockers
-        const url = 'http://localhost:8000/api/market/live-prices';
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('API Failed');
-        const data = await res.json();
+        // Use the configured api client which correctly maps API_BASE_URL (bypasses CORS/proxy issues)
+        const res = await api.get('/market/live-prices');
+        const data = res.data;
         
         // Transform the data format from data.gov.in API
         const formatted = data.records.map((r: any, idx: number) => {

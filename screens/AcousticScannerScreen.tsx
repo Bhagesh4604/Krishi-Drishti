@@ -4,7 +4,7 @@ import { Mic, FileAudio, Loader2, ShieldAlert, ArrowLeft, Activity } from 'lucid
 import { aiService } from '../src/services/api';
 
 // Constants
-const SERVER_URL = 'http://localhost:8002/analyze-audio';
+const SERVER_URL = (import.meta as any).env?.VITE_API_URL ? `${(import.meta as any).env.VITE_API_URL.replace('/api', '')}/analyze-audio` : 'http://localhost:8002/analyze-audio';
 const RECORDING_DURATION_MS = 10000;
 
 interface AnalysisResult {

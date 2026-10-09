@@ -139,7 +139,7 @@ const isNativeForApi = typeof (window as any).Capacitor !== 'undefined' &&
 // When running in the Android Emulator, 10.0.2.2 points to the laptop's localhost.
 // (If testing on a physical phone, you must use the laptop's actual IP like 192.168.x.x 
 // AND run the backend with --host 0.0.0.0)
-const API_BASE_URL = isNativeForApi ? 'http://localhost:8000/api' : '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativeForApi ? 'http://localhost:8000/api' : '/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -393,8 +393,8 @@ export const plotService = {
     return { carbon_score: 85, predicted_yield: 4200 };
   },
   forecastYield: async (plotId: number) => {
-    // Real endpoint implementation to be added
-    return { forecast: 4500, unit: 'kg' };
+    const response = await api.get(`/plots/${plotId}/yield-forecast`);
+    return response.data;
   },
   startAnalysis: async (plotId: number) => {
     // Call the real SSE analysis endpoint

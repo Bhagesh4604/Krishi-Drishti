@@ -8,3 +8,4 @@ backend/uploads/
 *.code-search
 .DS_Store
 patches/
+.vercel

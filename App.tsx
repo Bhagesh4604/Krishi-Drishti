@@ -123,6 +123,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, Error
 
 import { Geolocation } from '@capacitor/geolocation';
 import { Camera } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
 
 const AppContent: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
@@ -136,9 +137,11 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const requestPerms = async () => {
       try {
-        if ('capacitor' in window) {
-          await Geolocation.requestPermissions().catch(() => {});
-          await Camera.requestPermissions().catch(() => {});
+        if (Capacitor.isNativePlatform()) {
+          console.log("Requesting native permissions...");
+          const geoStatus = await Geolocation.requestPermissions();
+          const camStatus = await Camera.requestPermissions();
+          console.log("Permissions requested", { geoStatus, camStatus });
         }
       } catch (err) {
         console.warn('Could not request permissions proactively', err);

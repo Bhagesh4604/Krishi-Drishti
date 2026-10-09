@@ -36,17 +36,7 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
-          // Split heavyweight libraries into their own cacheable chunks so
-          // app updates don't invalidate them, and they load in parallel.
-          manualChunks(id) {
-            if (!id.includes('node_modules')) return;
-            if (id.includes('three') || id.includes('globe')) return 'vendor-3d';
-            if (id.includes('leaflet')) return 'vendor-maps';
-            if (id.includes('@google/genai') || id.includes('google-genai')) return 'vendor-genai';
-            if (id.includes('framer-motion')) return 'vendor-motion';
-            if (id.includes('react')) return 'vendor-react';
-            return 'vendor';
-          },
+          // Default Vite chunking handles this better without circular dependencies
         },
       },
     },

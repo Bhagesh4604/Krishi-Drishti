@@ -18,12 +18,11 @@ import {
   Waves,
   Zap,
   MessageCircle,
-import {
   Activity,
   Satellite
 } from 'lucide-react';
 import { languages } from '../translations';
-import MorphOrb from '../components/MorphOrb';
+
 
 interface LiveAudioScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -409,16 +408,9 @@ const LiveAudioScreen: React.FC<LiveAudioScreenProps> = ({ navigateTo, language,
 
       {/* ========== MAIN VISUALIZER (MORPH ORB) ========== */}
       <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 px-2 mt-4">
-        <MorphOrb 
-          onSubmit={async (text) => {
-            if (sessionRef.current) {
-              sessionRef.current.send({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }] } });
-              return "Sent to voice stream.";
-            } else {
-              return "Please start the voice session first.";
-            }
-          }}
-        />
+        <div className="w-full h-48 flex items-center justify-center">
+           <div className="w-32 h-32 rounded-full bg-white/10 animate-pulse border border-white/20" />
+        </div>
       </div>
 
         {/* ==== STATUS TEXT ==== */}
@@ -496,7 +488,6 @@ const LiveAudioScreen: React.FC<LiveAudioScreenProps> = ({ navigateTo, language,
             </motion.p>
           )}
         </div>
-      </div>
 
       {/* ========== CONTROLS ========== */}
       <motion.div
