@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
-import { getUserLocation } from '../src/services/api';
+import api, { getUserLocation } from '../src/services/api';
 import {
     AlertTriangle,
     CheckCircle,
@@ -65,7 +65,7 @@ const CropStressScreen = ({ navigateTo }: { navigateTo: (screen: Screen) => void
         try {
             // Real API Call
             const token = localStorage.getItem('ks_token');
-            const response = await axios.post('http://127.0.0.1:8000/api/ai/analyze/stress', {
+            const response = await api.post('/ai/analyze/stress', {
                 lat: position.lat,
                 lng: position.lng,
                 crop_type: cropType,
