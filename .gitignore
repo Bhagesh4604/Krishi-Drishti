@@ -9,3 +9,5 @@ backend/uploads/
 .DS_Store
 patches/
 .vercel
+.idea/
+.pytest_cache/

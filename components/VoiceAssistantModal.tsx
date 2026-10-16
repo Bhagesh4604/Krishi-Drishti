@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { X, Mic, MicOff, Loader2, Globe, Sparkles, Keyboard } from 'lucide-react';
+import { GoogleGenAI } from '@google/genai';
+import { X, Mic, Loader2, Globe, Sparkles, Keyboard } from 'lucide-react';
 import { languages } from '../translations';
 import { Language } from '../types';
-import MorphOrb from '../src/components/MorphOrb';
 
 interface VoiceAssistantModalProps {
     isOpen: boolean;
@@ -12,232 +11,215 @@ interface VoiceAssistantModalProps {
     onSwitchToText?: () => void;
 }
 
+const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+
 const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClose, language, onSwitchToText }) => {
     const [isActive, setIsActive] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [transcriptions, setTranscriptions] = useState<{ role: 'user' | 'model', text: string }[]>([]);
     const [currentInput, setCurrentInput] = useState('');
-    const [currentOutput, setCurrentOutput] = useState('');
     const [selectedLang, setSelectedLang] = useState<Language>(language);
     const [showLangMenu, setShowLangMenu] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Visualization State
     const [volume, setVolume] = useState(0);
-    const orbRef = useRef<any>(null);
 
-    const sessionRef = useRef<any>(null);
     const isActiveRef = useRef(false);
+    const recognitionRef = useRef<any>(null);
     const audioContextInRef = useRef<AudioContext | null>(null);
-    const audioContextOutRef = useRef<AudioContext | null>(null);
-    const nextStartTimeRef = useRef(0);
-    const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
-    const animationRef = useRef<number>();
     const analyserRef = useRef<AnalyserNode | null>(null);
+    const animationRef = useRef<number>();
+    const mediaStreamRef = useRef<MediaStream | null>(null);
 
-    // Audio helper functions (Same as LiveAudioScreen)
-    const decode = (base64: string) => {
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        return bytes;
-    };
-
-    const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number) => {
-        const dataInt16 = new Int16Array(data.buffer);
-        const frameCount = dataInt16.length / numChannels;
-        const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-        for (let channel = 0; channel < numChannels; channel++) {
-            const channelData = buffer.getChannelData(channel);
-            for (let i = 0; i < frameCount; i++) {
-                channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-            }
-        }
-        return buffer;
-    };
-
-    const encode = (bytes: Uint8Array) => {
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return btoa(binary);
-    };
-
-    const createBlob = (data: Float32Array) => {
-        const int16 = new Int16Array(data.length);
-        for (let i = 0; i < data.length; i++) {
-            int16[i] = data[i] * 32768;
-        }
-        return {
-            data: encode(new Uint8Array(int16.buffer)),
-            mimeType: 'audio/pcm;rate=16000',
+    const speakResponse = (text: string, langCode: string) => {
+        if (!window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Try to map our language codes to browser voice languages
+        const langMap: Record<string, string> = {
+            'en': 'en-IN', 'hi': 'hi-IN', 'kn': 'kn-IN', 'te': 'te-IN', 
+            'ta': 'ta-IN', 'mr': 'mr-IN', 'gu': 'gu-IN'
         };
+        utterance.lang = langMap[langCode] || 'en-IN';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        
+        utterance.onstart = () => {
+            // Simulate volume while speaking
+            setVolume(0.8);
+        };
+        
+        utterance.onend = () => {
+            setVolume(0);
+            if (isActiveRef.current && recognitionRef.current) {
+                // Resume listening after speaking
+                try {
+                    recognitionRef.current.start();
+                } catch(e) {}
+            }
+        };
+
+        window.speechSynthesis.speak(utterance);
+    };
+
+    const processUserInput = async (text: string) => {
+        setIsConnecting(true);
+        try {
+            const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+            const ai = new GoogleGenAI({ apiKey });
+            const currentLangLabel = languages.find(l => l.code === selectedLang)?.label || 'English';
+
+            setTranscriptions(prev => [...prev, { role: 'user', text }]);
+            setCurrentInput('');
+            
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: text,
+                config: {
+                    systemInstruction: `You are Krishi Drishti AI, an expert AI Agricultural Scientist. Language: ${currentLangLabel}. Provide concise, practical farming advice in exactly 1 or 2 short sentences. Do not use markdown.`
+                }
+            });
+
+            const reply = response.text || "I'm sorry, I couldn't process that.";
+            
+            setTranscriptions(prev => [...prev, { role: 'model', text: reply }]);
+            speakResponse(reply, selectedLang);
+
+        } catch (err: any) {
+            console.error(err);
+            setErrorMessage("Failed to connect to AI. Check API Key or internet.");
+            setIsActive(false);
+            isActiveRef.current = false;
+        } finally {
+            setIsConnecting(false);
+        }
     };
 
     const startSession = async () => {
+        setErrorMessage(null);
         setIsConnecting(true);
+        
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-            audioContextInRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-            audioContextOutRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-
+            // Setup visualizer mic
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            const currentLangLabel = languages.find(l => l.code === selectedLang)?.label || 'English';
-
-            // Connect Analyser for Visualization
+            mediaStreamRef.current = stream;
+            
+            audioContextInRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
             const analyser = audioContextInRef.current.createAnalyser();
             analyser.fftSize = 256;
             analyserRef.current = analyser;
 
             const source = audioContextInRef.current.createMediaStreamSource(stream);
-            source.connect(analyser); // Connect source to analyser
+            source.connect(analyser);
 
-            // Visualization Loop
             const updateVolume = () => {
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                analyser.getByteFrequencyData(dataArray);
+                if (!analyserRef.current) return;
+                const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+                analyserRef.current.getByteFrequencyData(dataArray);
                 const avg = dataArray.reduce((p, c) => p + c, 0) / dataArray.length;
-
-                // Normalize and smooth volume (0 to 1 range, biased towards speech frequencies)
-                // Use a lower threshold to make it sensitive
                 const normalizedParams = Math.min(1, avg / 60);
-
-                setVolume(prev => prev * 0.8 + normalizedParams * 0.2); // Smooth transition
+                
+                // If it's synthesizing speech, override volume for visual effect
+                if (!window.speechSynthesis.speaking) {
+                    setVolume(prev => prev * 0.8 + normalizedParams * 0.2);
+                }
+                
                 animationRef.current = requestAnimationFrame(updateVolume);
             };
             updateVolume();
 
-            const sessionPromise = ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-                callbacks: {
-                    onopen: () => {
-                        setIsActive(true);
-                        isActiveRef.current = true;
-                        setIsConnecting(false);
+            // Setup Speech Recognition
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                const langMap: Record<string, string> = {
+                    'en': 'en-IN', 'hi': 'hi-IN', 'kn': 'kn-IN', 'te': 'te-IN', 
+                    'ta': 'ta-IN', 'mr': 'mr-IN', 'gu': 'gu-IN'
+                };
+                recognition.lang = langMap[selectedLang] || 'en-IN';
+                recognition.continuous = false;
+                recognition.interimResults = true;
 
-                        // Re-use source for script processor logic
-                        // We need to re-create the graph part for the processor since it's a specific requirement for the SDK input
-                        const scriptProcessor = audioContextInRef.current!.createScriptProcessor(4096, 1, 1);
-                        scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
-                            if (!isActiveRef.current) return;
-                            const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-                            const pcmBlob = createBlob(inputData);
-                            sessionPromise.then((session) => {
-                                session.sendRealtimeInput({ media: pcmBlob });
-                            });
-                        };
+                recognition.onresult = (event: any) => {
+                    const transcript = Array.from(event.results)
+                        .map((result: any) => result[0].transcript)
+                        .join('');
+                    
+                    setCurrentInput(transcript);
 
-                        // Connect the source to the processor
-                        // Note: source is already created above and connected to analyser.
-                        // We can connect it to multiple destinations.
-                        source.connect(scriptProcessor);
-                        scriptProcessor.connect(audioContextInRef.current!.destination);
-                    },
-                    onmessage: async (message: LiveServerMessage) => {
-                        if (message.serverContent?.outputTranscription) {
-                            setCurrentOutput(prev => prev + message.serverContent!.outputTranscription!.text);
-                        } else if (message.serverContent?.inputTranscription) {
-                            setCurrentInput(prev => prev + message.serverContent!.inputTranscription!.text);
-                        }
-
-                        if (message.serverContent?.turnComplete) {
-                            setTranscriptions(prev => [
-                                ...prev,
-                                { role: 'user', text: currentInput },
-                                { role: 'model', text: currentOutput }
-                            ]);
-                            setCurrentInput('');
-                            setCurrentOutput('');
-                        }
-
-                        const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-                        if (base64Audio) {
-                            const audioCtx = audioContextOutRef.current!;
-                            nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioCtx.currentTime);
-                            const audioBuffer = await decodeAudioData(
-                                decode(base64Audio),
-                                audioCtx,
-                                24000,
-                                1
-                            );
-                            const source = audioCtx.createBufferSource();
-                            source.buffer = audioBuffer;
-                            source.connect(audioCtx.destination);
-                            source.onended = () => {
-                                sourcesRef.current.delete(source);
-                            };
-                            source.start(nextStartTimeRef.current);
-                            nextStartTimeRef.current += audioBuffer.duration;
-                            sourcesRef.current.add(source);
-                        }
-                    },
-                    onclose: () => {
-                        setIsActive(false);
-                        isActiveRef.current = false;
-                        if (animationRef.current) cancelAnimationFrame(animationRef.current);
-                    },
-                    onerror: (e) => {
-                        console.error(e);
-                        setIsActive(false);
-                        isActiveRef.current = false;
-                        setIsConnecting(false);
-                        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+                    if (event.results[0].isFinal) {
+                        recognition.stop();
+                        processUserInput(transcript);
                     }
-                },
-                config: {
-                    responseModalities: [Modality.AUDIO],
-                    speechConfig: {
-                        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-                    },
-                    systemInstruction: `You are Krishi Drishti AI, an expert AI Agricultural Scientist. 
-          Language: ${currentLangLabel}.
-          Provide concise, practical farming advice.`
-                }
-            });
-            sessionRef.current = sessionPromise;
+                };
 
-        } catch (err) {
+                recognition.onerror = (event: any) => {
+                    if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                        console.error('Speech recognition error', event.error);
+                        setErrorMessage(`Microphone error: ${event.error}`);
+                        stopSession();
+                    }
+                };
+
+                recognition.onend = () => {
+                    // Only auto-restart if we are actively listening and NOT currently speaking
+                    if (isActiveRef.current && !window.speechSynthesis.speaking && !isConnecting) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                };
+
+                recognitionRef.current = recognition;
+                recognition.start();
+                
+                setIsActive(true);
+                isActiveRef.current = true;
+                setIsConnecting(false);
+            } else {
+                setErrorMessage("Voice Recognition is not supported in your browser. Please try Chrome.");
+                setIsConnecting(false);
+            }
+
+        } catch (err: any) {
             console.error(err);
+            setErrorMessage("Microphone Access Denied. Please check browser permissions.");
             setIsConnecting(false);
-            if (animationRef.current) cancelAnimationFrame(animationRef.current);
         }
     };
 
     const stopSession = () => {
-        if (sessionRef.current) {
-            sessionRef.current.then((session: any) => session.close());
-        }
-        if (audioContextInRef.current) audioContextInRef.current.close();
-        if (audioContextOutRef.current) audioContextOutRef.current.close();
         setIsActive(false);
         isActiveRef.current = false;
         setIsConnecting(false);
-        setTranscriptions([]);
-        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        }
+        if (audioContextInRef.current) {
+            audioContextInRef.current.close();
+        }
+        if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+        }
+        setVolume(0);
+        setCurrentInput('');
     };
 
     useEffect(() => {
         if (isOpen && !isActive && !isConnecting) {
             startSession();
-            // Start the MorphOrb animation
-            setTimeout(() => {
-                orbRef.current?.start("Listening to you...");
-            }, 500);
         } else if (!isOpen) {
             stopSession();
         }
         return () => stopSession();
     }, [isOpen]);
-
-    // Send volume updates to MorphOrb
-    useEffect(() => {
-        if (isActive) {
-            orbRef.current?.setVolume?.(volume);
-        }
-    }, [volume, isActive]);
 
     // Restart session if language changes while active
     useEffect(() => {
@@ -247,14 +229,10 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
         }
     }, [selectedLang]);
 
-    // Dynamic Style for Orb
-    const orbScale = 1 + (volume * 1.5);
-
     if (!isOpen) return null;
 
     return (
         <div className="absolute inset-0 z-[100] flex flex-col bg-black/95 text-white animate-in fade-in duration-300 rounded-[2.5rem] overflow-hidden">
-
             {/* Header */}
             <div className="flex justify-between items-center p-6">
                 <div className="flex items-center gap-2">
@@ -299,28 +277,35 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
 
             {/* Main Visualizer Area */}
             <div className="flex-1 flex flex-col items-center justify-center relative">
-
-                {/* Morph Orb Component */}
-                <div className="w-full h-80 relative flex items-center justify-center pointer-events-none scale-110">
-                    <MorphOrb 
-                        ref={orbRef}
-                        onSubmit={async (text) => {
-                            if (sessionRef.current) {
-                                sessionRef.current.then((session: any) => {
-                                    session.send({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }] } });
-                                });
-                            }
-                            // Return a promise that never resolves, so MorphOrb stays in the "think" (orb) phase forever!
-                            return new Promise<string>(() => {});
-                        }}
-                    />
+                {/* Clean Pulsing Visualizer Area */}
+                <div className="w-full h-64 relative flex items-center justify-center pointer-events-none">
+                    {errorMessage ? (
+                        <div className="bg-red-500/20 border border-red-500/50 p-4 rounded-xl text-center max-w-[80%] backdrop-blur-md">
+                            <p className="text-red-200 text-sm font-medium">{errorMessage}</p>
+                        </div>
+                    ) : (
+                        <div className="relative flex items-center justify-center">
+                            {/* Outer animated rings when active */}
+                            {isActive && (
+                                <>
+                                    <div className="absolute w-40 h-40 bg-teal-500/20 rounded-full animate-ping" style={{ animationDuration: '2s', transform: `scale(${1 + volume})` }} />
+                                    <div className="absolute w-48 h-48 bg-emerald-500/10 rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '0.5s', transform: `scale(${1 + volume * 1.5})` }} />
+                                    <div className="absolute w-56 h-56 border border-teal-500/20 rounded-full animate-spin-slow" style={{ transform: `rotate(${volume * 360}deg)` }} />
+                                </>
+                            )}
+                            
+                            {/* Core Orb reacting to volume */}
+                            <div className={`w-32 h-32 rounded-full relative flex items-center justify-center transition-all duration-75 ease-out ${isActive ? 'bg-gradient-to-tr from-teal-400 to-emerald-500 shadow-[0_0_40px_rgba(45,212,191,0.6)]' : 'bg-white/5 border-2 border-white/10'}`} style={{ transform: `scale(${isActive ? 1 + volume * 0.4 : 1})` }}>
+                                <div className={`absolute inset-0 rounded-full bg-gradient-to-tr from-teal-300 to-emerald-400 blur-md transition-opacity duration-700 ${isActive ? 'opacity-50' : 'opacity-0'}`} />
+                                <Mic size={40} className={`relative z-10 transition-colors duration-700 ${isActive ? 'text-white drop-shadow-lg' : 'text-white/30'}`} />
+                            </div>
+                        </div>
+                    )}
                 </div>
-
-
 
                 {/* Status Text */}
                 <p className="mt-8 text-sm font-bold text-teal-200 uppercase tracking-[0.2em] animate-pulse">
-                    {isConnecting ? 'Initializing...' : (isActive ? 'Listening...' : 'Paused')}
+                    {isConnecting ? 'Thinking...' : (isActive ? 'Listening...' : 'Paused')}
                 </p>
 
                 {/* Transcription Stream */}
@@ -332,14 +317,11 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
                         </p>
                     ))}
                     {currentInput && <p className="text-lg text-gray-400 font-medium">"{currentInput}..."</p>}
-                    {currentOutput && <p className="text-lg text-white font-medium">"{currentOutput}..."</p>}
                 </div>
-
             </div>
 
             {/* Footer / Controls */}
             <div className="p-8 pb-12 flex justify-center items-center gap-6">
-
                 {/* Switch to Text Chat */}
                 <button
                     onClick={onSwitchToText}

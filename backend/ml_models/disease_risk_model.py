@@ -32,9 +32,9 @@ def _compute_window_stats(weather_data: List[Dict], window: int = 5) -> Dict:
     while len(recent) < window:
         recent.insert(0, _DEFAULT_DAY)
 
-    temps = [d.get("temp", 27.0) for d in recent]
-    humidities = [d.get("humidity", 72.0) for d in recent]
-    precips = [d.get("precip", 2.0) for d in recent]
+    temps      = [float(d.get("temp")      if d.get("temp")      is not None else 27.0) for d in recent]
+    humidities = [float(d.get("humidity")  if d.get("humidity")  is not None else 72.0) for d in recent]
+    precips    = [float(d.get("precip")    if d.get("precip")    is not None else  2.0) for d in recent]
 
     return {
         "avg_temp": sum(temps) / len(temps),

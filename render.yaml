@@ -20,3 +20,15 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: USE_LOCAL_DISEASE_MODEL
+        value: "true"
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      - key: TF_ENABLE_ONEDNN_OPTS
+        value: "0"
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "3"
+      - key: DISEASE_INFERENCE_TIMEOUT_SECONDS
+        value: "12.0"
+      - key: GEMINI_INFERENCE_TIMEOUT_SECONDS
+        value: "10.0"

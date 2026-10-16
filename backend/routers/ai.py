@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import os
+import logging
 
 try:
     from google import genai
@@ -17,10 +18,18 @@ from ..services.satellite import get_real_satellite_data
 from ..services.rag_indexer import get_rag_engine
 from ..services.weather_fetcher import get_bioclimatic_data
 from ..ml_models.soc_model import train_soc_model
+from ..ml_models.local_disease_predictor import predict as _local_predict
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 from ..rate_limiter import limiter
+
+logger = logging.getLogger(__name__)
+
+
+def _use_local_model() -> bool:
+    """Return True when USE_LOCAL_DISEASE_MODEL env-var is 'true' (case-insensitive)."""
+    return os.getenv("USE_LOCAL_DISEASE_MODEL", "false").strip().lower() == "true"
 
 class GeminiWrapper:
     def __init__(self, model_name="gemini-2.5-flash"):
@@ -369,6 +378,40 @@ def _generate_chat_response(prompt):
     return response.text
 
 
+DISEASE_INFERENCE_TIMEOUT = float(os.getenv("DISEASE_INFERENCE_TIMEOUT_SECONDS", "12.0"))
+GEMINI_INFERENCE_TIMEOUT = float(os.getenv("GEMINI_INFERENCE_TIMEOUT_SECONDS", "10.0"))
+
+
+def _safe_delayed_fallback(reason: str = "server load") -> dict:
+    """
+    Construct a clean HTTP 200 fallback response that strictly adheres to the exact
+    JSON schema expected by VisionResultScreen and the Android mobile application.
+    Guarantees the mobile app never drops connection, encounters unhandled 500/504 errors,
+    or displays a white screen during Render server-side delays.
+    """
+    return {
+        "diagnosis":    "Analysis Delayed",
+        "confidence":   0,
+        "summary":      (
+            f"Crop image analysis is taking longer than expected under current {reason}. "
+            "Please retry with a clear, well-lit crop photo."
+        ),
+        "health_score": 50,
+        "remedies":     [
+            {
+                "title": "Camera Focus & Lighting",
+                "desc":  "Ensure clear daylight and steady camera focus directly on the symptomatic leaf area.",
+                "type":  "cultural",
+            },
+            {
+                "title": "Retry Leaf Diagnosis",
+                "desc":  "Tap the scan button again to submit a new scan for immediate processing.",
+                "type":  "cultural",
+            },
+        ],
+    }
+
+
 @limiter.limit("10/minute")
 @router.post("/diagnose")
 async def diagnose_crop(
@@ -377,23 +420,80 @@ async def diagnose_crop(
     mode: str = Form("diagnosis"),
     current_user: User = Depends(get_current_user)
 ):
-    content = await file.read()
-    image = Image.open(io.BytesIO(content))
-    
-    prompt = """
-    You are an expert agronomist. Analyze this crop image.
-    Format your response EXACTLY as a JSON object with the following fields:
-    {
-        "diagnosis": "Name of disease or pest (or 'Healthy')",
-        "confidence": 0-100 (integer),
-        "summary": "Brief 1-sentence explanation",
-        "health_score": 0-100 (integer),
-        "remedies": [
-            { "title": "Remedy Name", "desc": "Short description", "type": "organic" },
-            { "title": "Remedy Name", "desc": "Short description", "type": "chemical" }
-        ]
-    }
     """
+    Crop disease diagnosis endpoint.
+
+    Contract Preservation:
+      Returns the EXACT SAME JSON schema whether processed by local model or Gemini:
+        { diagnosis, confidence, summary, health_score, remedies[] }
+      Frontend and Android application remain completely untouched.
+
+    Render Deployment Optimization & Connection Stability:
+      - Asynchronous thread-pool inference with strict timeout handling.
+      - Never drops connections or returns raw 500/504 errors.
+      - Dual cascade: Local Model <-> Gemini Vision fallback.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+
+    try:
+        content = await file.read()
+        image = Image.open(io.BytesIO(content))
+    except Exception as img_err:
+        logger.error("[diagnose] Invalid image payload: %s", img_err)
+        return _safe_delayed_fallback("image decoding")
+
+    def _clean(resp: dict) -> dict:
+        resp.pop("_source", None)
+        return resp
+
+    # ════════════════════════════════════════════════════════════════════════
+    # BRANCH A — Local model is PRIMARY (USE_LOCAL_DISEASE_MODEL=true)
+    # ════════════════════════════════════════════════════════════════════════
+    if _use_local_model() and mode != "grading":
+        logger.info("[diagnose] Running local model (timeout=%ss)...", DISEASE_INFERENCE_TIMEOUT)
+        try:
+            result = await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: _local_predict(image)),
+                timeout=DISEASE_INFERENCE_TIMEOUT,
+            )
+            source = result.get("_source", "local")
+            if "error" not in source:
+                logger.info("[diagnose] Local model success: %s (%s%%)",
+                            result.get("diagnosis"), result.get("confidence"))
+                return _clean(result)
+            logger.warning("[diagnose] Local model error reported: %s", result.get("summary"))
+        except asyncio.TimeoutError:
+            logger.warning("[diagnose] Local inference timed out after %ss on Render", DISEASE_INFERENCE_TIMEOUT)
+        except Exception as exc:
+            logger.warning("[diagnose] Local inference exception: %s", exc)
+
+        # Local model failed or timed out — cascade to Gemini as safety net
+        logger.warning("[diagnose] Cascading to Gemini API fallback...")
+
+    # ════════════════════════════════════════════════════════════════════════
+    # BRANCH B — Gemini Vision is PRIMARY (USE_LOCAL_DISEASE_MODEL=false)
+    # Also serves as cascade fallback when local model errors or times out.
+    # ════════════════════════════════════════════════════════════════════════
+    gemini = _get_gemini_model()
+
+    if gemini is None:
+        # No Gemini key configured
+        if not _use_local_model():
+            logger.info("[diagnose] Gemini unconfigured, attempting local model...")
+            try:
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(None, lambda: _local_predict(image)),
+                    timeout=DISEASE_INFERENCE_TIMEOUT,
+                )
+                source = result.get("_source", "local")
+                if "error" not in source:
+                    return _clean(result)
+            except Exception as e:
+                logger.warning("[diagnose] Local model fallback failed: %s", e)
+        return _safe_delayed_fallback("AI services busy")
+
+    # Build prompt based on mode
     if mode == "grading":
         prompt = """
         You are an expert quality grader. Grade this produce.
@@ -403,185 +503,67 @@ async def diagnose_crop(
             "confidence": 0-100 (integer),
             "summary": "Reason for grading",
             "health_score": 0-100 (visual quality score),
-            "remedies": [] 
+            "remedies": []
         }
         """
-        
-    model = _get_gemini_model()
-    if model is None:
-        return {
-            "diagnosis": "AI unavailable",
-            "confidence": 0,
-            "summary": "Gemini image analysis is not available because the required Python package is missing.",
-            "health_score": 0,
-            "remedies": []
+    else:
+        prompt = """
+        You are an expert agronomist. Analyze this crop image.
+        Format your response EXACTLY as a JSON object with the following fields:
+        {
+            "diagnosis": "Name of disease or pest (or 'Healthy')",
+            "confidence": 0-100 (integer),
+            "summary": "Brief 1-sentence explanation",
+            "health_score": 0-100 (integer),
+            "remedies": [
+                { "title": "Remedy Name", "desc": "Short description", "type": "organic" },
+                { "title": "Remedy Name", "desc": "Short description", "type": "chemical" }
+            ]
         }
+        """
 
     try:
-        response = model.generate_content([prompt, image])
-    except Exception as e:
-        print(f"[AI] Gemini vision failed: {e}. Falling back to local model.")
-        return _fallback_predict(image)
-        
-    try:
+        response = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: gemini.generate_content([prompt, image])),
+            timeout=GEMINI_INFERENCE_TIMEOUT,
+        )
         import json
         import re
-        # Clean markdown code blocks if present
         cleaned = re.sub(r'```json|```', '', response.text).strip()
         analysis = json.loads(cleaned)
+        if "health_score" not in analysis:
+            analysis["health_score"] = 100 if "healthy" in analysis.get("diagnosis", "").lower() else 50
+        if "remedies" not in analysis or not isinstance(analysis["remedies"], list):
+            analysis["remedies"] = []
         return analysis
-    except:
-        # Fallback if JSON parsing fails
-        return {
-            "diagnosis": "Analysis Failed",
-            "confidence": 0,
-            "summary": "Could not parse AI response. Raw: " + response.text[:50] + "...",
-            "healthScore": 0,
-            "remedies": []
-        }
-
-_local_model = None
-_local_classes = None
-
-def _load_local_model():
-    global _local_model, _local_classes
-    if _local_model is None:
-        try:
-            import tensorflow as tf
-            import numpy as np
-            import json
-            import os
-            # Note: The CWD when running uvicorn is usually the project root
-            model_path = os.path.join("backend", "ml_models", "plant_disease_efficientnet.h5")
-            labels_path = os.path.join("backend", "ml_models", "class_labels_disease.json")
-            if os.path.exists(model_path):
-                _local_model = tf.keras.models.load_model(model_path, compile=False)
-            if os.path.exists(labels_path):
-                with open(labels_path, "r") as f:
-                    _local_classes = json.load(f)["classes"]
-        except Exception as e:
-            print(f"[Fallback Model] Error loading local model: {e}")
-    return _local_model, _local_classes
-
-def _fallback_predict(image: Image.Image):
-    model, classes = _load_local_model()
-    if model is None or classes is None:
-        # Since Keras 3 breaks compatibility with older .h5 files, we provide a generic local fallback
-        return {
-            "diagnosis": "Unconfirmed Anomaly (Local Fallback)",
-            "confidence": 75,
-            "summary": "Gemini API is unavailable and the local EfficientNet model is incompatible with the current TensorFlow version. Displaying generic fallback.",
-            "health_score": 60,
-            "remedies": [
-                {
-                    "title": "Update AI Credentials",
-                    "desc": "Please provide a valid GEMINI_API_KEY in the backend .env file.",
-                    "type": "general"
-                },
-                {
-                    "title": "Consult Agronomist",
-                    "desc": "Until the AI is restored, please consult a local expert.",
-                    "type": "general"
-                }
-            ]
-        }
-    
-    try:
-        import numpy as np
-        # Preprocess
-        img = image.resize((224, 224))
-        img_array = np.array(img)
-        # Handle alpha channel or grayscale
-        if img_array.shape[-1] == 4:
-            img_array = img_array[..., :3]
-        elif len(img_array.shape) == 2:
-            img_array = np.stack((img_array,)*3, axis=-1)
-            
-        img_array = img_array / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
-        
-        preds = model.predict(img_array, verbose=0)
-        pred_idx = np.argmax(preds[0])
-        confidence = int(preds[0][pred_idx] * 100)
-        diagnosis = classes[pred_idx]
-        
-        # Clean diagnosis string (e.g. "Tomato__Late_blight" -> "Tomato Late blight")
-        clean_diagnosis = diagnosis.replace("_", " ").replace("  ", " ").strip()
-        
-        fallback_remedies_dict = {
-            "Pepper__bell___Bacterial_spot": [
-                {"title": "Copper Spray", "desc": "Apply copper-based bactericide early in the morning.", "type": "chemical"},
-                {"title": "Crop Rotation", "desc": "Rotate with non-solanaceous crops to break the disease cycle.", "type": "organic"}
-            ],
-            "Potato___Early_blight": [
-                {"title": "Fungicide", "desc": "Apply fungicide (e.g. Chlorothalonil) upon symptom detection.", "type": "chemical"},
-                {"title": "Pruning", "desc": "Remove infected lower leaves to improve air circulation.", "type": "organic"}
-            ],
-            "Potato___Late_blight": [
-                {"title": "Fungicide", "desc": "Spray systemic fungicides preventatively during cool, wet weather.", "type": "chemical"},
-                {"title": "Destroy Infected Plants", "desc": "Remove and burn infected foliage immediately.", "type": "organic"}
-            ],
-            "Tomato_Bacterial_spot": [
-                {"title": "Copper Bactericide", "desc": "Apply copper-based sprays preventatively.", "type": "chemical"},
-                {"title": "Drip Irrigation", "desc": "Avoid overhead watering to prevent splashing bacteria.", "type": "organic"}
-            ],
-            "Tomato_Early_blight": [
-                {"title": "Broad-spectrum Fungicide", "desc": "Apply broad-spectrum fungicides like Azoxystrobin.", "type": "chemical"},
-                {"title": "Mulching", "desc": "Apply mulch to prevent soil splashing onto lower leaves.", "type": "organic"}
-            ],
-            "Tomato_Late_blight": [
-                {"title": "Targeted Fungicide", "desc": "Apply fungicides specifically for late blight.", "type": "chemical"},
-                {"title": "Remove Debris", "desc": "Clear all tomato debris at the end of the season.", "type": "organic"}
-            ],
-            "Tomato_Leaf_Mold": [
-                {"title": "Fungicide", "desc": "Apply appropriate fungicides if humidity cannot be controlled.", "type": "chemical"},
-                {"title": "Ventilation", "desc": "Increase spacing and prune leaves to improve airflow.", "type": "organic"}
-            ],
-            "Tomato_Septoria_leaf_spot": [
-                {"title": "Fungicide", "desc": "Apply Mancozeb at first sign of disease on lower leaves.", "type": "chemical"},
-                {"title": "Sanitation", "desc": "Remove heavily infected leaves and do not compost them.", "type": "organic"}
-            ],
-            "Tomato_Spider_mites_Two_spotted_spider_mite": [
-                {"title": "Miticide", "desc": "Apply abamectin or other specialized miticides.", "type": "chemical"},
-                {"title": "Neem Oil", "desc": "Spray neem oil or insecticidal soap on undersides of leaves.", "type": "organic"}
-            ],
-            "Tomato__Target_Spot": [
-                {"title": "Fungicide", "desc": "Apply fungicides containing chlorothalonil or mancozeb.", "type": "chemical"},
-                {"title": "Air Circulation", "desc": "Ensure good air movement and avoid over-fertilizing with nitrogen.", "type": "organic"}
-            ],
-            "Tomato__Tomato_YellowLeaf__Curl_Virus": [
-                {"title": "Insecticide", "desc": "Control the whitefly vector using systemic insecticides.", "type": "chemical"},
-                {"title": "Reflective Mulch", "desc": "Use silver reflective mulch to repel whiteflies.", "type": "organic"}
-            ],
-            "Tomato__Tomato_mosaic_virus": [
-                {"title": "Sanitation", "desc": "Wash hands with soap and water after handling infected plants. Remove infected plants.", "type": "organic"}
-            ]
-        }
-        
-        remedies = fallback_remedies_dict.get(diagnosis, [])
-        if not remedies and "healthy" not in diagnosis.lower():
-            remedies = [
-                {
-                    "title": "Consult Agronomist",
-                    "desc": "Please consult a local expert for specific treatment.",
-                    "type": "general"
-                }
-            ]
-        
-        return {
-            "diagnosis": clean_diagnosis,
-            "confidence": confidence,
-            "summary": f"Diagnosed locally using fallback model with {confidence}% confidence.",
-            "health_score": 100 if "healthy" in diagnosis.lower() else max(0, 100 - confidence),
-            "remedies": remedies
-        }
-    except Exception as e:
-        return {
-            "diagnosis": "Analysis Failed",
-            "confidence": 0,
-            "summary": f"Local fallback failed: {str(e)}",
-            "health_score": 0,
-            "remedies": []
-        }
+    except asyncio.TimeoutError:
+        logger.warning("[diagnose] Gemini API timed out after %ss", GEMINI_INFERENCE_TIMEOUT)
+        # If local model hasn't been tried yet, try it now
+        if not _use_local_model():
+            try:
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(None, lambda: _local_predict(image)),
+                    timeout=DISEASE_INFERENCE_TIMEOUT,
+                )
+                source = result.get("_source", "local")
+                if "error" not in source:
+                    return _clean(result)
+            except Exception:
+                pass
+        return _safe_delayed_fallback("Gemini API timeout")
+    except Exception as exc:
+        logger.warning("[diagnose] Gemini API call/parse failed: %s", exc)
+        if not _use_local_model():
+            try:
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(None, lambda: _local_predict(image)),
+                    timeout=DISEASE_INFERENCE_TIMEOUT,
+                )
+                source = result.get("_source", "local")
+                if "error" not in source:
+                    return _clean(result)
+            except Exception:
+                pass
+        return _safe_delayed_fallback("AI service response")
 
 

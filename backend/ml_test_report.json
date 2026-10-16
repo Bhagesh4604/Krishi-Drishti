@@ -1,0 +1,714 @@
+{
+  "summary": {
+    "total": 78,
+    "pass": 72,
+    "fail": 1,
+    "warn": 4,
+    "skip": 1,
+    "pass_rate_pct": 92.3
+  },
+  "results": [
+    {
+      "component": "Disease Forecaster",
+      "test": "Module Import",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Rice \u2014 High-humidity payload",
+      "status": "PASS",
+      "latency_ms": 0.47979999999370193,
+      "output_sample": "[{'disease_name': 'Rice Blast', 'risk_level': 'High', 'recommendation': 'High risk of Rice Blast (Pyricularia oryzae). Cloudy, humid and warm nights promote conidia release. Apply Tricyclazole 75WP @ ",
+      "error": null,
+      "note": "2 alert(s) generated"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Wheat \u2014 Normal conditions",
+      "status": "PASS",
+      "latency_ms": 0.02750000021478627,
+      "output_sample": "[{'disease_name': 'Powdery Mildew', 'risk_level': 'Medium', 'recommendation': 'Conditions favor Powdery Mildew. Monitor lower leaves for white powdery patches. Apply Sulphur 80WP @ 2g/L or Hexaconazol",
+      "error": null,
+      "note": "2 alert(s)"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Insufficient data (<5 days) \u2192 empty list",
+      "status": "PASS",
+      "latency_ms": 0.0012999998943996616,
+      "output_sample": null,
+      "error": null,
+      "note": "Correctly returns [] with <5 days"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Unknown crop type \u2192 fallback rules",
+      "status": "PASS",
+      "latency_ms": 0.017099999240599573,
+      "output_sample": "[{'disease_name': 'Stem Rust', 'risk_level': 'High', 'recommendation': 'Warm humid conditions favor Stem Rust (Puccinia graminis). Apply Propiconazole (Tilt 25 EC) @ 0.1% immediately. Use rust-resista",
+      "error": null,
+      "note": "Fallback produced 4 alert(s)"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Empty weather list \u2192 graceful return",
+      "status": "PASS",
+      "latency_ms": 0.0008999995770864189,
+      "output_sample": null,
+      "error": null,
+      "note": "Returns []"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Crop coverage \u2014 cotton",
+      "status": "PASS",
+      "latency_ms": 0.011399999493733048,
+      "output_sample": null,
+      "error": null,
+      "note": "2 alert(s)"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Crop coverage \u2014 sugarcane",
+      "status": "PASS",
+      "latency_ms": 0.010099999599333387,
+      "output_sample": null,
+      "error": null,
+      "note": "1 alert(s)"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Crop coverage \u2014 tomato",
+      "status": "PASS",
+      "latency_ms": 0.013500000022759195,
+      "output_sample": null,
+      "error": null,
+      "note": "2 alert(s)"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Crop coverage \u2014 maize",
+      "status": "PASS",
+      "latency_ms": 0.009200000022246968,
+      "output_sample": null,
+      "error": null,
+      "note": "1 alert(s)"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Crop coverage \u2014 soybean",
+      "status": "PASS",
+      "latency_ms": 0.009999999747378752,
+      "output_sample": null,
+      "error": null,
+      "note": "2 alert(s)"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Crop coverage \u2014 potato",
+      "status": "PASS",
+      "latency_ms": 0.00850000014906982,
+      "output_sample": null,
+      "error": null,
+      "note": "1 alert(s)"
+    },
+    {
+      "component": "Disease Forecaster",
+      "test": "Crop coverage \u2014 grapes",
+      "status": "PASS",
+      "latency_ms": 0.00830000044516055,
+      "output_sample": null,
+      "error": null,
+      "note": "1 alert(s)"
+    },
+    {
+      "component": "Disease Risk Model",
+      "test": "Module Import",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Disease Risk Model",
+      "test": "Potato Late Blight conditions",
+      "status": "PASS",
+      "latency_ms": 0.03370000013092067,
+      "output_sample": "[{'disease_name': 'Late Blight (Phytophthora infestans)', 'risk_level': 'High', 'recommendation': 'CRITICAL: Potato Late Blight conditions are met. Apply Metalaxyl-M + Mancozeb (Ridomil Gold) @ 2.5g/L",
+      "error": null,
+      "note": "3 alert(s)"
+    },
+    {
+      "component": "Disease Risk Model",
+      "test": "2-day input \u2014 padding fallback",
+      "status": "PASS",
+      "latency_ms": 0.001600000359758269,
+      "output_sample": null,
+      "error": null,
+      "note": "Padded to 5 days, 0 alert(s)"
+    },
+    {
+      "component": "Disease Risk Model",
+      "test": "None values in weather dict",
+      "status": "FAIL",
+      "latency_ms": 0.01340000017080456,
+      "output_sample": null,
+      "error": "unsupported operand type(s) for +: 'int' and 'NoneType'",
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Module Import",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Wheat \u2014 healthy conditions (first call, trains model)",
+      "status": "PASS",
+      "latency_ms": 890.121000000363,
+      "output_sample": "3.39 t/ha",
+      "error": null,
+      "note": "Training included in latency"
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Rice \u2014 health=0.8, moist=55.0%",
+      "status": "PASS",
+      "latency_ms": 144.47480000035284,
+      "output_sample": "4.47 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Sugarcane \u2014 health=0.6, moist=60.0%",
+      "status": "PASS",
+      "latency_ms": 130.1768000002994,
+      "output_sample": "75.07 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Potato \u2014 health=0.5, moist=50.0%",
+      "status": "PASS",
+      "latency_ms": 148.76689999982773,
+      "output_sample": "22.01 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Tomato \u2014 health=0.9, moist=52.0%",
+      "status": "PASS",
+      "latency_ms": 63.35240000043996,
+      "output_sample": "38.75 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Maize \u2014 health=0.4, moist=48.0%",
+      "status": "PASS",
+      "latency_ms": 61.82439999975031,
+      "output_sample": "3.31 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Edge \u2014 Zero health score",
+      "status": "PASS",
+      "latency_ms": 64.18930000018008,
+      "output_sample": "3.08 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Edge \u2014 Max health score",
+      "status": "PASS",
+      "latency_ms": 84.0329999991809,
+      "output_sample": "3.81 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Edge \u2014 Extreme low moisture",
+      "status": "PASS",
+      "latency_ms": 168.4968999998091,
+      "output_sample": "2.81 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Edge \u2014 Extreme high moisture",
+      "status": "PASS",
+      "latency_ms": 114.59999999988213,
+      "output_sample": "5.45 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Edge \u2014 None crop type",
+      "status": "PASS",
+      "latency_ms": 152.39199999996345,
+      "output_sample": "5.3 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Edge \u2014 Unknown crop",
+      "status": "PASS",
+      "latency_ms": 81.95340000020224,
+      "output_sample": "5.3 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Yield Predictor",
+      "test": "Benchmark lookup \u2014 rice",
+      "status": "PASS",
+      "latency_ms": 0.033099999200203456,
+      "output_sample": "{'crop': 'rice', 'icar_average_yield_t_ha': 4.1, 'optimal_moisture_pct': 55.0, 'source': 'ICAR/DES Crop Production Statistics 2022-23'}",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "SOC Estimator (GB)",
+      "test": "Module Import",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "SOC Estimator (GB)",
+      "test": "Training data CSV present",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": "backend\\data\\soc_training_data.csv"
+    },
+    {
+      "component": "SOC Estimator (GB)",
+      "test": "Nominal input (first call, trains model)",
+      "status": "PASS",
+      "latency_ms": 582.8523000000132,
+      "output_sample": "20.22 t/ha",
+      "error": null,
+      "note": "Training included in latency"
+    },
+    {
+      "component": "SOC Estimator (GB)",
+      "test": "Low NDVI degraded land",
+      "status": "PASS",
+      "latency_ms": 2.431099999739672,
+      "output_sample": "11.57 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "SOC Estimator (GB)",
+      "test": "High NDVI healthy soil",
+      "status": "PASS",
+      "latency_ms": 4.13490000028105,
+      "output_sample": "29.99 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "SOC Estimator (GB)",
+      "test": "Zero days enrolled",
+      "status": "PASS",
+      "latency_ms": 2.696300000025076,
+      "output_sample": "15.81 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "SOC Estimator (GB)",
+      "test": "Max days enrolled",
+      "status": "PASS",
+      "latency_ms": 2.1306999997250387,
+      "output_sample": "27.65 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "SOC Model (MLR)",
+      "test": "Module Import",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "SOC Model (MLR)",
+      "test": "Train with 5 data points",
+      "status": "PASS",
+      "latency_ms": 15.31040000008943,
+      "output_sample": "SOC = (-0.0958 * Moisture) + (3.3569 * ET) + 7.2080",
+      "error": null,
+      "note": "R\u00b2=0.984"
+    },
+    {
+      "component": "SOC Model (MLR)",
+      "test": "Predict 2 grid points",
+      "status": "PASS",
+      "latency_ms": 0.03530000049067894,
+      "output_sample": "[19.06, 20.93]",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "SOC Model (MLR)",
+      "test": "Single point \u2014 raises ValueError \u2713",
+      "status": "PASS",
+      "latency_ms": 0.007100000402715523,
+      "output_sample": null,
+      "error": null,
+      "note": "Must provide at least 2 matching pairs of bioclimatic and SOC data points to train."
+    },
+    {
+      "component": "SOC Model (MLR)",
+      "test": "Negative coeff \u2192 floor at 0.0",
+      "status": "PASS",
+      "latency_ms": 0.008200000593205914,
+      "output_sample": "[0.0]",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "Import ml_models.anomaly_detector",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "(ml_models.anomaly_detector) Normal NDVI series",
+      "status": "PASS",
+      "latency_ms": 726.5510999995968,
+      "output_sample": "[True, False, False, False, False, False, False, False, False, False]",
+      "error": null,
+      "note": "1 anomaly flags"
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "(ml_models.anomaly_detector) Series with injected dips",
+      "status": "PASS",
+      "latency_ms": 380.5111000001489,
+      "output_sample": "[False, False, False, False, False, False, True, False, False, False]",
+      "error": null,
+      "note": "1 anomaly flag(s) raised"
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "(ml_models.anomaly_detector) <4 points \u2192 all False",
+      "status": "PASS",
+      "latency_ms": 0.005300000339047983,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "(ml_models.anomaly_detector) Empty list",
+      "status": "PASS",
+      "latency_ms": 0.002599999788799323,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "Import ml_models.crop_anomaly_detector",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "(ml_models.crop_anomaly_detector) Normal NDVI series",
+      "status": "PASS",
+      "latency_ms": 423.5226999999213,
+      "output_sample": "[True, False, False, False, False, False, False, False, False, False]",
+      "error": null,
+      "note": "1 anomaly flags"
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "(ml_models.crop_anomaly_detector) Series with injected dips",
+      "status": "PASS",
+      "latency_ms": 488.3926000002248,
+      "output_sample": "[False, False, False, False, False, False, True, False, False, False]",
+      "error": null,
+      "note": "1 anomaly flag(s) raised"
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "(ml_models.crop_anomaly_detector) <4 points \u2192 all False",
+      "status": "PASS",
+      "latency_ms": 0.0037999998312443495,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "NDVI Anomaly Detector",
+      "test": "(ml_models.crop_anomaly_detector) Empty list",
+      "status": "PASS",
+      "latency_ms": 0.001600000359758269,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "H5 Model Files",
+      "test": "plant_disease_efficientnet.h5 on disk",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": "43.8 MB"
+    },
+    {
+      "component": "H5 Model Files",
+      "test": "mobilenetv2_5_class.h5 on disk",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": "24.5 MB"
+    },
+    {
+      "component": "H5 Model Files",
+      "test": "universal_vision_model.h5 on disk",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": "24.2 MB"
+    },
+    {
+      "component": "H5 Model Files",
+      "test": "class_labels_disease.json loaded",
+      "status": "PASS",
+      "latency_ms": 0.7934000004752306,
+      "output_sample": null,
+      "error": null,
+      "note": "15 disease classes"
+    },
+    {
+      "component": "H5 Model Files",
+      "test": "TensorFlow import (v2.21.0)",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "H5 Model Files",
+      "test": "EfficientNet load into memory",
+      "status": "WARN",
+      "latency_ms": 4039.234199999555,
+      "output_sample": null,
+      "error": "Error when deserializing class 'Dense' using config={'name': 'dense', 'trainable': True, 'dtype': 'float32', 'units': 512, 'activation': 'relu', 'use_bias': True, 'kernel_initializer': {'module': 'ker",
+      "note": "Known issue: Keras 3 / TF 2.x compatibility with old .h5 format"
+    },
+    {
+      "component": "H5 Model Files",
+      "test": "MobileNetV2 (5-class) load into memory",
+      "status": "WARN",
+      "latency_ms": 56.22430000039458,
+      "output_sample": null,
+      "error": "Error when deserializing class 'DepthwiseConv2D' using config={'name': 'expanded_conv_depthwise', 'trainable': False, 'dtype': 'float32', 'kernel_size': [3, 3], 'strides': [1, 1], 'padding': 'same', '",
+      "note": null
+    },
+    {
+      "component": "RAG Engine",
+      "test": "Corpus file present",
+      "status": "WARN",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": "Missing \u2014 will use fallback hardcoded docs only"
+    },
+    {
+      "component": "RAG Engine",
+      "test": "HybridSearchEngine import",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "RAG Engine",
+      "test": "Engine initialization (BM25-only)",
+      "status": "PASS",
+      "latency_ms": 0.15390000044135377,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "RAG Engine",
+      "test": "Add 5 documents to index",
+      "status": "PASS",
+      "latency_ms": 0.7241000002977671,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "RAG Engine",
+      "test": "Query: 'Rice fertilizer recommendations'",
+      "status": "PASS",
+      "latency_ms": 0.6708000000799075,
+      "output_sample": null,
+      "error": null,
+      "note": "Top score=1.000, 2 results"
+    },
+    {
+      "component": "RAG Engine",
+      "test": "Query: 'What to do for late blight'",
+      "status": "PASS",
+      "latency_ms": 0.41539999983797316,
+      "output_sample": null,
+      "error": null,
+      "note": "Top score=1.000, 2 results"
+    },
+    {
+      "component": "RAG Engine",
+      "test": "Query: 'NDVI healthy crop value'",
+      "status": "PASS",
+      "latency_ms": 0.23710000004939502,
+      "output_sample": null,
+      "error": null,
+      "note": "Top score=1.000, 2 results"
+    },
+    {
+      "component": "RAG Engine",
+      "test": "Query: 'drip irrigation efficiency'",
+      "status": "PASS",
+      "latency_ms": 0.1812999998946907,
+      "output_sample": null,
+      "error": null,
+      "note": "Top score=1.000, 2 results"
+    },
+    {
+      "component": "RAG Engine",
+      "test": "Empty query \u2014 graceful",
+      "status": "PASS",
+      "latency_ms": 0.09339999996882398,
+      "output_sample": "2 results",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Soil Carbon Estimator",
+      "test": "Module Import",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Soil Carbon Estimator",
+      "test": "Nominal input",
+      "status": "PASS",
+      "latency_ms": 529.3845999995028,
+      "output_sample": "20.22 t/ha",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Evidence AI Verifier",
+      "test": "Module Import",
+      "status": "PASS",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Evidence AI Verifier",
+      "test": "No-API fallback \u2014 fake image",
+      "status": "PASS",
+      "latency_ms": 0.06450000000768341,
+      "output_sample": "{'ai_status': 'flagged', 'ai_confidence': None, 'ai_analysis': '{\"note\": \"AI screening unavailable (GEMINI_API_KEY not set) \\\\u2014 queued for human review\", \"is_farm_field\": null, \"practice_visible\":",
+      "error": null,
+      "note": "ai_status=flagged, review_status=pending_l1"
+    },
+    {
+      "component": "Evidence AI Verifier",
+      "test": "No image provided \u2192 auto-flagged",
+      "status": "PASS",
+      "latency_ms": 0.018799999452312477,
+      "output_sample": null,
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Evidence AI Verifier",
+      "test": "GPS checkpoints for valid polygon (n=3)",
+      "status": "PASS",
+      "latency_ms": 1.3627000007545575,
+      "output_sample": "[{'id': 1, 'lat': 18.528621, 'lng': 73.852341, 'label': 'Checkpoint 1', 'radius_m': 50, 'instructions': 'Navigate to this location within your field and take a photo showing your crop'}, {'id': 2, 'la",
+      "error": null,
+      "note": null
+    },
+    {
+      "component": "Evidence AI Verifier",
+      "test": "GPS checkpoints \u2014 degenerate polygon \u2192 []",
+      "status": "PASS",
+      "latency_ms": 0.08989999969344353,
+      "output_sample": null,
+      "error": null,
+      "note": "Got: []"
+    },
+    {
+      "component": "Gemini AI",
+      "test": "API key present in environment",
+      "status": "WARN",
+      "latency_ms": 0.0,
+      "output_sample": null,
+      "error": null,
+      "note": "GEMINI_API_KEY not set \u2014 AI endpoints degraded"
+    },
+    {
+      "component": "Gemini AI",
+      "test": "Connectivity test",
+      "status": "SKIP",
+      "latency_ms": null,
+      "output_sample": null,
+      "error": null,
+      "note": "Skipped: No API key"
+    }
+  ]
+}
