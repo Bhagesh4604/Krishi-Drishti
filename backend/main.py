@@ -1,5 +1,15 @@
 import os
+import sys
 import warnings
+
+# Ensure backend package context is preserved when executed from within backend/
+if __package__ is None or __package__ == "":
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _parent = os.path.dirname(_here)
+    if _parent not in sys.path:
+        sys.path.insert(0, _parent)
+    __package__ = "backend"
+
 warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
 from dotenv import load_dotenv
 
@@ -174,3 +184,11 @@ def startup_event():
     scheduler.add_job(run_daily_disease_forecasting, 'interval', days=1)
     scheduler.start()
     api_logger.info("Background ML scheduler started (anomaly: 7d, disease: 1d).")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    host = os.environ.get("HOST", "0.0.0.0")
+    print(f"Starting Krishi-Drishti FastAPI Server on {host}:{port}...")
+    uvicorn.run(app, host=host, port=port, log_level="info")
