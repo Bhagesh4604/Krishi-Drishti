@@ -136,10 +136,8 @@ export const getUserLocation = async (): Promise<{ lat: number; lng: number }> =
 const isNativeForApi = typeof (window as any).Capacitor !== 'undefined' &&
   (window as any).Capacitor?.isNativePlatform?.() === true;
 
-// When running in the Android Emulator, 10.0.2.2 points to the laptop's localhost.
-// (If testing on a physical phone, you must use the laptop's actual IP like 192.168.x.x 
-// AND run the backend with --host 0.0.0.0)
-const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativeForApi ? 'http://localhost:8000/api' : '/api');
+const LIVE_BACKEND_URL = 'https://krishi-drishti-api.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,

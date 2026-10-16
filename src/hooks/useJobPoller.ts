@@ -16,7 +16,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:8000';
+const LIVE_ROOT_URL = 'https://krishi-drishti-api.onrender.com';
+const API_BASE = ((import.meta as any).env?.VITE_API_URL
+  ? (import.meta as any).env.VITE_API_URL.replace(/\/api\/?$/, '')
+  : LIVE_ROOT_URL);
 
 export type JobStatus = 'idle' | 'queued' | 'running' | 'success' | 'failed' | 'timeout';
 

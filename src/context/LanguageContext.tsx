@@ -74,7 +74,10 @@ const translationCache = new Map<string, string>();
 // ── Context ───────────────────────────────────────────────────────────────────
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const LIVE_ROOT_URL = 'https://krishi-drishti-api.onrender.com';
+const API_BASE = (import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
+  : LIVE_ROOT_URL);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLang] = useState<string>(

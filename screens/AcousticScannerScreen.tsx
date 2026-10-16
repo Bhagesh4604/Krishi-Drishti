@@ -4,7 +4,10 @@ import { Mic, FileAudio, Loader2, ShieldAlert, ArrowLeft, Activity } from 'lucid
 import { aiService } from '../src/services/api';
 
 // Constants
-const SERVER_URL = (import.meta as any).env?.VITE_API_URL ? `${(import.meta as any).env.VITE_API_URL.replace('/api', '')}/analyze-audio` : 'http://localhost:8002/analyze-audio';
+const LIVE_ROOT_URL = 'https://krishi-drishti-api.onrender.com';
+const SERVER_URL = (import.meta as any).env?.VITE_API_URL
+  ? `${(import.meta as any).env.VITE_API_URL.replace(/\/api\/?$/, '')}/analyze-audio`
+  : `${LIVE_ROOT_URL}/analyze-audio`;
 const RECORDING_DURATION_MS = 10000;
 
 interface AnalysisResult {

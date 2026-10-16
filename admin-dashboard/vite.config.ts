@@ -7,8 +7,9 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'https://krishi-drishti-api.onrender.com',
         changeOrigin: true,
+        secure: true,
       }
     }
   }

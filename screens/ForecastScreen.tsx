@@ -495,8 +495,8 @@ const ForecastScreen: React.FC<ForecastScreenProps> = ({ navigateTo, weather, lo
     const lat = (weather as any)?.latitude;
     const lng = (weather as any)?.longitude;
     if (!lat||!lng) return;
-    const isNative = typeof (window as any).Capacitor!=='undefined' && (window as any).Capacitor?.isNativePlatform?.()===true;
-    const base = import.meta.env.VITE_API_URL || (isNative ? 'http://10.0.2.2:8000/api' : '/api');
+    const LIVE_BACKEND_URL = 'https://krishi-drishti-api.onrender.com/api';
+    const base = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
     fetch(`${base}/weather/airquality?lat=${lat}&lng=${lng}`)
       .then(r=>r.json()).then(setAqi).catch(()=>{});
   },[current]);

@@ -11,14 +11,14 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: 'http://127.0.0.1:8000',
+          target: 'https://krishi-drishti-api.onrender.com',
           changeOrigin: true,
-          secure: false,
+          secure: true,
         },
         '/analyze-audio': {
-          target: 'http://127.0.0.1:8002',
+          target: 'https://krishi-drishti-api.onrender.com',
           changeOrigin: true,
-          secure: false,
+          secure: true,
         },
       },
     },
