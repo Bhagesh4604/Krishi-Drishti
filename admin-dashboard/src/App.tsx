@@ -457,7 +457,8 @@ const FarmersView = () => {
 const CarbonView = () => {
   const { data, loading, refetch } = useApi<{projects: CarbonProject[]; total: number}>(API('carbon/queue') + '&limit=50');
   const approve = async (id: number) => {
-    try { await axios.post(`/api/admin/carbon/${id}/approve?token=${TOKEN}`, { credits_to_issue: 10, admin_note: 'Auto-approved from admin dashboard' }); refetch(); } catch (e) { alert('Approval failed'); }
+    const token = localStorage.getItem('kd_admin_token') || '';
+    try { await axios.post(`${API_BASE}/admin/carbon/${id}/approve?token=${token}`, { credits_to_issue: 10, admin_note: 'Auto-approved from admin dashboard' }); refetch(); } catch (e) { alert('Approval failed'); }
   };
   return (
     <div style={{ padding: '32px 36px', position: 'relative', zIndex: 10 }}>

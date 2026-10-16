@@ -19,6 +19,11 @@
 
 import { useState, useRef, useCallback } from 'react';
 
+const LIVE_ROOT_URL = 'https://krishi-drishti-api.onrender.com';
+const API_BASE = ((import.meta as any).env?.VITE_API_URL
+  ? (import.meta as any).env.VITE_API_URL.replace(/\/api\/?$/, '')
+  : LIVE_ROOT_URL);
+
 export interface SSEAnalysisResult {
   ndvi: number;
   msavi: number;
@@ -72,7 +77,7 @@ export function useSSEAnalysis(options: SSEAnalysisOptions = {}) {
     try {
       // Step 1: POST to kick off the background task
       const token = localStorage.getItem('ks_token');
-      const response = await fetch('/api/v1/analyze-plot', {
+      const response = await fetch(`${API_BASE}/api/v1/analyze-plot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +96,7 @@ export function useSSEAnalysis(options: SSEAnalysisOptions = {}) {
       setStatus('running');
 
       // Step 2: Open SSE stream — server pushes exactly once when done
-      const sseUrl = `/api/v1/analyze-stream/${task_id}?token=${token || ''}`;
+      const sseUrl = `${API_BASE}/api/v1/analyze-stream/${task_id}?token=${token || ''}`;
       const es = new EventSource(sseUrl);
       eventSourceRef.current = es;
 

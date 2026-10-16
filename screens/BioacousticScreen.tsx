@@ -5,8 +5,12 @@ import { aiService } from '../src/services/api';
 import { GradientFileUpload } from '../components/ui/gradient-file-upload';
 
 // Constants
-// Bioacoustic service URL — proxy through main backend in production, or direct in dev
-const SERVER_URL = (import.meta as any).env?.VITE_BIOACOUSTIC_URL ?? '/api/bioacoustic/analyze';
+// Bioacoustic service URL — pointing to live backend server
+const LIVE_ROOT_URL = 'https://krishi-drishti-api.onrender.com';
+const SERVER_URL = (import.meta as any).env?.VITE_BIOACOUSTIC_URL
+  || ((import.meta as any).env?.VITE_API_URL
+    ? `${(import.meta as any).env.VITE_API_URL.replace(/\/api\/?$/, '')}/analyze-audio`
+    : `${LIVE_ROOT_URL}/analyze-audio`);
 
 const RECORDING_DURATION_MS = 10000;
 

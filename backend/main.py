@@ -33,10 +33,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── CORS Middleware ───────────────────────────────────────────────────────────
-# Read allowed origins from env; defaults to local dev servers only.
+# Read allowed origins from env; defaults to all origins for live production & mobile clients.
 CORS_ORIGINS = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:3000,http://localhost:5173"
+    "*"
 ).split(",")
 
 app.add_middleware(
