@@ -26,8 +26,7 @@ scikit-learn<=1.7.2
 numpy<2.0.0
 faiss-cpu==1.13.2
 rank-bm25==0.2.2
-tf-keras>=2.16.0
-tensorflow-cpu>=2.16.0
+ai-edge-litert>=2.3.0
 
 # ── Geospatial ──────────────────────────────────────────────────────────────
 earthengine-api==1.7.15

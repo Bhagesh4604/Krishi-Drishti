@@ -178,9 +178,28 @@ def _load_model_once() -> tuple:
         # ── 2. Strategy A (PRIMARY for Render): Ultra-lightweight TFLite ─────
         if os.path.exists(_TFLITE_PATH):
             try:
-                import tensorflow as tf
+                Interpreter = None
+                try:
+                    from ai_edge_litert.interpreter import Interpreter
+                except ImportError:
+                    pass
+                if Interpreter is None:
+                    try:
+                        from tflite_runtime.interpreter import Interpreter
+                    except ImportError:
+                        pass
+                if Interpreter is None:
+                    try:
+                        import tensorflow as tf
+                        Interpreter = tf.lite.Interpreter
+                    except ImportError:
+                        pass
+
+                if Interpreter is None:
+                    raise ImportError("No LiteRT/TFLite interpreter found (ai_edge_litert, tflite_runtime, or tensorflow)")
+
                 # Enforce single-thread execution to prevent memory surges on Render
-                interpreter = tf.lite.Interpreter(
+                interpreter = Interpreter(
                     model_path=_TFLITE_PATH,
                     num_threads=1
                 )
@@ -191,7 +210,7 @@ def _load_model_once() -> tuple:
                 _engine_type = "tflite"
                 _load_error = None
                 logger.info(
-                    "[LocalDiseasePredictor] Render-optimized TFLite model loaded successfully "
+                    "[LocalDiseasePredictor] Render-optimized LiteRT/TFLite model loaded successfully "
                     "(%.1f MB, memory ~20MB).",
                     os.path.getsize(_TFLITE_PATH) / 1e6
                 )
