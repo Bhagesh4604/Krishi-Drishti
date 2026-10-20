@@ -139,9 +139,14 @@ const isNativeForApi = typeof (window as any).Capacitor !== 'undefined' &&
 const LIVE_BACKEND_URL = 'https://krishi-drishti-api.onrender.com/api';
 const API_BASE_URL = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
 
+// Enforce modern Fetch API adapter across all Axios requests.
+// Eliminates CapacitorHttp's XMLHttpRequest setRequestHeader state bug.
+axios.defaults.adapter = 'fetch';
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 60000, // 60 seconds (Wait for Render free-tier cold starts)
+  adapter: 'fetch',
   headers: {
     'Content-Type': 'application/json',
   },

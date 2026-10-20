@@ -27,11 +27,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onSkip, currentLang, o
     try {
       setLoading(true);
       await authService.sendOtp(phone);
-      alert('OTP Sent! Check your backend terminal for the code.');
+      alert('OTP Sent! Your demo verification code is 1234');
       setStep('otp');
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
-    } catch {
-      alert('Failed to send OTP. Is the backend running at port 8000?');
+    } catch (err: any) {
+      console.error('Failed to send OTP:', err);
+      const detail = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Could not reach server. Please retry.';
+      alert(`Failed to send OTP: ${detail}`);
     } finally { setLoading(false); }
   };
 
@@ -51,8 +53,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onSkip, currentLang, o
       setLoading(true);
       await authService.verifyOtp(phone, code);
       onLogin();
-    } catch { alert('Invalid OTP. Try again.'); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      console.error('Invalid OTP:', err);
+      const detail = err?.response?.data?.detail || 'Invalid OTP. Use demo code: 1234 (or 0000)';
+      alert(detail);
+    } finally { setLoading(false); }
   };
 
   const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
