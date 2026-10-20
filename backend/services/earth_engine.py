@@ -41,10 +41,13 @@ def _round_or_none(value: Optional[float], digits: int = 3) -> Optional[float]:
 def _normalize_ring(geometry_coords: Sequence[Any]) -> List[List[float]]:
     ring: List[List[float]] = []
 
+    if not geometry_coords:
+        return ring
+
     for coord in geometry_coords:
         if isinstance(coord, dict):
-            lat = coord.get("lat")
-            lng = coord.get("lng")
+            lat = coord.get("lat") or coord.get("latitude")
+            lng = coord.get("lng") or coord.get("longitude") or coord.get("lon")
         else:
             if not isinstance(coord, (list, tuple)) or len(coord) < 2:
                 continue
@@ -53,7 +56,10 @@ def _normalize_ring(geometry_coords: Sequence[Any]) -> List[List[float]]:
         if lat is None or lng is None:
             continue
 
-        ring.append([float(lng), float(lat)])
+        try:
+            ring.append([float(lng), float(lat)])
+        except (ValueError, TypeError):
+            continue
 
     if ring and ring[0] != ring[-1]:
         ring.append(ring[0])

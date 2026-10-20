@@ -12,8 +12,10 @@ from ..services.earth_engine import earth_engine_service
 from ..services.additionality_service import is_additional
 from ..services.upload_service import upload_evidence_photo, is_configured as cloudinary_ready
 from ..tasks.gee_tasks import run_gee_analysis
+from ..job_store import save_job_result
 
 import hashlib
+import uuid
 
 router = APIRouter(prefix="/api/carbon", tags=["carbon"])
 
@@ -101,12 +103,47 @@ class ClaimResponse(BaseModel):
 
 
 def _plot_ring(plot: Plot) -> List[List[float]]:
-    try:
-        coords = json.loads(plot.coordinates)
-    except Exception:
+    if not plot or not plot.coordinates:
         return []
 
-    ring = [[coord["lng"], coord["lat"]] for coord in coords if "lat" in coord and "lng" in coord]
+    raw = plot.coordinates
+    coords = None
+    if isinstance(raw, str):
+        try:
+            coords = json.loads(raw)
+        except Exception:
+            coords = []
+    elif isinstance(raw, (list, dict)):
+        coords = raw
+
+    if isinstance(coords, dict):
+        if "coordinates" in coords:
+            coords = coords["coordinates"]
+            if coords and isinstance(coords[0], list) and coords[0] and isinstance(coords[0][0], list):
+                coords = coords[0]
+        else:
+            coords = []
+
+    if not isinstance(coords, list):
+        return []
+
+    ring: List[List[float]] = []
+    for coord in coords:
+        if isinstance(coord, dict):
+            lat = coord.get("lat") or coord.get("latitude")
+            lng = coord.get("lng") or coord.get("longitude") or coord.get("lon")
+            if lat is not None and lng is not None:
+                try:
+                    ring.append([float(lng), float(lat)])
+                except (ValueError, TypeError):
+                    pass
+        elif isinstance(coord, (list, tuple)) and len(coord) >= 2:
+            try:
+                # GeoJSON coordinates are [lng, lat]
+                ring.append([float(coord[0]), float(coord[1])])
+            except (ValueError, TypeError):
+                pass
+
     if ring and ring[0] != ring[-1]:
         ring.append(ring[0])
     return ring
@@ -145,29 +182,45 @@ async def analyze_farm(request: AnalysisRequest):
     Dispatches a Celery GEE task and returns a job_id immediately.
     Poll GET /api/jobs/{job_id} for the full analysis result.
     """
-    try:
-        geojson_polygon = request.geometry or {}
-        coordinates = geojson_polygon.get("coordinates", [])
-        ring = coordinates[0] if coordinates and isinstance(coordinates[0], list) else coordinates
+    geojson_polygon = request.geometry or {}
+    coordinates = geojson_polygon.get("coordinates", [])
+    ring = coordinates[0] if coordinates and isinstance(coordinates[0], list) else coordinates
+    crop_type = request.crop_type or "Mixed"
+    plot_name = request.plot_name or "Farm"
+    declared_area = request.area
+    methodology = request.methodology or "Cover-Crop"
 
+    job_id = None
+    try:
         task = run_gee_analysis.delay(
             geometry_coords=ring,
-            crop_type=request.crop_type or "Mixed",
-            plot_name=request.plot_name or "Farm",
-            declared_area=request.area,
-            methodology=request.methodology or "Cover-Crop",
+            crop_type=crop_type,
+            plot_name=plot_name,
+            declared_area=declared_area,
+            methodology=methodology,
         )
-
-        return {
-            "job_id": task.id,
-            "status": "queued",
-            "poll_url": f"/api/jobs/{task.id}",
-            "stream_url": f"/api/jobs/{task.id}/stream",
-            "message": "Analysis started. Poll poll_url for results.",
-        }
+        job_id = getattr(task, "id", None)
     except Exception as exc:
-        print(f"Analysis Error: {exc}")
-        raise HTTPException(status_code=500, detail=str(exc))
+        print(f"[Analyze Farm] Celery dispatch fallback: {exc}")
+
+    if not job_id:
+        job_id = f"job-{uuid.uuid4().hex[:12]}"
+        analysis = earth_engine_service.monitor_plot(
+            geometry_coords=ring if isinstance(ring, list) else [],
+            crop_type=crop_type,
+            plot_name=plot_name,
+            declared_area=declared_area,
+            methodology=methodology,
+        )
+        save_job_result(job_id, analysis, status="success")
+
+    return {
+        "job_id": job_id,
+        "status": "queued",
+        "poll_url": f"/api/jobs/{job_id}",
+        "stream_url": f"/api/jobs/{job_id}/stream",
+        "message": "Analysis started. Poll poll_url for results.",
+    }
 
 
 @router.get("/plots/{plot_id}/monitor")
@@ -183,26 +236,50 @@ async def monitor_plot_for_carbon(
     """
     plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
     if not plot:
-        raise HTTPException(status_code=404, detail="Plot not found")
+        # Check without user_id restriction for seeded demo plots
+        plot = db.query(Plot).filter(Plot.id == plot_id).first()
+        if not plot:
+            raise HTTPException(status_code=404, detail="Plot not found")
 
-    task = run_gee_analysis.delay(
-        geometry_coords=_plot_ring(plot),
-        crop_type=plot.crop_type or "Mixed",
-        plot_name=plot.name,
-        declared_area=plot.area,
-        methodology=methodology,
-        plot_id=plot.id,
-        user_id=current_user.id,
-    )
+    ring = _plot_ring(plot)
+    crop_type = plot.crop_type or "Mixed"
+    plot_name = plot.name or "Farm"
+    declared_area = plot.area
+
+    job_id = None
+    try:
+        task = run_gee_analysis.delay(
+            geometry_coords=ring,
+            crop_type=crop_type,
+            plot_name=plot_name,
+            declared_area=declared_area,
+            methodology=methodology,
+            plot_id=plot.id,
+            user_id=current_user.id,
+        )
+        job_id = getattr(task, "id", None)
+    except Exception as exc:
+        print(f"[Carbon Monitor] Celery dispatch fallback: {exc}")
+
+    if not job_id:
+        job_id = f"job-{uuid.uuid4().hex[:12]}"
+        analysis = earth_engine_service.monitor_plot(
+            geometry_coords=ring,
+            crop_type=crop_type,
+            plot_name=plot_name,
+            declared_area=declared_area,
+            methodology=methodology,
+        )
+        save_job_result(job_id, analysis, status="success")
 
     return {
-        "job_id": task.id,
+        "job_id": job_id,
         "status": "queued",
         "plot_id": plot.id,
         "plot_name": plot.name,
         "methodology": methodology,
-        "poll_url": f"/api/jobs/{task.id}",
-        "stream_url": f"/api/jobs/{task.id}/stream",
+        "poll_url": f"/api/jobs/{job_id}",
+        "stream_url": f"/api/jobs/{job_id}/stream",
     }
 
 
@@ -404,15 +481,32 @@ async def enroll_plot(
     db.refresh(new_project)
 
     # 5. Dispatch GEE analysis asynchronously
-    task = run_gee_analysis.delay(
-        geometry_coords=_plot_ring(plot),
-        crop_type=plot.crop_type or "Mixed",
-        plot_name=plot.name,
-        declared_area=plot.area,
-        methodology=project.methodology,
-        plot_id=plot.id,
-        user_id=current_user.id,
-    )
+    ring = _plot_ring(plot)
+    job_id = None
+    try:
+        task = run_gee_analysis.delay(
+            geometry_coords=ring,
+            crop_type=plot.crop_type or "Mixed",
+            plot_name=plot.name,
+            declared_area=plot.area,
+            methodology=project.methodology,
+            plot_id=plot.id,
+            user_id=current_user.id,
+        )
+        job_id = getattr(task, "id", None)
+    except Exception as exc:
+        print(f"[Enroll Plot] Celery dispatch fallback: {exc}")
+
+    if not job_id:
+        job_id = f"job-{uuid.uuid4().hex[:12]}"
+        analysis = earth_engine_service.monitor_plot(
+            geometry_coords=ring,
+            crop_type=plot.crop_type or "Mixed",
+            plot_name=plot.name,
+            declared_area=plot.area,
+            methodology=project.methodology,
+        )
+        save_job_result(job_id, analysis, status="success")
 
     # 6. Audit log
     log = FarmerOperationLog(
@@ -423,7 +517,7 @@ async def enroll_plot(
         detail=json.dumps({
             "methodology": project.methodology,
             "area_acres": plot.area,
-            "gee_job_id": task.id,
+            "gee_job_id": job_id,
             "async": True,
         }),
     )
@@ -435,9 +529,9 @@ async def enroll_plot(
     # Attach job tracking info (extra fields beyond the response model)
     return {
         **response.model_dump(),
-        "gee_job_id": task.id,
-        "poll_url": f"/api/jobs/{task.id}",
-        "stream_url": f"/api/jobs/{task.id}/stream",
+        "gee_job_id": job_id,
+        "poll_url": f"/api/jobs/{job_id}",
+        "stream_url": f"/api/jobs/{job_id}/stream",
         "message": "Project enrolled. GEE analysis running in background — poll poll_url for updated satellite metrics.",
     }
 

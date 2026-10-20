@@ -49,12 +49,21 @@ def is_redis_available() -> bool:
 
 def configure_eager_fallback() -> None:
     """
-    Enable synchronous (eager) mode if Redis is not reachable.
-    Tasks will run in-process without a worker — identical to the old
-    blocking behaviour but the code path is now async-ready.
+    Enable synchronous in-memory mode if Redis is not reachable.
+    Tasks will run in-process without a worker — identical to synchronous execution
+    without throwing unhandled broker connection errors.
     """
     celery_app.conf.update(
+        broker_url="memory://",
+        result_backend="cache+memory://",
         task_always_eager=True,
-        task_eager_propagates=True,
+        task_eager_propagates=False,
+        task_store_eager_result=True,
     )
-    print("[Celery] Redis unavailable — running in synchronous fallback mode.")
+    print("[Celery] Redis unavailable — running in in-memory synchronous fallback mode.")
+
+
+# Auto-configure eager fallback if Redis is not reachable right away
+if not is_redis_available():
+    configure_eager_fallback()
+

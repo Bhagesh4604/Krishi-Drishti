@@ -14,6 +14,8 @@ from ..ml_models.anomaly_detector import detect_anomalies
 from ..models import DiseaseRiskAlert, FarmerOperationLog, Plot, PlotHistory, User
 from ..services.earth_engine import earth_engine_service
 from ..tasks.gee_tasks import run_gee_analysis
+from ..job_store import save_job_result
+import uuid
 
 
 def det_float(seed_str: str, min_v: float, max_v: float) -> float:
@@ -53,15 +55,38 @@ class PlotResponse(BaseModel):
 
 
 def _parse_coordinates(plot: Plot) -> List[dict]:
-    try:
-        return json.loads(plot.coordinates)
-    except Exception:
+    if not plot or not plot.coordinates:
         return []
+    raw = plot.coordinates
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+    if isinstance(raw, list):
+        return raw
+    return []
 
 
 def _plot_ring(plot: Plot) -> List[List[float]]:
     coords = _parse_coordinates(plot)
-    ring = [[coord["lng"], coord["lat"]] for coord in coords if "lat" in coord and "lng" in coord]
+    ring: List[List[float]] = []
+    for coord in coords:
+        if isinstance(coord, dict):
+            lat = coord.get("lat") or coord.get("latitude")
+            lng = coord.get("lng") or coord.get("longitude") or coord.get("lon")
+            if lat is not None and lng is not None:
+                try:
+                    ring.append([float(lng), float(lat)])
+                except (ValueError, TypeError):
+                    pass
+        elif isinstance(coord, (list, tuple)) and len(coord) >= 2:
+            try:
+                ring.append([float(coord[0]), float(coord[1])])
+            except (ValueError, TypeError):
+                pass
+
     if ring and ring[0] != ring[-1]:
         ring.append(ring[0])
     return ring
@@ -226,24 +251,43 @@ async def analyze_plot(
         raise HTTPException(status_code=404, detail="Plot not found")
 
     ring = _plot_ring(plot)
+    crop_type = plot.crop_type or "Mixed"
+    plot_name = plot.name or "Farm"
+    declared_area = plot.area
 
-    task = run_gee_analysis.delay(
-        geometry_coords=ring,
-        crop_type=plot.crop_type or "Mixed",
-        plot_name=plot.name,
-        declared_area=plot.area,
-        methodology="Cover-Crop",
-        plot_id=plot.id,
-        user_id=current_user.id,
-    )
+    job_id = None
+    try:
+        task = run_gee_analysis.delay(
+            geometry_coords=ring,
+            crop_type=crop_type,
+            plot_name=plot_name,
+            declared_area=declared_area,
+            methodology="Cover-Crop",
+            plot_id=plot.id,
+            user_id=current_user.id,
+        )
+        job_id = getattr(task, "id", None)
+    except Exception as exc:
+        print(f"[Plot Scan] Celery dispatch fallback: {exc}")
+
+    if not job_id:
+        job_id = f"job-{uuid.uuid4().hex[:12]}"
+        analysis = earth_engine_service.monitor_plot(
+            geometry_coords=ring,
+            crop_type=crop_type,
+            plot_name=plot_name,
+            declared_area=declared_area,
+            methodology="Cover-Crop",
+        )
+        save_job_result(job_id, analysis, status="success")
 
     return {
-        "job_id": task.id,
+        "job_id": job_id,
         "status": "queued",
         "plot_id": plot.id,
         "plot_name": plot.name,
-        "poll_url": f"/api/jobs/{task.id}",
-        "stream_url": f"/api/jobs/{task.id}/stream",
+        "poll_url": f"/api/jobs/{job_id}",
+        "stream_url": f"/api/jobs/{job_id}/stream",
         "message": "GEE analysis started. Poll poll_url or connect to stream_url for live results.",
     }
 
@@ -262,23 +306,44 @@ async def analyze_carbon(
     if not plot:
         raise HTTPException(status_code=404, detail="Plot not found")
 
-    task = run_gee_analysis.delay(
-        geometry_coords=_plot_ring(plot),
-        crop_type=plot.crop_type or "Mixed",
-        plot_name=plot.name,
-        declared_area=plot.area,
-        methodology="Cover-Crop",
-        plot_id=plot.id,
-        user_id=current_user.id,
-    )
+    ring = _plot_ring(plot)
+    crop_type = plot.crop_type or "Mixed"
+    plot_name = plot.name or "Farm"
+    declared_area = plot.area
+
+    job_id = None
+    try:
+        task = run_gee_analysis.delay(
+            geometry_coords=ring,
+            crop_type=crop_type,
+            plot_name=plot_name,
+            declared_area=declared_area,
+            methodology="Cover-Crop",
+            plot_id=plot.id,
+            user_id=current_user.id,
+        )
+        job_id = getattr(task, "id", None)
+    except Exception as exc:
+        print(f"[Plot Carbon] Celery dispatch fallback: {exc}")
+
+    if not job_id:
+        job_id = f"job-{uuid.uuid4().hex[:12]}"
+        analysis = earth_engine_service.monitor_plot(
+            geometry_coords=ring,
+            crop_type=crop_type,
+            plot_name=plot_name,
+            declared_area=declared_area,
+            methodology="Cover-Crop",
+        )
+        save_job_result(job_id, analysis, status="success")
 
     return {
-        "job_id": task.id,
+        "job_id": job_id,
         "status": "queued",
         "plot_id": plot.id,
         "plot_name": plot.name,
-        "poll_url": f"/api/jobs/{task.id}",
-        "stream_url": f"/api/jobs/{task.id}/stream",
+        "poll_url": f"/api/jobs/{job_id}",
+        "stream_url": f"/api/jobs/{job_id}/stream",
         "carbon_credits_cached": plot.carbon_credits,
         "organic_score_cached": plot.organic_score,
         "last_scan": plot.last_scan_date,

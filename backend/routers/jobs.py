@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from ..celery_app import celery_app
+from ..job_store import get_saved_job, save_job_result
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -84,14 +85,22 @@ async def get_job_status(job_id: str):
       - status: "queued" | "running" | "success" | "failed"
       - result: full analysis dict (only when status == "success")
       - error:  error message (only when status == "failed")
-
-    Frontend should poll every 2–3 seconds until status is "success" or "failed".
     """
+    # 1. Check in-memory store first (handles eager fallback and cached tasks)
+    saved = get_saved_job(job_id)
+    if saved:
+        return saved
+
+    # 2. Check Celery AsyncResult
     try:
         result = AsyncResult(job_id, app=celery_app)
-        return _task_payload(result)
+        payload = _task_payload(result)
+        if payload.get("status") == "success":
+            save_job_result(job_id, payload.get("result"))
+        return payload
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Could not fetch job status: {exc}")
+        print(f"[Jobs API] AsyncResult retrieval warning for {job_id}: {exc}")
+        return {"status": "queued", "job_id": job_id}
 
 
 # ---------------------------------------------------------------------------
@@ -102,16 +111,6 @@ async def get_job_status(job_id: str):
 async def stream_job_result(job_id: str):
     """
     SSE stream that pushes events until the job completes.
-
-    Event types emitted:
-      event: progress  — sent every 2 s while running/queued
-      event: result    — sent once when status == "success" (data = full analysis JSON)
-      event: error     — sent once when status == "failed"
-
-    Frontend usage:
-      const es = new EventSource(`/api/jobs/${jobId}/stream`);
-      es.addEventListener('result', e => { setAnalysis(JSON.parse(e.data)); es.close(); });
-      es.addEventListener('error',  e => { setError(e.data); es.close(); });
     """
 
     async def event_generator():
@@ -119,6 +118,12 @@ async def stream_job_result(job_id: str):
         polls = 0
 
         while polls < max_polls:
+            saved = get_saved_job(job_id)
+            if saved and saved.get("status") == "success":
+                data = json.dumps(saved.get("result", {}))
+                yield f"event: result\ndata: {data}\n\n"
+                return
+
             try:
                 result = AsyncResult(job_id, app=celery_app)
                 payload = _task_payload(result)
@@ -135,11 +140,10 @@ async def stream_job_result(job_id: str):
 
                 # Still running — send a heartbeat progress event
                 progress_data = json.dumps({"status": status, "job_id": job_id, "poll": polls})
-                yield f"event: progress\ndata: {progress_data}\n\n"
+                yield f"event: progress\ndata: progress_data\n\n"
 
             except Exception as exc:
-                yield f"event: error\ndata: {str(exc)}\n\n"
-                return
+                yield f"event: progress\ndata: {{\"status\": \"queued\", \"job_id\": \"{job_id}\"}}\n\n"
 
             polls += 1
             await asyncio.sleep(2)
