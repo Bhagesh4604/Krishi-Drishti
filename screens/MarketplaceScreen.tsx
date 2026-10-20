@@ -536,7 +536,7 @@ const MarketplaceScreen: React.FC<Props> = ({ navigateTo, user }) => {
                   Claim your verified carbon credits in the Carbon Vault, then list them here.
                 </p>
                 <button
-                  onClick={() => navigateTo('carbonVault')}
+                  onClick={() => navigateTo('carbon-vault')}
                   className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold"
                 >
                   Go to Carbon Vault

@@ -125,10 +125,11 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
     const ProjectionHeatmap = () => {
         if (!showProjection || !modelResult || (!selectedPlot && !currentPos)) return null;
 
-        const grid = [];
-        const gridSize = 0.0005; // approx 50m squares for zoom 17+
-        const centerLat = selectedPlot ? selectedPlot.coordinates[0].lat : currentPos!.lat;
-        const centerLng = selectedPlot ? selectedPlot.coordinates[0].lng : currentPos!.lng;
+        const coord0 = selectedPlot?.coordinates?.[0];
+        const plotLat = coord0 ? (typeof coord0.lat === 'number' ? coord0.lat : (Array.isArray(coord0) ? coord0[1] : null)) : null;
+        const plotLng = coord0 ? (typeof coord0.lng === 'number' ? coord0.lng : (Array.isArray(coord0) ? coord0[0] : null)) : null;
+        const centerLat = plotLat ?? currentPos?.lat ?? defaultLoc.lat;
+        const centerLng = plotLng ?? currentPos?.lng ?? defaultLoc.lng;
         
         const startLat = centerLat - 0.003;
         const startLng = centerLng - 0.003;
@@ -209,13 +210,13 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                         <MapContainer center={[defaultLoc.lat, defaultLoc.lng]} zoom={5} scrollWheelZoom={false} style={{ height: "100%", width: "100%", zIndex: 0 }}>
                             <TileLayer url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}" subdomains={['mt0', 'mt1', 'mt2', 'mt3']} />
                             <RecenterMap 
-                                lat={selectedPlot?.coordinates[0]?.lat || defaultLoc.lat} 
-                                lng={selectedPlot?.coordinates[0]?.lng || defaultLoc.lng} 
+                                lat={selectedPlot?.coordinates?.[0]?.lat ?? defaultLoc.lat} 
+                                lng={selectedPlot?.coordinates?.[0]?.lng ?? defaultLoc.lng} 
                             />
                             
                             <LocationMarker />
 
-                            {selectedPlot && (
+                            {Array.isArray(selectedPlot?.coordinates) && selectedPlot.coordinates.length >= 3 && (
                                 <Polygon
                                   positions={selectedPlot.coordinates}
                                   pathOptions={{ color: '#00BB78', fillColor: '#00BB78', fillOpacity: 0.1, weight: 2 }}
