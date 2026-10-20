@@ -535,6 +535,38 @@ async def enroll_plot(
         "message": "Project enrolled. GEE analysis running in background — poll poll_url for updated satellite metrics.",
     }
 
+
+@router.delete("/projects/{project_id}")
+async def unenroll_carbon_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Unenrolls a plot from a carbon project and cleans up associated records.
+    """
+    project = db.query(CarbonProject).filter(
+        CarbonProject.id == project_id,
+        CarbonProject.user_id == current_user.id,
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Carbon project not found")
+
+    # Clean up associated evidence records
+    db.query(CarbonEvidence).filter(CarbonEvidence.project_id == project.id).delete()
+
+    # Reset plot carbon stats if not verified
+    if project.status != "Verified":
+        plot = db.query(Plot).filter(Plot.id == project.plot_id).first()
+        if plot:
+            plot.carbon_credits = 0.0
+
+    db.delete(project)
+    db.commit()
+
+    return {"status": "success", "message": "Project unenrolled successfully."}
+
+
 @router.post("/{project_id}/evidence")
 async def upload_evidence(
     project_id: int,

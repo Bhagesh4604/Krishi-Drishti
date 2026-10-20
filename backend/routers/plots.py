@@ -361,11 +361,16 @@ async def forecast_yield(
     if not plot:
         raise HTTPException(status_code=404, detail="Plot not found")
 
+    health = plot.health_score if plot.health_score is not None else 0.65
+    moist = plot.moisture if plot.moisture is not None else 30.0
+    organic = plot.organic_score if plot.organic_score is not None else 0.0
+    area_val = plot.area if (plot.area is not None and plot.area > 0) else 1.0
+
     from ..ml_models.yield_predictor import predict_yield
 
     predicted_yield = predict_yield(
-        health_score=plot.health_score,
-        moisture=plot.moisture,
+        health_score=health,
+        moisture=moist,
         crop_type=plot.crop_type,
     )
 
@@ -385,13 +390,13 @@ async def forecast_yield(
             base_price = value
             break
 
-    quality_multiplier = 1.0 + ((plot.organic_score or 0) / 100.0) * 0.15
+    quality_multiplier = 1.0 + (organic / 100.0) * 0.15
     price_per_ton = base_price * quality_multiplier
 
-    area_ha = plot.area / 2.471
+    area_ha = area_val / 2.471
     total_yield = round(predicted_yield * area_ha, 2)
     estimated_revenue = round(total_yield * price_per_ton, 2)
-    confidence = min(95, 70 + (plot.health_score * 15) + ((plot.organic_score or 0) / 10))
+    confidence = min(95.0, 70.0 + (health * 15.0) + (organic / 10.0))
 
     return {
         "plot_id": plot.id,
@@ -401,3 +406,4 @@ async def forecast_yield(
         "estimated_revenue_inr": estimated_revenue,
         "confidence_score": round(confidence, 1),
     }
+
