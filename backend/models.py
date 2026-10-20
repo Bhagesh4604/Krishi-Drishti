@@ -519,3 +519,160 @@ class MerkleAnchor(Base):
     l2_tx_hash = Column(String, nullable=True)                # Public blockchain tx hash (future)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class ManagementPracticeLog(Base):
+    """
+    Structured record of farmer regenerative practices (VM0042 MRV Pillar 1).
+    """
+    __tablename__ = "management_practice_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plot_id = Column(Integer, ForeignKey("plots.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    project_id = Column(Integer, ForeignKey("carbon_projects.id"), nullable=True, index=True)
+    practice_type = Column(String)
+    event_date = Column(DateTime, default=datetime.utcnow)
+    description = Column(String, nullable=True)
+    photo_url = Column(String, nullable=True)
+    geo_lat = Column(Float, nullable=True)
+    geo_lng = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    local_photo_path = Column(String, nullable=True)
+    quantity = Column(Float, nullable=True)
+    unit = Column(String, nullable=True)
+    fertilizer_type = Column(String, nullable=True)
+    fertilizer_name = Column(String, nullable=True)
+    irrigation_method = Column(String, nullable=True)
+    yield_tonnes_ha = Column(Float, nullable=True)
+    residue_management = Column(String, nullable=True)
+
+    plot = relationship("Plot")
+    user = relationship("User")
+    project = relationship("CarbonProject")
+
+
+class SoilSampleRecord(Base):
+    """
+    Physical soil sample record with laboratory verification (VM0042 Pillar 2).
+    """
+    __tablename__ = "soil_sample_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("carbon_projects.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    sample_date = Column(DateTime, default=datetime.utcnow)
+    depth_cm = Column(Integer, default=30)
+    sample_type = Column(String, default="Baseline")  # Baseline | Monitoring
+    soc_percent = Column(Float, nullable=True)
+    bulk_density_g_cm3 = Column(Float, nullable=True)
+    ph = Column(Float, nullable=True)
+    nitrogen_percent = Column(Float, nullable=True)
+    geo_lat = Column(Float, nullable=True)
+    geo_lng = Column(Float, nullable=True)
+    sample_id_code = Column(String, nullable=True)
+    lab_certificate_url = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    verified_by_admin = Column(Boolean, default=False)
+    verified_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    lab_name = Column(String, nullable=True)
+    lab_accreditation_no = Column(String, nullable=True)
+    collection_method = Column(String, nullable=True)
+    lab_certificate_local = Column(String, nullable=True)
+    status = Column(String, default="pending")
+    verified_by = Column(String, nullable=True)
+    admin_soc_percent = Column(Float, nullable=True)
+    admin_bulk_density = Column(Float, nullable=True)
+    admin_ph = Column(Float, nullable=True)
+    admin_nitrogen_percent = Column(Float, nullable=True)
+    admin_notes = Column(String, nullable=True)
+    rejection_reason = Column(String, nullable=True)
+    qr_bag_id = Column(Integer, ForeignKey("soil_qr_bags.id"), nullable=True)
+    video_url = Column(String, nullable=True)
+    video_local_path = Column(String, nullable=True)
+    geo_distance_from_plot_m = Column(Float, nullable=True)
+    fraud_flags = Column(Text, default="[]")
+    bag_seal_status = Column(String, default="unknown")
+    satellite_soc_estimate = Column(Float, nullable=True)
+    soc_discrepancy_flag = Column(Boolean, default=False)
+    lab_report_hash = Column(String, nullable=True, index=True)
+
+    project = relationship("CarbonProject")
+    user = relationship("User")
+
+
+class SoilQRBag(Base):
+    """
+    Platform-issued tamper-evident soil collection bag with cryptographic QR code.
+    """
+    __tablename__ = "soil_qr_bags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bag_code = Column(String, unique=True, nullable=False)
+    plot_id = Column(Integer, ForeignKey("plots.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("carbon_projects.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    issued_at = Column(DateTime, default=datetime.utcnow)
+    used_at = Column(DateTime, nullable=True)
+    status = Column(String, default="unused")
+    sample_record_id = Column(Integer, ForeignKey("soil_sample_records.id"), nullable=True)
+
+    plot = relationship("Plot")
+    user = relationship("User")
+    project = relationship("CarbonProject")
+
+
+class CreditListing(Base):
+    """
+    Marketplace listing for verified carbon credits.
+    """
+    __tablename__ = "credit_listings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("carbon_projects.id"), nullable=False)
+    token_id = Column(String, ForeignKey("carbon_tokens.token_id"), nullable=True)
+    quantity_tco2e = Column(Float, nullable=False)
+    price_per_tco2e_inr = Column(Float, nullable=False)
+    total_inr = Column(Float, nullable=False)
+    methodology = Column(String, nullable=True)
+    vintage_year = Column(Integer, nullable=True)
+    description = Column(String, nullable=True)
+    status = Column(String, default="active")
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    sold_at = Column(DateTime, nullable=True)
+
+    user = relationship("User")
+    project = relationship("CarbonProject")
+
+
+class CreditPurchase(Base):
+    """
+    Payment and settlement record for purchased carbon credits.
+    """
+    __tablename__ = "credit_purchases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("credit_listings.id"), nullable=False)
+    buyer_name = Column(String, nullable=False)
+    buyer_email = Column(String, nullable=False)
+    buyer_entity = Column(String, nullable=True)
+    buyer_gstin = Column(String, nullable=True)
+    quantity_tco2e = Column(Float, nullable=False)
+    price_per_tco2e_inr = Column(Float, nullable=False)
+    total_inr = Column(Float, nullable=False)
+    platform_fee_inr = Column(Float, default=0.0)
+    farmer_payout_inr = Column(Float, default=0.0)
+    razorpay_order_id = Column(String, nullable=True)
+    razorpay_payment_id = Column(String, nullable=True, unique=True)
+    razorpay_signature = Column(String, nullable=True)
+    payment_status = Column(String, default="pending")
+    certificate_id = Column(String, nullable=True, unique=True)
+    certificate_hash = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    paid_at = Column(DateTime, nullable=True)
+
+    listing = relationship("CreditListing")
+
+
