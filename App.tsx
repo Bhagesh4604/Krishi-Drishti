@@ -350,29 +350,19 @@ const AppContent: React.FC = () => {
         // Save coords so the weather re-fetch effect picks them up
         setUserCoords({ lat, lng });
 
-        // ── Reverse geocode: try backend first, then direct BigDataCloud as client-side fallback ──
+        // ── Reverse geocode: always via backend (Nominatim + BigDataCloud fallback on server)
+        // Direct calls to external APIs like BigDataCloud fail on Android native due to
+        // CapacitorHttp routing and DNS resolution restrictions.
         const resolveLocationName = async (lat: number, lng: number) => {
-          // Try backend first
           try {
             const locData = await weatherService.reverseGeocode(lat, lng);
             if (locData && (locData.city || locData.district)) {
               setLocationName(`${locData.city || ''}${locData.city && locData.district ? ', ' : ''}${locData.district || ''}`);
               return;
             }
-          } catch { /* fall through to client-side fallback */ }
-
-          // Backend failed (500) — call BigDataCloud directly from browser (free, no key, no CORS issues)
-          try {
-            const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
-            const d = await r.json();
-            const city = d.locality || d.city || d.principalSubdivision || null;
-            const district = d.principalSubdivision || '';
-            if (city) {
-              setLocationName(`${city}${district && district !== city ? ', ' + district : ''}`);
-              return;
-            }
-          } catch { /* ignore */ }
-
+          } catch (e) {
+            console.warn('[App] Reverse geocode via backend failed:', e);
+          }
           // Final fallback: show rounded coordinates
           setLocationName(`${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E`);
         };

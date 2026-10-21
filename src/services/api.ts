@@ -133,20 +133,17 @@ export const getUserLocation = async (): Promise<{ lat: number; lng: number }> =
   return fetchIpLocation();
 };
 
-const isNativeForApi = typeof (window as any).Capacitor !== 'undefined' &&
-  (window as any).Capacitor?.isNativePlatform?.() === true;
-
 const LIVE_BACKEND_URL = 'https://krishi-drishti-api.onrender.com/api';
 const API_BASE_URL = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
 
-// Enforce modern Fetch API adapter across all Axios requests.
-// Eliminates CapacitorHttp's XMLHttpRequest setRequestHeader state bug.
-axios.defaults.adapter = 'fetch';
+// NOTE: Do NOT override axios.defaults.adapter here.
+// CapacitorHttp (enabled in capacitor.config.ts) intercepts ALL HTTP calls natively
+// on Android/iOS. Forcing the 'fetch' adapter breaks this interception and causes
+// "Network Error" on device. Let Capacitor/axios pick the right adapter automatically.
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 60 seconds (Wait for Render free-tier cold starts)
-  adapter: 'fetch',
+  timeout: 90000, // 90s: covers Render free-tier cold starts (can take 60-80s)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -319,21 +316,40 @@ export const weatherService = {
       return weatherCache.data;
     }
 
-    try {
+    const fetchWeather = async () => {
       const response = await api.get(`/weather/current?lat=${lat}&lng=${lng}`);
-      // Update cache
-      weatherCache = {
-        data: response.data,
-        timestamp: now,
-        lat,
-        lng
-      };
       return response.data;
-    } catch (error) {
-      console.error("Weather fetch failed", error);
-      // Return cached data even if expired if fetch fails
-      if (weatherCache.data) return weatherCache.data;
-      throw error;
+    };
+
+    try {
+      const data = await fetchWeather();
+      // Update cache
+      weatherCache = { data, timestamp: now, lat, lng };
+      return data;
+    } catch (error: any) {
+      console.warn("Weather fetch failed (attempt 1), retrying in 5s...", error?.message);
+      // Return cached (even expired) immediately if available
+      if (weatherCache.data) {
+        // Retry in background so cache gets refreshed
+        setTimeout(async () => {
+          try {
+            const data = await fetchWeather();
+            weatherCache = { data, timestamp: Date.now(), lat, lng };
+            console.log("Weather background retry succeeded");
+          } catch { /* ignore */ }
+        }, 5000);
+        return weatherCache.data;
+      }
+      // No cache — wait 5s and retry once (Render cold start)
+      await new Promise(r => setTimeout(r, 5000));
+      try {
+        const data = await fetchWeather();
+        weatherCache = { data, timestamp: Date.now(), lat, lng };
+        return data;
+      } catch (retryError) {
+        console.error("Weather fetch failed after retry", retryError);
+        throw retryError;
+      }
     }
   },
   searchCity: async (query: string) => {
@@ -345,6 +361,7 @@ export const weatherService = {
     return response.data;
   }
 };
+
 
 export const newsService = {
   getNews: async (district: string, language: string) => {
