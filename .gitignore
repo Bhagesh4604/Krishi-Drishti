@@ -3,7 +3,9 @@ dist/
 backend/.env
 .env
 *.log
+*.pyc
 __pycache__/
+*.db
 backend/uploads/
 *.code-search
 .DS_Store
@@ -11,3 +13,15 @@ patches/
 .vercel
 .idea/
 .pytest_cache/
+emulator_screen.png
+
+# Local redundant sub-models (subsumed in universal_model_v2.h5)
+backend/ml_models/fruit_veg_model.h5
+backend/ml_models/fruit_veg_model.json
+backend/ml_models/kaggle_trained_model.h5
+backend/ml_models/kaggle_trained_model.json
+backend/ml_models/plant_disease_model.h5
+backend/ml_models/plant_disease_model.json
+
+# Local microservice vector store
+backend/data/faiss_db/

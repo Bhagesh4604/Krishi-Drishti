@@ -28,8 +28,19 @@ logger = logging.getLogger(__name__)
 
 
 def _use_local_model() -> bool:
-    """Return True when USE_LOCAL_DISEASE_MODEL env-var is 'true' (case-insensitive)."""
-    return os.getenv("USE_LOCAL_DISEASE_MODEL", "false").strip().lower() == "true"
+    """Return True when USE_LOCAL_DISEASE_MODEL is 'true' or 'auto' (when model files are present)."""
+    val = os.getenv("USE_LOCAL_DISEASE_MODEL", "auto").strip().lower()
+    if val == "true":
+        return True
+    if val == "false":
+        return False
+    # In 'auto' mode, prefer local universal model if model files exist
+    try:
+        from ..ml_models.local_disease_predictor import is_model_ready
+        ready, _ = is_model_ready()
+        return ready
+    except Exception:
+        return False
 
 class GeminiWrapper:
     def __init__(self, model_name="gemini-2.5-flash"):
@@ -278,6 +289,28 @@ async def train_soc_calibration(
 class ChatRequest(BaseModel):
     message: str
 
+
+def _query_local_agri_service(message: str, language: str) -> dict | None:
+    """
+    Connect to local AgriculturelLLM microservice (agri_ai_service) if running on port 8001.
+    Allows local LLaMA-3 (Dhenu) with full agricultural context & regional TTS.
+    """
+    service_url = os.getenv("AGRI_AI_SERVICE_URL", "http://127.0.0.1:8001/agent")
+    try:
+        import httpx
+        with httpx.Client(timeout=3.0) as client:
+            resp = client.post(
+                service_url,
+                json={"text": message, "language": language.lower()}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, dict) and data.get("text"):
+                    return data
+    except Exception:
+        pass
+    return None
+
 @limiter.limit("20/minute")
 @router.post("/chat")
 async def ai_chat(
@@ -339,13 +372,16 @@ INSTRUCTIONS:
         full_prompt = f"{system_prompt}\nConversation History:\n{chat_history}\n\nFarmer: {request.message}\nKrishi-AI:"
 
         
-        # 3. Call Gemini (Async Wrapper)
-        import asyncio
-        from concurrent.futures import ThreadPoolExecutor
-        
-        # Use run_in_executor to prevent blocking the main event loop
-        loop = asyncio.get_event_loop()
-        answer = await loop.run_in_executor(None, lambda: _generate_chat_response(full_prompt))
+        # 3. Call Local Microservice or Gemini (Async Wrapper)
+        local_service_resp = _query_local_agri_service(request.message, user_lang_name)
+        if local_service_resp and local_service_resp.get("text"):
+            answer = local_service_resp["text"]
+            logger.info("[ai_chat] Successfully answered via local AgriculturelLLM service.")
+        else:
+            import asyncio
+            from concurrent.futures import ThreadPoolExecutor
+            loop = asyncio.get_event_loop()
+            answer = await loop.run_in_executor(None, lambda: _generate_chat_response(full_prompt))
 
         # 4. Save User Message
         user_msg = ChatMessage(user_id=current_user.id, role="user", text=request.message)
@@ -448,13 +484,13 @@ async def diagnose_crop(
         return resp
 
     # ════════════════════════════════════════════════════════════════════════
-    # BRANCH A — Local model is PRIMARY (USE_LOCAL_DISEASE_MODEL=true)
+    # BRANCH A — Local model is PRIMARY (USE_LOCAL_DISEASE_MODEL=true or auto)
     # ════════════════════════════════════════════════════════════════════════
-    if _use_local_model() and mode != "grading":
-        logger.info("[diagnose] Running local model (timeout=%ss)...", DISEASE_INFERENCE_TIMEOUT)
+    if _use_local_model():
+        logger.info("[diagnose] Running local model (mode=%s, timeout=%ss)...", mode, DISEASE_INFERENCE_TIMEOUT)
         try:
             result = await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: _local_predict(image)),
+                loop.run_in_executor(None, lambda: _local_predict(image, mode=mode)),
                 timeout=DISEASE_INFERENCE_TIMEOUT,
             )
             source = result.get("_source", "local")
@@ -483,7 +519,7 @@ async def diagnose_crop(
             logger.info("[diagnose] Gemini unconfigured, attempting local model...")
             try:
                 result = await asyncio.wait_for(
-                    loop.run_in_executor(None, lambda: _local_predict(image)),
+                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode)),
                     timeout=DISEASE_INFERENCE_TIMEOUT,
                 )
                 source = result.get("_source", "local")
@@ -542,7 +578,7 @@ async def diagnose_crop(
         if not _use_local_model():
             try:
                 result = await asyncio.wait_for(
-                    loop.run_in_executor(None, lambda: _local_predict(image)),
+                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode)),
                     timeout=DISEASE_INFERENCE_TIMEOUT,
                 )
                 source = result.get("_source", "local")
@@ -556,7 +592,7 @@ async def diagnose_crop(
         if not _use_local_model():
             try:
                 result = await asyncio.wait_for(
-                    loop.run_in_executor(None, lambda: _local_predict(image)),
+                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode)),
                     timeout=DISEASE_INFERENCE_TIMEOUT,
                 )
                 source = result.get("_source", "local")

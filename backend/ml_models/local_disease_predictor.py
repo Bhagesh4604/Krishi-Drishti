@@ -1,28 +1,17 @@
 """
-Local Disease Predictor — Production Engine & Render Optimization
-==================================================================
-Dual-Engine (TFLite + Keras 3) Local Disease Prediction for Krishi-Drishti.
-
-Render Constrained Memory Optimization:
-----------------------------------------
-Render free/starter instances have 512MB RAM and throttled vCPUs.
-This module optimizes resource consumption:
-  1. Primary Runtime: TensorFlow Lite (.tflite, 5.2 MB) with single-threaded
-     execution (`num_threads=1`). Consumes only ~15-25 MB RAM (vs 350+ MB for full Keras).
-  2. Fallback Runtime: Keras 3 with compatibility patch and thread limits.
-  3. OS Environment Tuning:
-       - TF_ENABLE_ONEDNN_OPTS=0   (disables heavy oneDNN tensor scratch buffers)
-       - TF_CPP_MIN_LOG_LEVEL=3    (suppresses verbose C++ buffer allocations)
-       - MALLOC_ARENA_MAX=2        (restricts glibc malloc arenas on Linux/Docker)
-  4. Memory Cleanup: Explicit gc.collect() and tensor deallocation after every run.
-  5. Thread-Safe: Singleton interpreter protected by threading.Lock() to prevent
-     concurrent spikes.
+Local Disease Predictor — Production Engine & Universal Multi-Crop Vision
+========================================================================
+Supports:
+  1. Universal Model V2 (universal_model_v2.h5 + universal_indices_v2.json):
+     74 Agricultural Classes covering major Indian staple crops, cash crops,
+     horticulture fruits & vegetables, and severe field insect pests.
+  2. Fallback Engine: TensorFlow Lite (.tflite, 5.2 MB) / EfficientNet H5 (15 classes).
+  3. Render Low-Memory Execution (<100MB RAM via single-threaded execution & immediate gc.collect()).
 
 Contract Preservation:
 ----------------------
 Returns an output schema 100% IDENTICAL to the Gemini /api/ai/diagnose response:
   { diagnosis, confidence, summary, health_score, remedies[], _source }
-The frontend and Android app remain completely untouched.
 """
 
 from __future__ import annotations
@@ -39,100 +28,157 @@ import numpy as np
 from PIL import Image
 
 # ── Render / Low-Memory Environment Variables ────────────────────────────────
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 os.environ.setdefault("MALLOC_ARENA_MAX", "2")
 
+
 logger = logging.getLogger(__name__)
 
-# ── Paths (resolved relative to this file) ───────────────────────────────────
+# ── Model Paths ─────────────────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
+_UNIVERSAL_MODEL_PATH = os.path.join(_HERE, "universal_model_v2.h5")
+_UNIVERSAL_INDICES_PATH = os.path.join(_HERE, "universal_indices_v2.json")
 _TFLITE_PATH = os.path.join(_HERE, "plant_disease_efficientnet.tflite")
-_MODEL_PATH  = os.path.join(_HERE, "plant_disease_efficientnet.h5")
-_LABELS_PATH = os.path.join(_HERE, "class_labels_disease.json")
+_LEGACY_MODEL_PATH = os.path.join(_HERE, "plant_disease_efficientnet.h5")
+_LEGACY_LABELS_PATH = os.path.join(_HERE, "class_labels_disease.json")
 
-# ── Image pre-processing config ──────────────────────────────────────────────
+# ── Input Configuration ──────────────────────────────────────────────────────
 _INPUT_SIZE = (224, 224)
 
-# ── Remedy knowledge-base (15 classes across tomato, potato, pepper) ─────────
-_REMEDIES: dict[str, list[dict]] = {
-    "Pepper__bell___Bacterial_spot": [
-        {"title": "Copper Bactericide",  "desc": "Apply copper-based bactericide (e.g. Kocide 3000) every 7 days during warm, wet weather.", "type": "chemical"},
-        {"title": "Crop Rotation",        "desc": "Rotate with non-solanaceous crops for 2+ seasons to break the disease cycle.", "type": "organic"},
+# ── Detailed Agronomic Remedies Knowledge-Base ──────────────────────────────
+_BASE_REMEDIES: dict[str, list[dict]] = {
+    # ── Pests (Kaggle Model Classes) ──
+    "Rice stem borer": [
+        {"title": "Pheromone Traps", "desc": "Install 5-8 yellow stem borer pheromone traps per acre at 20-25 days after transplanting.", "type": "organic"},
+        {"title": "Biological Parasitoid", "desc": "Release Trichogramma japonicum egg parasitoid @ 1,00,000/ha 3 times at weekly intervals.", "type": "organic"},
+        {"title": "Clipping Seedling Tips", "desc": "Clip the tips of rice seedlings before transplanting to destroy egg clusters.", "type": "cultural"},
+        {"title": "Cartap Hydrochloride", "desc": "Apply Cartap hydrochloride 4G @ 10 kg/acre or Chlorantraniliprole 18.5 SC @ 60 mL/acre at ETL (5% dead hearts).", "type": "chemical"},
     ],
-    "Pepper__bell___healthy": [],
+    "green leafhopper": [
+        {"title": "Neem Seed Kernel Extract", "desc": "Spray NSKE 5% or Azadirachtin 10,000 ppm @ 2 mL/L to repel vectors.", "type": "organic"},
+        {"title": "Yellow Sticky Traps", "desc": "Erect 10 yellow sticky traps per acre slightly above the crop canopy.", "type": "cultural"},
+        {"title": "Imidacloprid / Thiamethoxam", "desc": "Spray Thiamethoxam 25 WG @ 40 g/acre or Imidacloprid 17.8 SL @ 50 mL/acre.", "type": "chemical"},
+    ],
+    "planthopper": [
+        {"title": "Alley Formation (Alternate Wetting)", "desc": "Drain the field for 3-4 days to expose the plant base to direct sunlight and reduce humidity.", "type": "cultural"},
+        {"title": "Avoid Excess Nitrogen", "desc": "Split nitrogen doses; avoid excess urea which promotes succulent growth favored by BPH.", "type": "cultural"},
+        {"title": "Pymetrozine 50 WG", "desc": "Direct spray towards the plant base using Pymetrozine 50 WG @ 120 g/acre or Triflumezopyrim 10 SC @ 94 mL/acre.", "type": "chemical"},
+    ],
+    "rice bug": [
+        {"title": "Field Sanitation", "desc": "Keep bunds clean by trimming weed grasses that act as alternate hosts during tillering.", "type": "cultural"},
+        {"title": "Neem Oil Spray", "desc": "Spray 3% neem oil mixed with mild soap during milky grain stage early in the morning.", "type": "organic"},
+        {"title": "Malathion 5% Dust", "desc": "Dust Malathion 5D @ 10 kg/acre or spray Chlorpyrifos 20 EC @ 2 mL/L during flowering/milking.", "type": "chemical"},
+    ],
+    "rice leaf roller": [
+        {"title": "Biological Control", "desc": "Conserve predatory spiders and release Trichogramma chilonis @ 1,00,000/ha.", "type": "organic"},
+        {"title": "Manual Rope Dragging", "desc": "Pass a long rope across the crop canopy during early tillering to dislodge feeding larvae.", "type": "cultural"},
+        {"title": "Flubendiamide Spray", "desc": "Spray Flubendiamide 39.35 SC @ 20 mL/acre or Cartap hydrochloride 50 SP @ 400 g/acre.", "type": "chemical"},
+    ],
 
-    "Potato___Early_blight": [
-        {"title": "Chlorothalonil Spray", "desc": "Apply Chlorothalonil (Daconil) at first symptom appearance; repeat every 7-10 days.", "type": "chemical"},
-        {"title": "Lower-Leaf Removal",   "desc": "Prune infected lower leaves early to reduce inoculum and improve air circulation.", "type": "organic"},
+    # ── Field Crops & Staples (Plant Disease Classes) ──
+    "rice": [
+        {"title": "Tricyclazole 75 WP", "desc": "For Blast: Spray Tricyclazole 75 WP @ 0.6 g/L or Isoprothiolane 40 EC @ 1.5 mL/L at boot leaf stage.", "type": "chemical"},
+        {"title": "Validamycin / Hexaconazole", "desc": "For Sheath Blight: Spray Validamycin 3L @ 2 mL/L targeting the plant sheath.", "type": "chemical"},
+        {"title": "Pseudomonas fluorescens", "desc": "Apply bio-control agent Pseudomonas fluorescens @ 2.5 kg/ha mixed with 50 kg FYM.", "type": "organic"},
     ],
-    "Potato___Late_blight": [
-        {"title": "Metalaxyl + Mancozeb", "desc": "Apply Ridomil Gold MZ preventatively during cool, wet weather every 7 days.", "type": "chemical"},
-        {"title": "Destroy Infected Tissue", "desc": "Immediately remove and burn infected haulm; never compost late blight debris.", "type": "organic"},
+    "wheat": [
+        {"title": "Propiconazole 25 EC", "desc": "For Rust / Blight: Spray Propiconazole 25 EC (Tilt) @ 1 mL/L upon first sighting of pustules.", "type": "chemical"},
+        {"title": "Seed Treatment", "desc": "Treat seeds with Carboxin + Thiram @ 2 g/kg seed before sowing.", "type": "cultural"},
+        {"title": "Balanced Potash Nutrition", "desc": "Ensure adequate Muriate of Potash (MOP) application to enhance disease resistance.", "type": "cultural"},
     ],
-    "Potato___healthy": [],
+    "cotton": [
+        {"title": "Copper Oxychloride + Streptocycline", "desc": "For Bacterial Blight: Spray Copper oxychloride 50 WP @ 2.5 g/L + Streptocycline 100 ppm.", "type": "chemical"},
+        {"title": "Vector Management for CLCuV", "desc": "Manage whitefly vectors with Diafenthiuron 50 WP @ 1.2 g/L or Spiromesifen 22.9 SC @ 1 mL/L.", "type": "chemical"},
+        {"title": "Resistant Crop Spacing", "desc": "Maintain 90x60 cm row spacing to avoid dense canopy humidity.", "type": "cultural"},
+    ],
+    "sugarcane": [
+        {"title": "Sett Treatment", "desc": "Dip seed setts in Carbendazim 50 WP (1 g/L) or hot water treatment (52°C for 30 mins) before planting.", "type": "cultural"},
+        {"title": "Trichoderma Soil Enrichment", "desc": "Apply Trichoderma viride @ 5 kg/ha with enriched vermicompost in planting furrows.", "type": "organic"},
+        {"title": "Rogue Out Infected Clumps", "desc": "Uproot and burn red rot or smut affected clumps immediately; do not take ratoon from affected crop.", "type": "cultural"},
+    ],
+    "banana": [
+        {"title": "Propiconazole + Mineral Oil", "desc": "For Sigatoka: Spray Propiconazole 25 EC @ 1 mL/L mixed with 1% agricultural mineral oil.", "type": "chemical"},
+        {"title": "De-suckering & Drainage", "desc": "Prune excess suckers to maintain single pseudo-stem; provide drainage trenches.", "type": "cultural"},
+        {"title": "Pseudomonas Drenching", "desc": "Drench basin with Pseudomonas fluorescens (10 g/L) for biological suppression of soil pathogens.", "type": "organic"},
+    ],
+    "mustard-oil": [
+        {"title": "Mancozeb Spray", "desc": "For White Rust / Alternaria: Spray Mancozeb 75 WP @ 2 g/L at 45 and 60 days after sowing.", "type": "chemical"},
+        {"title": "Early Sowing", "desc": "Complete sowing before October 15 to escape peak aphids and white rust infection.", "type": "cultural"},
+    ],
+    "Fox_nut(Makhana)": [
+        {"title": "Water Circulation", "desc": "Maintain fresh water circulation and skim floating debris to prevent stagnation pathogens.", "type": "cultural"},
+        {"title": "Copper Hydroxide Spray", "desc": "Apply copper hydroxide @ 2 g/L during vegetative leaf expansion phase.", "type": "chemical"},
+    ],
+    "Pearl_millet(bajra)": [
+        {"title": "Metalaxyl Seed Treatment", "desc": "Treat seeds with Metalaxyl 35 SD @ 6 g/kg seed to prevent Downy Mildew / Green Ear.", "type": "cultural"},
+        {"title": "Mancozeb 75 WP", "desc": "Spray Mancozeb @ 2 g/L at earhead emergence stage.", "type": "chemical"},
+    ],
 
-    "Tomato_Bacterial_spot": [
-        {"title": "Copper Bactericide",  "desc": "Spray copper oxychloride (50WP @ 3g/L) preventatively; avoid overhead irrigation.", "type": "chemical"},
-        {"title": "Drip Irrigation",     "desc": "Switch to drip irrigation to prevent water splashing that spreads bacteria.", "type": "organic"},
+    # ── Fruits & Vegetable Post-Harvest Rot & Freshness ──
+    "Rotten": [
+        {"title": "Immediate Segregation", "desc": "Cull and segregate infected and decaying produce immediately to prevent ethylene and spore spread.", "type": "cultural"},
+        {"title": "Post-Harvest Cold Storage", "desc": "Maintain optimal cold storage temperature (0-4°C for temperate fruits, 10-13°C for tropical produce).", "type": "cultural"},
+        {"title": "Hot Water Immersion (48-52°C)", "desc": "Dip fruit in warm water (48-52°C for 3-5 mins) to kill surface fungal mycelia and latent anthracnose.", "type": "organic"},
+        {"title": "Sanitary Crate Disinfection", "desc": "Disinfect harvesting crates with 0.1% sodium hypochlorite solution between batches.", "type": "cultural"},
     ],
-    "Tomato_Early_blight": [
-        {"title": "Azoxystrobin Fungicide", "desc": "Apply Azoxystrobin (Amistar) at 1mL/L; rotate with Mancozeb to prevent resistance.", "type": "chemical"},
-        {"title": "Mulching",               "desc": "Apply plastic or straw mulch to prevent soil splash onto lower foliage.", "type": "organic"},
+    "Healthy": [
+        {"title": "Maintain Balanced Nutrition", "desc": "Continue recommended fertigation and micronutrient schedule (Zn, B, Fe).", "type": "cultural"},
+        {"title": "Routine Prophylaxis", "desc": "Carry out regular field scouting every 3-4 days to spot early pest hotspots.", "type": "organic"},
     ],
-    "Tomato_Late_blight": [
-        {"title": "Metalaxyl-M + Mancozeb", "desc": "Apply Ridomil Gold @ 2.5g/L at first sign; repeat every 5-7 days in wet conditions.", "type": "chemical"},
-        {"title": "Remove Debris",           "desc": "Remove all infected plant material at season end; do not compost.", "type": "organic"},
-    ],
-    "Tomato_Leaf_Mold": [
-        {"title": "Chlorothalonil / Mancozeb", "desc": "Apply fungicide spray when humidity exceeds 85%; target leaf undersides.", "type": "chemical"},
-        {"title": "Improve Ventilation",       "desc": "Increase plant spacing and prune leaves to reduce humidity in the canopy.", "type": "organic"},
-    ],
-    "Tomato_Septoria_leaf_spot": [
-        {"title": "Mancozeb 75WP",  "desc": "Apply Mancozeb @ 2g/L at first symptom on lower leaves; repeat every 10 days.", "type": "chemical"},
-        {"title": "Sanitation",     "desc": "Remove and destroy heavily infected leaves; do not compost them.", "type": "organic"},
-    ],
-    "Tomato_Spider_mites_Two_spotted_spider_mite": [
-        {"title": "Abamectin Miticide", "desc": "Apply abamectin (Vertimec) @ 0.5mL/L; focus on leaf undersides where mites colonize.", "type": "chemical"},
-        {"title": "Neem Oil Spray",     "desc": "Spray neem oil (3mL/L) + insecticidal soap on undersides of leaves every 5 days.", "type": "organic"},
-    ],
-    "Tomato__Target_Spot": [
-        {"title": "Chlorothalonil / Mancozeb", "desc": "Apply broad-spectrum fungicide when first lesions appear; repeat every 7 days.", "type": "chemical"},
-        {"title": "Canopy Management",         "desc": "Reduce leaf wetness by pruning and increasing row spacing; avoid overhead watering.", "type": "organic"},
-    ],
-    "Tomato__Tomato_YellowLeaf__Curl_Virus": [
-        {"title": "Imidacloprid Insecticide", "desc": "Apply Imidacloprid 17.8SL @ 0.5mL/L to control whitefly vector; start early.", "type": "chemical"},
-        {"title": "Reflective Mulch",         "desc": "Use silver reflective mulch to disorient and repel Bemisia tabaci whitefly.", "type": "organic"},
-    ],
-    "Tomato__Tomato_mosaic_virus": [
-        {"title": "Sanitation Protocol", "desc": "Wash hands and tools with soap before handling plants; remove and destroy infected plants immediately.", "type": "organic"},
-    ],
-    "Tomato_healthy": [],
 }
 
-# ── Summaries for each class ─────────────────────────────────────────────────
-_SUMMARIES: dict[str, str] = {
-    "Pepper__bell___Bacterial_spot": "Bacterial spot detected on bell pepper - caused by Xanthomonas campestris; favoured by warm, wet conditions.",
-    "Pepper__bell___healthy":        "Pepper plant appears healthy with no visible disease symptoms.",
-    "Potato___Early_blight":         "Early blight (Alternaria solani) detected - brown lesions with concentric rings on older leaves.",
-    "Potato___Late_blight":          "CRITICAL: Late blight (Phytophthora infestans) detected - rapid defoliation risk; act immediately.",
-    "Potato___healthy":              "Potato plant appears healthy with no visible disease symptoms.",
-    "Tomato_Bacterial_spot":         "Bacterial spot (Xanthomonas spp.) detected - small, water-soaked leaf lesions that turn brown.",
-    "Tomato_Early_blight":           "Early blight (Alternaria solani) on tomato - dark concentric lesions, usually on lower leaves first.",
-    "Tomato_Late_blight":            "Late blight (Phytophthora infestans) detected on tomato - white mould on undersides; spreads fast.",
-    "Tomato_Leaf_Mold":              "Leaf mold (Passalora fulva) detected - pale green/yellow spots on upper leaf surface, olive mould below.",
-    "Tomato_Septoria_leaf_spot":     "Septoria leaf spot - small circular lesions with dark borders and white centres on lower leaves.",
-    "Tomato_Spider_mites_Two_spotted_spider_mite": "Spider mite infestation detected - stippling and bronzing on leaves; fine webbing visible.",
-    "Tomato__Target_Spot":           "Target spot (Corynespora cassiicola) - concentric ring lesions on leaves, stems, and fruit.",
-    "Tomato__Tomato_YellowLeaf__Curl_Virus": "Tomato Yellow Leaf Curl Virus (TYLCV) detected - transmitted by whitefly; no cure, manage vector.",
-    "Tomato__Tomato_mosaic_virus":   "Tomato mosaic virus detected - light/dark green mosaic pattern; spread by contact.",
-    "Tomato_healthy":                "Tomato plant appears healthy with no visible disease symptoms.",
-}
+
+def _format_class_metadata(raw_class: str) -> tuple[str, bool, str, list[dict]]:
+    """
+    Parses composite class name (e.g. 'fruit_veg_model___Mango__Rotten')
+    into (clean_name, is_healthy, summary, remedies).
+    """
+    clean = raw_class
+    for prefix in ["plant_disease_model___", "fruit_veg_model___", "kaggle_trained_model___", "universal_vision_model___"]:
+        if clean.startswith(prefix):
+            clean = clean[len(prefix):]
+            break
+
+    clean = clean.replace("__", " - ").replace("_", " ").strip()
+    is_healthy = "healthy" in raw_class.lower()
+
+    # Determine remedies and summary
+    remedies: list[dict] = []
+    summary = f"Detected: {clean}."
+
+    if is_healthy:
+        summary = f"The {clean.split('-')[0].strip()} specimen is healthy with no pathogenic lesions or infestation."
+        remedies = _BASE_REMEDIES["Healthy"]
+    elif "rotten" in raw_class.lower():
+        crop_name = clean.split('-')[0].strip()
+        summary = f"Post-harvest rot / decay detected on {crop_name}. Immediate sorting and cold-chain sanitation required."
+        remedies = _BASE_REMEDIES["Rotten"]
+    else:
+        # Check specific keyword match in base remedies
+        matched = False
+        for key, rem_list in _BASE_REMEDIES.items():
+            if key.lower() in raw_class.lower():
+                remedies = rem_list
+                summary = f"Agronomic alert: {clean} detected. Recommended protocol attached below."
+                matched = True
+                break
+
+        if not matched:
+            # Default broad-spectrum organic & cultural protocol
+            summary = f"Identified crop symptom: {clean}. Early intervention recommended."
+            remedies = [
+                {"title": "Neem / Biological Spray", "desc": "Spray neem oil 3-5 mL/L or apply Trichoderma viride @ 5g/L on affected foliage.", "type": "organic"},
+                {"title": "Field Sanitation & Airflow", "desc": "Prune severely affected foliage and avoid overhead irrigation to minimize leaf wetness.", "type": "cultural"},
+                {"title": "Broad-Spectrum Protectant", "desc": "Apply copper oxychloride (2.5 g/L) or Mancozeb (2 g/L) as a protective barrier.", "type": "chemical"},
+            ]
+
+    return clean, is_healthy, summary, remedies
 
 
 # ── Thread-Safe Singletons ───────────────────────────────────────────────────
-
-_engine_type: Optional[str] = None  # "tflite" or "keras"
+_engine_type: Optional[str] = None
 _model = None
 _tflite_input_details = None
 _tflite_output_details = None
@@ -145,12 +191,11 @@ _inference_lock = threading.Lock()
 
 def _load_model_once() -> tuple:
     """
-    Lazy-load the model exactly once in a thread-safe manner.
+    Lazy-load the model once in a thread-safe manner.
     Order of preference:
-      1. TFLite (Ultra-low memory, ideal for Render 512MB RAM, single-threaded)
-      2. Keras 3 with compatibility patch
-      3. tf_keras (Keras 2 standalone)
-      4. tensorflow.keras
+      1. Universal Model V2 (universal_model_v2.h5 + universal_indices_v2.json) — 74 classes.
+      2. TFLite (Ultra-low memory, ideal for Render 512MB RAM, single-threaded) — 15 classes.
+      3. Legacy EfficientNet H5.
     """
     global _engine_type, _model, _tflite_input_details, _tflite_output_details
     global _classes, _load_error, _load_attempted
@@ -164,20 +209,39 @@ def _load_model_once() -> tuple:
 
         _load_attempted = True
 
-        # ── 1. Load class labels ──────────────────────────────────────────────
-        try:
-            with open(_LABELS_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                _classes = data["classes"]
-            logger.info("[LocalDiseasePredictor] Loaded %d class labels.", len(_classes))
-        except Exception as e:
-            _load_error = f"Cannot load class labels: {e}"
-            logger.error("[LocalDiseasePredictor] %s", _load_error)
-            return None, None, None, _load_error
-
-        # ── 2. Strategy A (PRIMARY for Render): Ultra-lightweight TFLite ─────
-        if os.path.exists(_TFLITE_PATH):
+        # ── 1. Strategy A: Universal Model V2 (74 Classes) ───────────────────
+        if os.path.exists(_UNIVERSAL_MODEL_PATH) and os.path.exists(_UNIVERSAL_INDICES_PATH):
             try:
+                with open(_UNIVERSAL_INDICES_PATH, "r", encoding="utf-8") as f:
+                    raw_indices = json.load(f)
+                    # Sort classes by their integer index to guarantee alignment
+                    _classes = [k for k, v in sorted(raw_indices.items(), key=lambda item: item[1])]
+
+                import tensorflow as tf
+                # Enforce single-thread CPU execution to maintain low memory on Render
+                try:
+                    tf.config.threading.set_inter_op_parallelism_threads(1)
+                    tf.config.threading.set_intra_op_parallelism_threads(1)
+                except Exception:
+                    pass
+
+                _model = tf.keras.models.load_model(_UNIVERSAL_MODEL_PATH, compile=False)
+                _engine_type = "universal_keras"
+                _load_error = None
+                logger.info(
+                    "[LocalDiseasePredictor] Universal Model V2 loaded successfully: %d classes (%.1f MB).",
+                    len(_classes), os.path.getsize(_UNIVERSAL_MODEL_PATH) / 1e6
+                )
+                return _engine_type, _model, _classes, None
+            except Exception as e:
+                logger.warning("[LocalDiseasePredictor] Universal model load failed (%s); trying TFLite...", e)
+
+        # ── 2. Strategy B: Ultra-lightweight TFLite (15 classes) ─────────────
+        if os.path.exists(_TFLITE_PATH) and os.path.exists(_LEGACY_LABELS_PATH):
+            try:
+                with open(_LEGACY_LABELS_PATH, "r", encoding="utf-8") as f:
+                    _classes = json.load(f)["classes"]
+
                 Interpreter = None
                 try:
                     from ai_edge_litert.interpreter import Interpreter
@@ -195,66 +259,38 @@ def _load_model_once() -> tuple:
                     except ImportError:
                         pass
 
-                if Interpreter is None:
-                    raise ImportError("No LiteRT/TFLite interpreter found (ai_edge_litert, tflite_runtime, or tensorflow)")
-
-                # Enforce single-thread execution to prevent memory surges on Render
-                interpreter = Interpreter(
-                    model_path=_TFLITE_PATH,
-                    num_threads=1
-                )
-                interpreter.allocate_tensors()
-                _tflite_input_details = interpreter.get_input_details()
-                _tflite_output_details = interpreter.get_output_details()
-                _model = interpreter
-                _engine_type = "tflite"
-                _load_error = None
-                logger.info(
-                    "[LocalDiseasePredictor] Render-optimized LiteRT/TFLite model loaded successfully "
-                    "(%.1f MB, memory ~20MB).",
-                    os.path.getsize(_TFLITE_PATH) / 1e6
-                )
-                return _engine_type, _model, _classes, None
+                if Interpreter is not None:
+                    interpreter = Interpreter(model_path=_TFLITE_PATH, num_threads=1)
+                    interpreter.allocate_tensors()
+                    _tflite_input_details = interpreter.get_input_details()
+                    _tflite_output_details = interpreter.get_output_details()
+                    _model = interpreter
+                    _engine_type = "tflite"
+                    _load_error = None
+                    logger.info(
+                        "[LocalDiseasePredictor] TFLite model loaded successfully: %d classes (%.1f MB).",
+                        len(_classes), os.path.getsize(_TFLITE_PATH) / 1e6
+                    )
+                    return _engine_type, _model, _classes, None
             except Exception as e:
-                logger.warning(
-                    "[LocalDiseasePredictor] TFLite load failed (%s); falling back to H5...", e
-                )
+                logger.warning("[LocalDiseasePredictor] TFLite load failed: %s", e)
 
-        # ── 3. Strategy B: Keras 3 with compatibility patch ───────────────────
-        if os.path.exists(_MODEL_PATH):
+        # ── 3. Strategy C: Legacy EfficientNet Keras ─────────────────────────
+        if os.path.exists(_LEGACY_MODEL_PATH) and os.path.exists(_LEGACY_LABELS_PATH):
             try:
-                import keras
-                if hasattr(keras, "layers") and hasattr(keras.layers, "Dense"):
-                    _orig_dense_from_config = keras.layers.Dense.from_config
+                with open(_LEGACY_LABELS_PATH, "r", encoding="utf-8") as f:
+                    _classes = json.load(f)["classes"]
 
-                    @classmethod
-                    def _patched_dense_from_config(cls, config):
-                        if isinstance(config, dict):
-                            config.pop("quantization_config", None)
-                        return _orig_dense_from_config(config)
-
-                    keras.layers.Dense.from_config = _patched_dense_from_config
-
-                _model = keras.models.load_model(_MODEL_PATH, compile=False)
-                _engine_type = "keras"
+                import tensorflow as tf
+                _model = tf.keras.models.load_model(_LEGACY_MODEL_PATH, compile=False)
+                _engine_type = "legacy_keras"
                 _load_error = None
-                logger.info("[LocalDiseasePredictor] Keras model loaded (%.1f MB).",
-                            os.path.getsize(_MODEL_PATH) / 1e6)
+                logger.info("[LocalDiseasePredictor] Legacy Keras model loaded: %d classes.", len(_classes))
                 return _engine_type, _model, _classes, None
             except Exception as e:
-                logger.warning("[LocalDiseasePredictor] Keras load failed (%s); trying tf_keras...", e)
+                logger.warning("[LocalDiseasePredictor] Legacy Keras load failed: %s", e)
 
-            # Strategy C: tf_keras standalone
-            try:
-                import tf_keras as tfk
-                _model = tfk.models.load_model(_MODEL_PATH, compile=False)
-                _engine_type = "keras"
-                _load_error = None
-                return _engine_type, _model, _classes, None
-            except Exception as e:
-                logger.warning("[LocalDiseasePredictor] tf_keras load failed: %s", e)
-
-        _load_error = f"Neither {_TFLITE_PATH} nor {_MODEL_PATH} could be loaded."
+        _load_error = "No supported disease vision model could be loaded."
         logger.error("[LocalDiseasePredictor] %s", _load_error)
         return None, None, None, _load_error
 
@@ -266,48 +302,14 @@ def _preprocess(image: Image.Image) -> np.ndarray:
     return np.expand_dims(arr, axis=0)
 
 
-def _build_response(
-    diagnosis_key: str,
-    confidence: int,
-    source_tag: str = "local",
-) -> dict:
-    """
-    Construct a response dict that is schema-identical to the Gemini response:
-      { diagnosis, confidence, summary, health_score, remedies[], _source }
-    """
-    clean_name = (
-        diagnosis_key
-        .replace("___", " - ")
-        .replace("__", " - ")
-        .replace("_", " ")
-        .strip()
-    )
-    is_healthy = "healthy" in diagnosis_key.lower()
-    health_score = 100 if is_healthy else max(0, 100 - confidence)
-    summary = _SUMMARIES.get(
-        diagnosis_key,
-        f"Detected: {clean_name}. Confidence: {confidence}%."
-    )
-
-    return {
-        "diagnosis":    clean_name,
-        "confidence":   confidence,
-        "summary":      summary,
-        "health_score": health_score,
-        "remedies":     _REMEDIES.get(diagnosis_key, []),
-        "_source":      source_tag,
-    }
-
-
 # ── Public API ───────────────────────────────────────────────────────────────
 
-def predict(image: Image.Image) -> dict:
+def predict(image: Image.Image, mode: str = "diagnosis") -> dict:
     """
     Run local inference on `image` and return a response dict
     that matches the Gemini /api/ai/diagnose schema exactly.
-
-    Always returns a dict — never raises.
-    Thread-safe and memory-bounded for Render environments.
+    Supports both disease/pest diagnosis and produce commercial quality grading.
+    Always returns a valid dict — never raises.
     """
     t0 = time.perf_counter()
 
@@ -316,21 +318,17 @@ def predict(image: Image.Image) -> dict:
     if load_err or model is None or classes is None:
         logger.warning("[LocalDiseasePredictor] Model unavailable: %s", load_err)
         return {
-            "diagnosis":    "Local Model Unavailable",
-            "confidence":   0,
-            "summary":      (
-                f"Local model could not be loaded: {load_err}. "
-                "Set USE_LOCAL_DISEASE_MODEL=false to use Gemini API instead."
-            ),
+            "diagnosis": "Local Model Unavailable",
+            "confidence": 0,
+            "summary": f"Local model unavailable: {load_err}. Falling back to Gemini cloud vision.",
             "health_score": 0,
-            "remedies":     [],
-            "_source":      "local_error",
+            "remedies": [],
+            "_source": "local_error",
         }
 
     try:
         arr = _preprocess(image)
 
-        # Thread-safe execution to prevent memory contention
         with _inference_lock:
             if engine == "tflite":
                 model.set_tensor(_tflite_input_details[0]["index"], arr)
@@ -339,39 +337,87 @@ def predict(image: Image.Image) -> dict:
             else:
                 preds = model.predict(arr, verbose=0)
 
-        pred_idx   = int(np.argmax(preds[0]))
+        pred_idx = int(np.argmax(preds[0]))
         confidence = int(round(float(preds[0][pred_idx]) * 100))
-        diagnosis_key = classes[pred_idx]
+        raw_key = classes[pred_idx]
 
-        # Free memory immediately (essential for Render 512MB RAM)
         del arr
         gc.collect()
 
+        clean_name, is_healthy, summary, remedies = _format_class_metadata(raw_key)
+
         latency_ms = (time.perf_counter() - t0) * 1000
+
+        # Commercial Quality Grading Mode
+        if mode == "grading":
+            crop_name = clean_name.split("-")[0].strip()
+            if is_healthy:
+                grade = "Grade A"
+                grade_summary = f"{crop_name} Quality: Grade A (Fresh & Market Ready). High commercial visual standard."
+                grade_score = 95
+                grade_remedies = [
+                    {"title": "Cold-Chain Preservation", "desc": f"Maintain recommended post-harvest temperature and 85-90% relative humidity for {crop_name}.", "type": "cultural"},
+                    {"title": "Aerated Packaging", "desc": "Pack in ventilated crates to prevent moisture build-up and surface condensation.", "type": "cultural"}
+                ]
+            elif "rotten" in raw_key.lower():
+                grade = "Grade C"
+                grade_summary = f"{crop_name} Quality: Grade C (Post-Harvest Spoilage / Decay). Tissue rot detected; cull immediately."
+                grade_score = max(15, 100 - confidence)
+                grade_remedies = [
+                    {"title": "Immediate Cull & Sorting", "desc": "Segregate decayed items immediately to stop ethylene gas and spore transmission.", "type": "cultural"},
+                    {"title": "Crate Sanitation", "desc": "Wash crates and sorting tables with 0.1% sodium hypochlorite solution.", "type": "cultural"}
+                ]
+            else:
+                grade = "Grade B"
+                grade_summary = f"{crop_name} Quality: Grade B (Cosmetic Blemish / Secondary). Minor surface marking ({clean_name}); suitable for processing or immediate local retail."
+                grade_score = 65
+                grade_remedies = [
+                    {"title": "Processing Diversion", "desc": "Redirect blemished produce to pulp, drying, or processing facilities to avoid waste.", "type": "cultural"}
+                ]
+
+            logger.info(
+                "[LocalDiseasePredictor] Grading (%s): %s -> %s (conf=%d%%, latency=%.1fms)",
+                engine, clean_name, grade, confidence, latency_ms
+            )
+            return {
+                "diagnosis": grade,
+                "confidence": confidence,
+                "summary": grade_summary,
+                "health_score": grade_score,
+                "remedies": grade_remedies,
+                "_source": f"local_{engine}_grading",
+            }
+
+        # Standard Diagnosis Mode
+        health_score = 100 if is_healthy else max(10, 100 - confidence)
         logger.info(
             "[LocalDiseasePredictor] Prediction (%s): %s (conf=%d%%, latency=%.1fms)",
-            engine, diagnosis_key, confidence, latency_ms,
+            engine, clean_name, confidence, latency_ms
         )
 
-        return _build_response(diagnosis_key, confidence, source_tag="local")
+        return {
+            "diagnosis": clean_name,
+            "confidence": confidence,
+            "summary": summary,
+            "health_score": health_score,
+            "remedies": remedies,
+            "_source": f"local_{engine}",
+        }
 
     except Exception as exc:
         logger.exception("[LocalDiseasePredictor] Inference error: %s", exc)
         gc.collect()
         return {
-            "diagnosis":    "Inference Error",
-            "confidence":   0,
-            "summary":      f"Local model inference failed: {exc}",
+            "diagnosis": "Inference Error",
+            "confidence": 0,
+            "summary": f"Local model inference failed: {exc}",
             "health_score": 0,
-            "remedies":     [],
-            "_source":      "local_error",
+            "remedies": [],
+            "_source": "local_error",
         }
 
 
 def is_model_ready() -> tuple[bool, str]:
-    """
-    Returns (True, '') if the model loaded OK, or (False, reason) otherwise.
-    Triggers the lazy load on first call.
-    """
+    """Returns (True, '') if the model loaded OK, or (False, reason) otherwise."""
     _, _, _, err = _load_model_once()
     return (err is None), (err or "")
