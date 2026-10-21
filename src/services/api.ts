@@ -138,7 +138,7 @@ export const getUserLocation = async (): Promise<{ lat: number; lng: number }> =
   return fetchIpLocation();
 };
 
-const LIVE_BACKEND_URL = 'https://krishi-drishti-api.onrender.com/api';
+const LIVE_BACKEND_URL = 'https://krishi-drishti-proxy.swanky-mine.workers.dev/api';
 const API_BASE_URL = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
 
 // NOTE: Do NOT override axios.defaults.adapter here.

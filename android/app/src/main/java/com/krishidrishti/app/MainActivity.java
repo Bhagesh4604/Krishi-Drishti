@@ -23,18 +23,15 @@ public class MainActivity extends BridgeActivity {
         // Allow mixed content (required for Capacitor https://localhost → http backend in dev)
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
-        // Pre-warm DNS resolution for the Render backend using the system's DNS resolver.
-        // This resolves "krishi-drishti-api.onrender.com" on a background thread as soon
-        // as the app opens, so the first API call hits an already-resolved host.
-        // On Android API 29+ we can force DNS lookup through the system's encrypted DNS
-        // (Private DNS) if set, or fall through to Google DNS as configured in network_security_config.
+        // Pre-warm DNS resolution for the Cloudflare Worker proxy using the system's DNS resolver.
+        // This resolves the proxy host on a background thread as soon as the app opens.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 DnsResolver resolver = DnsResolver.getInstance();
                 CancellationSignal cancel = new CancellationSignal();
                 resolver.query(
                     null,
-                    "krishi-drishti-api.onrender.com",
+                    "krishi-drishti-proxy.swanky-mine.workers.dev",
                     DnsResolver.TYPE_A,
                     DnsResolver.FLAG_EMPTY,
                     command -> new Thread(command).start(),

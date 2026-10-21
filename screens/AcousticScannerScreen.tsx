@@ -4,7 +4,7 @@ import { Mic, FileAudio, Loader2, ShieldAlert, ArrowLeft, Activity } from 'lucid
 import { aiService } from '../src/services/api';
 
 // Constants
-const LIVE_ROOT_URL = 'https://krishi-drishti-api.onrender.com';
+const LIVE_ROOT_URL = 'https://krishi-drishti-proxy.swanky-mine.workers.dev';
 const SERVER_URL = (import.meta as any).env?.VITE_API_URL
   ? `${(import.meta as any).env.VITE_API_URL.replace(/\/api\/?$/, '')}/analyze-audio`
   : `${LIVE_ROOT_URL}/analyze-audio`;

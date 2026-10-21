@@ -15,9 +15,11 @@
         <domain includeSubdomains="false">127.0.0.1</domain>
     </domain-config>
 
-    <!-- Explicitly allow HTTPS (no cleartext needed) for the live backend -->
+    <!-- Explicitly allow HTTPS (no cleartext needed) for live backend and proxy -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">onrender.com</domain>
+        <domain includeSubdomains="true">workers.dev</domain>
+        <domain includeSubdomains="true">cloudflare.com</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

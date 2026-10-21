@@ -19,7 +19,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 
-const LIVE_ROOT_URL = 'https://krishi-drishti-api.onrender.com';
+const LIVE_ROOT_URL = 'https://krishi-drishti-proxy.swanky-mine.workers.dev';
 const API_BASE = ((import.meta as any).env?.VITE_API_URL
   ? (import.meta as any).env.VITE_API_URL.replace(/\/api\/?$/, '')
   : LIVE_ROOT_URL);

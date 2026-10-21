@@ -3,8 +3,8 @@
   <component name="deploymentTargetSelector">
     <selectionStates>
       <SelectionState runConfigName="app">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-10-16T19:40:37.621600300Z">
+        <option name="selectionMode" value="DIALOG" />
+        <DropdownSelection timestamp="2026-10-21T15:20:03.929445700Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\bhage\.android\avd\Pixel_9.avd" />
@@ -13,11 +13,6 @@
         </DropdownSelection>
         <DialogSelection>
           <targets>
-            <Target type="DEFAULT_BOOT">
-              <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=10MG36F5K90000A" />
-              </handle>
-            </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
                 <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\bhage\.android\avd\Pixel_9.avd" />
