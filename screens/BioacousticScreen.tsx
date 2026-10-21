@@ -6,7 +6,7 @@ import { GradientFileUpload } from '../components/ui/gradient-file-upload';
 
 // Constants
 // Bioacoustic service URL — pointing to live backend server
-const LIVE_ROOT_URL = 'https://krishi-drishti-proxy.swanky-mine.workers.dev';
+const LIVE_ROOT_URL = 'https://krishi-drishti-api.onrender.com';
 const SERVER_URL = (import.meta as any).env?.VITE_BIOACOUSTIC_URL
   || ((import.meta as any).env?.VITE_API_URL
     ? `${(import.meta as any).env.VITE_API_URL.replace(/\/api\/?$/, '')}/analyze-audio`
