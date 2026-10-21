@@ -179,11 +179,17 @@ api.interceptors.response.use((response) => {
 
 export const authService = {
   sendOtp: async (phone: string) => {
-    const response = await api.post('/auth/send-otp', { phone });
+    const response = await resilientDispatcher.execute(
+      () => api.post('/auth/send-otp', { phone }),
+      { priority: PriorityLevel.HIGH, maxRetries: 3, initialDelayMs: 1500 }
+    );
     return response.data;
   },
   verifyOtp: async (phone: string, otp: string) => {
-    const response = await api.post('/auth/verify-otp', { phone, otp });
+    const response = await resilientDispatcher.execute(
+      () => api.post('/auth/verify-otp', { phone, otp }),
+      { priority: PriorityLevel.HIGH, maxRetries: 3, initialDelayMs: 1500 }
+    );
     if (response.data.access_token) {
       localStorage.setItem('ks_token', response.data.access_token);
     }
@@ -208,7 +214,10 @@ export const userService = {
     return response.data;
   },
   updateProfile: async (profile: Partial<UserProfile>) => {
-    const response = await api.put<UserProfile>('/users/me', profile);
+    const response = await resilientDispatcher.execute(
+      () => api.put<UserProfile>('/users/me', profile),
+      { priority: PriorityLevel.HIGH, maxRetries: 2, initialDelayMs: 1500 }
+    );
     apiResponseCache.put('user:profile', response.data, { ttlMs: 10 * 60 * 1000 });
     return response.data;
   }
@@ -292,7 +301,15 @@ export const marketService = {
 
 export const aiService = {
   chat: async (message: string) => {
-    const response = await api.post<{ response: string }>('/ai/chat', { message });
+    const response = await resilientDispatcher.execute(
+      () => api.post<{ response: string }>('/ai/chat', { message }),
+      {
+        priority: PriorityLevel.HIGH,
+        maxRetries: 3,
+        timeoutMs: 90000,
+        initialDelayMs: 2000,
+      }
+    );
     return response.data;
   },
   diagnose: async (imageFile: File, mode: string) => {
