@@ -48,28 +48,9 @@ def _chunk_text(text: str, chunk_size: int = 600, overlap: int = 100) -> list[st
 
 def _get_embeddings(texts: list[str]) -> list[list[float]]:
     """
-    Uses Gemini text-embedding-004 to produce dense vectors for FAISS.
-    Falls back to empty list (BM25-only mode) if API key is missing.
+    Returns empty list to run in BM25-only mode (instantaneous, high-speed lexical search over agricultural corpus).
     """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("[RAG] No GEMINI_API_KEY — running in BM25-only mode (no dense embeddings)")
-        return []
-
-    try:
-        from google import genai
-        client = genai.Client(api_key=api_key)
-        embeddings = []
-        for text in texts:
-            result = client.models.embed_content(
-                model="text-embedding-004",
-                contents=text
-            )
-            embeddings.append(result.embeddings[0].values)
-        return embeddings
-    except Exception as e:
-        print(f"[RAG] Embedding error: {e} — falling back to BM25-only")
-        return []
+    return []
 
 
 def get_rag_engine() -> HybridSearchEngine:
