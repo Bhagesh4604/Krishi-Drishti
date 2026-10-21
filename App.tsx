@@ -122,7 +122,6 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, Error
 }
 
 import { Geolocation } from '@capacitor/geolocation';
-import { Camera } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 
 const AppContent: React.FC = () => {
@@ -133,21 +132,25 @@ const AppContent: React.FC = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [visionMode, setVisionMode] = useState<VisionMode>('diagnosis');
 
-  // Request all permissions proactively on Android via Capacitor
+  // ── Coordinated non-blocking native permission check ──
+  // Camera permission is NOT requested here — it is strictly governed by the
+  // Camera Finite State Machine (CameraFSM) when the user navigates to the camera.
+  // This eliminates Android dialog race conditions and UI thread blocking on boot.
   useEffect(() => {
-    const requestPerms = async () => {
+    const checkNativePerms = async () => {
       try {
         if (Capacitor.isNativePlatform()) {
-          console.log("Requesting native permissions...");
-          const geoStatus = await Geolocation.requestPermissions();
-          const camStatus = await Camera.requestPermissions();
-          console.log("Permissions requested", { geoStatus, camStatus });
+          const status = await Geolocation.checkPermissions();
+          if (status.location === 'prompt') {
+            // Non-blocking request only if unprompted
+            Geolocation.requestPermissions().catch(() => {});
+          }
         }
       } catch (err) {
-        console.warn('Could not request permissions proactively', err);
+        console.warn('[App] Native geo permission check deferred:', err);
       }
     };
-    requestPerms();
+    checkNativePerms();
   }, []);
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [language, setLanguage] = useState<Language>('en');

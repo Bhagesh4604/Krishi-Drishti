@@ -128,6 +128,8 @@ export function useJobPoller<T = any>(
     return cleanup;
 
     function startRestPolling() {
+      let pollDelay = pollIntervalMs;
+
       const poll = async () => {
         const elapsed = Date.now() - startRef.current;
         if (elapsed > timeoutMs) {
@@ -138,7 +140,7 @@ export function useJobPoller<T = any>(
         }
 
         try {
-          const token = localStorage.getItem('access_token') ?? '';
+          const token = localStorage.getItem('ks_token') ?? localStorage.getItem('access_token') ?? '';
           const res = await fetch(`${API_BASE}/api/jobs/${jobId}`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           });
@@ -151,19 +153,27 @@ export function useJobPoller<T = any>(
             cleanup();
             setState({ status: 'success', progress: 100, elapsedMs: elapsed });
             onComplete?.(data.result as T);
+            return;
           } else if (data.status === 'failed') {
             cleanup();
             setState({ status: 'failed', progress: 0, elapsedMs: elapsed });
             onError?.(data.error ?? 'Analysis failed');
+            return;
           } else {
             setState({ status: data.status === 'queued' ? 'queued' : 'running', progress: estimatedProgress, elapsedMs: elapsed });
+            // Reset to base poll interval on successful response
+            pollDelay = pollIntervalMs;
           }
         } catch (err: any) {
-          console.error('[useJobPoller] Poll error:', err);
+          console.warn('[useJobPoller] Transient poll error, backing off:', err?.message || err);
+          // Exponential backoff with jitter on transient error
+          pollDelay = Math.min(15000, pollDelay * 1.5 + (Math.random() * 500));
         }
+
+        // Schedule next poll with backoff
+        timerRef.current = setTimeout(poll, pollDelay) as any;
       };
 
-      timerRef.current = setInterval(poll, pollIntervalMs);
       poll(); // Immediate first poll
     }
   }, [jobId]); // eslint-disable-line react-hooks/exhaustive-deps

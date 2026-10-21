@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Screen, Language, VisionMode } from '../types';
 import { ArrowLeft, Leaf, Droplets, ThermometerSun, AlertCircle, CheckCircle2, ChevronRight, Download, Share2 } from 'lucide-react';
 import { aiService } from '../src/services/api';
+import { imageWorkerClient } from '../src/utils/imageWorkerClient';
 
 interface VisionResultScreenProps {
   navigateTo: (screen: Screen) => void;
@@ -15,23 +16,13 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<any>(null);
 
-  const dataURItoBlob = (dataURI: string) => {
-    const byteString = atob(dataURI.split(',')[1]);
-    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([ab], { type: mimeString });
-  };
-
   useEffect(() => {
     const analyzeImage = async () => {
       if (!image) return;
       try {
         setLoading(true);
-        const blob = dataURItoBlob(image);
+        // Offload Base64 decoding & Blob creation to Web Worker background thread
+        const blob = await imageWorkerClient.dataUriToBlob(image);
         const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
         const data = await aiService.diagnose(file, mode);
         

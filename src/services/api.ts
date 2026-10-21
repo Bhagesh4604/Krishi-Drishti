@@ -1,6 +1,11 @@
 import axios from 'axios';
 import { UserProfile, Listing, ChatMessage } from '../../types';
 import { Geolocation } from '@capacitor/geolocation';
+import { apiResponseCache } from '../utils/lruCache';
+import { resilientDispatcher } from '../utils/resilientPoll';
+import { PriorityLevel } from '../utils/priorityQueue';
+
+export { apiResponseCache, resilientDispatcher, PriorityLevel };
 
 // Cache last-known position in sessionStorage for quick re-use
 const LOCATION_CACHE_KEY = 'kd_last_location';
@@ -191,17 +196,32 @@ export const authService = {
 
 export const userService = {
   getProfile: async () => {
-    const response = await api.get<UserProfile>('/users/me');
+    const cached = apiResponseCache.get('user:profile');
+    if (cached) {
+      return cached;
+    }
+    const response = await resilientDispatcher.execute(
+      () => api.get<UserProfile>('/users/me'),
+      { priority: PriorityLevel.HIGH }
+    );
+    apiResponseCache.put('user:profile', response.data, { ttlMs: 10 * 60 * 1000 });
     return response.data;
   },
   updateProfile: async (profile: Partial<UserProfile>) => {
     const response = await api.put<UserProfile>('/users/me', profile);
+    apiResponseCache.put('user:profile', response.data, { ttlMs: 10 * 60 * 1000 });
     return response.data;
   }
 };
 
 export const marketService = {
   getListings: async (filters?: { crop?: string, location?: string, lat?: number, lng?: number }) => {
+    const cacheKey = `market:listings:${filters?.crop || ''}:${filters?.location || ''}:${filters?.lat || ''}:${filters?.lng || ''}`;
+    const cached = apiResponseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const params = new URLSearchParams();
     if (filters?.crop) params.append('crop', filters.crop);
     if (filters?.location) params.append('location', filters.location);
@@ -209,10 +229,12 @@ export const marketService = {
     if (filters?.lng) params.append('lng', filters.lng.toString());
 
     // The backend returns ListingResponse which has slightly different fields than Listing interface
-    // So we map it here
-    const response = await api.get<any[]>('/market/', { params });
+    const response = await resilientDispatcher.execute(
+      () => api.get<any[]>('/market/', { params }),
+      { priority: PriorityLevel.HIGH }
+    );
 
-    return response.data.map((item: any) => ({
+    const mapped = response.data.map((item: any) => ({
       id: item.id,
       crop: item.crop_name, // Map crop_name to crop
       quantity: item.quantity,
@@ -231,6 +253,9 @@ export const marketService = {
       grade: item.grade || 'A',
       distanceKm: 0 // Default
     })) as Listing[];
+
+    apiResponseCache.put(cacheKey, mapped, { ttlMs: 5 * 60 * 1000 });
+    return mapped;
   },
   createListing: async (listing: any) => {
     const response = await api.post<any>('/market/', listing);
@@ -274,9 +299,20 @@ export const aiService = {
     const formData = new FormData();
     formData.append('file', imageFile);
     formData.append('mode', mode);
-    const response = await api.post<any>('/ai/diagnose', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+
+    // Dispatched via Priority Queue with Critical Priority & Exponential Backoff
+    // to handle Render cold-start latency without dropping the inference request.
+    const response = await resilientDispatcher.execute(
+      () => api.post<any>('/ai/diagnose', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }),
+      {
+        priority: PriorityLevel.CRITICAL,
+        maxRetries: 4,
+        timeoutMs: 90000,
+        initialDelayMs: 2000,
+      }
+    );
     return response.data;
   }
 };
@@ -287,69 +323,37 @@ export const financeService = {
     return response.data;
   },
   getSchemes: async () => {
-    // This was the old finance schemes. We now have a dedicated schemes router.
-    // Keeping this for backward compatibility if needed, or redirecting.
     const response = await api.get('/finance/schemes');
     return JSON.parse(response.data.schemes);
   }
 };
 
-// Simple in-memory cache
-let weatherCache = {
-  data: null as any,
-  timestamp: 0,
-  lat: 0,
-  lng: 0
-};
-
 export const weatherService = {
   getWeather: async (lat: number, lng: number) => {
-    // Return cached data if valid (< 10 mins) and same location (approx)
-    const now = Date.now();
-    if (
-      weatherCache.data &&
-      (now - weatherCache.timestamp < 10 * 60 * 1000) &&
-      Math.abs(weatherCache.lat - lat) < 0.01 &&
-      Math.abs(weatherCache.lng - lng) < 0.01
-    ) {
-      console.log("Serving cached weather data");
-      return weatherCache.data;
+    const cacheKey = `weather:${lat.toFixed(2)},${lng.toFixed(2)}`;
+    const cached = apiResponseCache.get(cacheKey);
+    if (cached) {
+      console.log("[LRUCache] Serving cached weather data:", cacheKey);
+      return cached;
     }
 
-    const fetchWeather = async () => {
-      const response = await api.get(`/weather/current?lat=${lat}&lng=${lng}`);
-      return response.data;
-    };
-
     try {
-      const data = await fetchWeather();
-      // Update cache
-      weatherCache = { data, timestamp: now, lat, lng };
-      return data;
-    } catch (error: any) {
-      console.warn("Weather fetch failed (attempt 1), retrying in 5s...", error?.message);
-      // Return cached (even expired) immediately if available
-      if (weatherCache.data) {
-        // Retry in background so cache gets refreshed
-        setTimeout(async () => {
-          try {
-            const data = await fetchWeather();
-            weatherCache = { data, timestamp: Date.now(), lat, lng };
-            console.log("Weather background retry succeeded");
-          } catch { /* ignore */ }
-        }, 5000);
-        return weatherCache.data;
-      }
-      // No cache — wait 5s and retry once (Render cold start)
-      await new Promise(r => setTimeout(r, 5000));
-      try {
-        const data = await fetchWeather();
-        weatherCache = { data, timestamp: Date.now(), lat, lng };
-        return data;
-      } catch (retryError) {
-        console.error("Weather fetch failed after retry", retryError);
-        throw retryError;
-      }
+      const response = await resilientDispatcher.execute(
+        () => api.get(`/weather/current?lat=${lat}&lng=${lng}`),
+        {
+          priority: PriorityLevel.HIGH,
+          maxRetries: 3,
+          initialDelayMs: 1500,
+        }
+      );
+      apiResponseCache.put(cacheKey, response.data, { ttlMs: 10 * 60 * 1000 });
+      return response.data;
+    } catch (err: any) {
+      console.warn("[WeatherService] Resilient fetch failed:", err?.message || err);
+      // Return expired cache if available
+      const fallbackCached = apiResponseCache.get(cacheKey);
+      if (fallbackCached) return fallbackCached;
+      throw err;
     }
   },
   searchCity: async (query: string) => {
@@ -362,7 +366,6 @@ export const weatherService = {
   }
 };
 
-
 export const newsService = {
   getNews: async (district: string, language: string) => {
     const response = await api.post('/news/', { district, language });
@@ -372,7 +375,17 @@ export const newsService = {
 
 export const schemesService = {
   getSchemes: async () => {
-    const response = await api.get('/schemes/');
+    const cacheKey = 'schemes:list';
+    const cached = apiResponseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const response = await resilientDispatcher.execute(
+      () => api.get('/schemes/'),
+      { priority: PriorityLevel.NORMAL, maxRetries: 3 }
+    );
+    apiResponseCache.put(cacheKey, response.data, { ttlMs: 30 * 60 * 1000 });
     return response.data;
   },
   applyScheme: async (schemeId: string, schemeName: string) => {
@@ -448,38 +461,50 @@ export const carbonService = {
     return response.data;
   },
   monitorPlot: async (plotId: number, methodology: string = 'Cover-Crop') => {
-    const response = await api.get(`/carbon/plots/${plotId}/monitor?methodology=${methodology}`);
+    const response = await resilientDispatcher.execute(
+      () => api.get(`/carbon/plots/${plotId}/monitor?methodology=${methodology}`),
+      { priority: PriorityLevel.HIGH, maxRetries: 3 }
+    );
     const jobId = response.data.job_id;
     if (!jobId) return response.data;
 
-    // Poll for async job completion
-    while (true) {
-      const jobResponse = await api.get(`/jobs/${jobId}`);
-      if (jobResponse.data.status === 'success') {
-        return { analysis: jobResponse.data.result };
+    // Resilient Exponential Backoff Polling with Priority Queue
+    // Manages Render cold-start and prevents long-running inference dropped requests
+    const finalJob = await resilientDispatcher.pollUntil(
+      () => api.get(`/jobs/${jobId}`),
+      (res: any) => res.data?.status === 'success',
+      (res: any) => res.data?.status === 'failed' ? (res.data?.error || 'Monitoring failed') : false,
+      {
+        priority: PriorityLevel.HIGH,
+        timeoutMs: 180000,
+        initialDelayMs: 2000,
+        maxDelayMs: 15000,
+        backoffFactor: 1.5,
       }
-      if (jobResponse.data.status === 'failed') {
-        throw new Error(jobResponse.data.error || 'Monitoring failed');
-      }
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
+    );
+    return { analysis: finalJob.data.result };
   },
   enrollPlot: async (plotId: number, methodology: string) => {
-    const response = await api.post('/carbon/enroll', { plot_id: plotId, methodology });
+    const response = await resilientDispatcher.execute(
+      () => api.post('/carbon/enroll', { plot_id: plotId, methodology }),
+      { priority: PriorityLevel.HIGH, maxRetries: 3 }
+    );
     const jobId = response.data.gee_job_id;
     if (!jobId) return response.data;
 
-    // Poll for async job completion before returning
-    while (true) {
-      const jobResponse = await api.get(`/jobs/${jobId}`);
-      if (jobResponse.data.status === 'success') {
-        return response.data;
+    await resilientDispatcher.pollUntil(
+      () => api.get(`/jobs/${jobId}`),
+      (res: any) => res.data?.status === 'success',
+      (res: any) => res.data?.status === 'failed' ? (res.data?.error || 'Enrollment processing failed') : false,
+      {
+        priority: PriorityLevel.HIGH,
+        timeoutMs: 180000,
+        initialDelayMs: 2000,
+        maxDelayMs: 15000,
+        backoffFactor: 1.5,
       }
-      if (jobResponse.data.status === 'failed') {
-        throw new Error(jobResponse.data.error || 'Enrollment processing failed');
-      }
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
+    );
+    return response.data;
   },
   unenrollPlot: async (projectId: number) => {
     const response = await api.delete(`/carbon/projects/${projectId}`);
