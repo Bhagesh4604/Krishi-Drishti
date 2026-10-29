@@ -70,7 +70,7 @@ const MarketDetailScreen: React.FC<MarketDetailScreenProps> = ({ navigateTo, lis
   };
 
   return (
-    <div className="bg-[#f8fafc] min-h-full pb-32">
+    <div className="bg-[#f8fafc] min-h-full pb-6">
       {/* Visual Header */}
       <div className="relative h-[420px]">
         <img src={listing.image} className="w-full h-full object-cover" alt={listing.crop} />

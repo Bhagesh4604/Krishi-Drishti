@@ -837,11 +837,11 @@ const AppContent: React.FC = () => {
       >
       <main
         onScroll={handleMainScroll}
-        className={`flex-1 overflow-y-auto mobile-container relative ${showNav ? 'pb-32 sm:pb-36' : 'pb-6'}`}
+        className="flex-1 overflow-y-auto mobile-container relative"
         style={{
           paddingBottom: showNav
-            ? 'calc(9rem + env(safe-area-inset-bottom, 0px))'
-            : 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+            ? 'calc(4.75rem + env(safe-area-inset-bottom, 0px))'
+            : 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
           WebkitOverflowScrolling: 'touch',
         }}
       >
@@ -862,9 +862,6 @@ const AppContent: React.FC = () => {
             </React.Suspense>
           </motion.div>
         </AnimatePresence>
-        {showNav && (
-          <div className="h-16 w-full shrink-0 pointer-events-none" aria-hidden="true" />
-        )}
       </main>
 
       {/* ============ FLOATING ACTION BUTTON WITH EXPANDABLE MENU ============ */}

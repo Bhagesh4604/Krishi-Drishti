@@ -172,7 +172,7 @@ const AcousticScannerScreen: React.FC<{ navigation?: { goBack: () => void } }> =
     };
 
     return (
-        <div className="min-h-full bg-gray-50 flex flex-col pt-0 pb-32 font-sans relative">
+        <div className="min-h-full bg-gray-50 flex flex-col pt-0 pb-6 font-sans relative">
             {/* Structured Premium Header */}
             <div className="bg-white p-6 pt-12 pb-6 shadow-sm border-b border-gray-100 sticky top-0 z-20 flex items-center justify-between rounded-b-[2rem]">
                 <button

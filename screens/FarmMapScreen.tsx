@@ -312,7 +312,7 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
               </div>
             )}
 
-            <div className="space-y-4 pb-32">
+            <div className="space-y-4 pb-6">
               {/* Yield Forecast */}
               <div className="p-4 rounded-2xl" style={{ background: '#F7F9F8', border: '1px solid #F0F0F0' }}>
                 <p className="text-[10px] uppercase font-black mb-1" style={{ color: '#616B68' }}>Predicted Yield</p>

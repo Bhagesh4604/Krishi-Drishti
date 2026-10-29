@@ -162,7 +162,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
       {/* ══════════ FORM CARD ══════════ */}
       <div className="flex-1 overflow-y-auto -mt-8 relative z-10 rounded-t-3xl bg-white"
         style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.06)' }}>
-        <div className="px-5 pt-6 pb-40 space-y-5">
+        <div className="px-5 pt-6 pb-6 space-y-5">
 
           {/* ── Name ── */}
           <div>

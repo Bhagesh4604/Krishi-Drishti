@@ -698,7 +698,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       {/* ══════════════════════════════════════════════════════════════════════════════════
           MY FIELDS
       ══════════════════════════════════════════════════════════════════════════════════ */}
-      <div className="mt-6 px-5 pb-32" style={{ fontFamily: 'Inter, sans-serif' }}>
+      <div className="mt-6 px-5 pb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold" style={{ color: '#001A11' }}>My Fields</h2>
           <button
