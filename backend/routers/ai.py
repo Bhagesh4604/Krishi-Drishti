@@ -194,7 +194,7 @@ async def analyze_stress(
         },
         "thermal_data": {
             "water_stress_index": final_stress, # Mapping overall stress to water stress loosely for MVP
-            "canopy_temperature": f"{sat_data.get('temperature', 25)}Ã‚Â°C"
+            "canopy_temperature": f"{round(float(sat_data.get('temperature', 25)), 1)}°C"
         },
         "hyperspectral_data": {
             "fungal_risk": "High" if final_stress == "High" else "Low" # Simplification for MVP

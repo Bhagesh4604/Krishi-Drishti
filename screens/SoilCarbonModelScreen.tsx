@@ -197,7 +197,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                        <div className="bg-white rounded-2xl p-4 shadow-sm border flex items-center justify-between" style={{ borderColor: '#F0F0F0' }}>
                            <div>
                                <h3 className="font-bold text-sm" style={{ color: '#001A11' }}>{selectedPlot?.name}</h3>
-                               <p className="text-[10px] font-medium mt-0.5" style={{ color: '#616B68' }}>{selectedPlot?.area} ha</p>
+                               <p className="text-[10px] font-medium mt-0.5" style={{ color: '#616B68' }}>{Number(selectedPlot?.area || 0).toFixed(2)} ha</p>
                            </div>
                            <Activity size={16} style={{ color: '#00BB78' }} />
                        </div>
@@ -225,7 +225,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
 
                             {points.map((p, i) => (
                                 <Marker key={i} position={[p.lat, p.lng]}>
-                                    <Popup>SOC: {p.soc_value} g/kg</Popup>
+                                    <Popup>SOC: {Number(p.soc_value || 0).toFixed(2)} g/kg</Popup>
                                 </Marker>
                             ))}
 
@@ -298,7 +298,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                                 <div key={i} className="flex justify-between items-center p-3 rounded-xl border" style={{ background: '#F7F9F8', borderColor: '#F0F0F0' }}>
                                     <div className="flex items-center gap-3">
                                         <div className="w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center bg-white border" style={{ color: '#001A11', borderColor: '#EBEBEB' }}>{i + 1}</div>
-                                        <div className="text-xs font-bold" style={{ color: '#616B68' }}>SOC: <span style={{ color: '#001A11' }}>{p.soc_value} g/kg</span></div>
+                                        <div className="text-xs font-bold" style={{ color: '#616B68' }}>SOC: <span style={{ color: '#001A11' }}>{Number(p.soc_value || 0).toFixed(2)} g/kg</span></div>
                                     </div>
                                     <button onClick={() => removePoint(i)} className="text-[10px] font-bold text-red-500 hover:bg-red-50 px-2 py-1 rounded-md transition-colors">
                                         Remove

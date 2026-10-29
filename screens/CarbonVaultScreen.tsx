@@ -448,7 +448,7 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                                  </div>
                                  <div className="flex-1 min-w-0">
                                     <h4 className="text-sm font-bold truncate" style={{ color: '#001A11' }}>{plot.name}</h4>
-                                    <p className="text-[11px]" style={{ color: '#616B68' }}>{plot.area} ha · {plot.crop_type}</p>
+                                    <p className="text-[11px]" style={{ color: '#616B68' }}>{Number(plot.area || 0).toFixed(2)} ha · {plot.crop_type}</p>
                                  </div>
                                  <button
                                     onClick={() => { setSelectedPlotId(plot.id); setSelectedMethodology('Cover-Crop'); setMonitoringPreview(null); setShowEnrollModal(true); }}

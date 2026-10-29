@@ -111,13 +111,22 @@ async def _fetch_wttr_fallback(lat: float, lng: float, client: httpx.AsyncClient
         raise Exception(f"wttr.in parse error: {e}")
 
 @router.get("/current")
+def _clean_floats(obj, decimals=1):
+    if isinstance(obj, float):
+        return round(obj, decimals)
+    elif isinstance(obj, dict):
+        return {k: _clean_floats(v, decimals) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_clean_floats(v, decimals) for v in obj]
+    return obj
+
 async def get_weather(lat: float = 21.1458, lng: float = 79.0882):
     print(f"[Weather] Fetching weather for lat={lat}, lng={lng}")
     async with httpx.AsyncClient(timeout=15.0) as client:
         # Primary: Open-Meteo
         try:
             data = await _fetch_open_meteo(lat, lng, client)
-            return data
+            return _clean_floats(data, 1)
         except Exception as e:
             print(f"[Weather] Open-Meteo failed ({e}), trying wttr.in fallback...")
 
@@ -125,7 +134,7 @@ async def get_weather(lat: float = 21.1458, lng: float = 79.0882):
         try:
             data = await _fetch_wttr_fallback(lat, lng, client)
             print(f"[Weather] wttr.in fallback succeeded for lat={lat}, lng={lng}")
-            return data
+            return _clean_floats(data, 1)
         except Exception as e2:
             print(f"[Weather] All weather providers failed: {e2}")
             raise HTTPException(status_code=502, detail=f"All weather providers failed. Last error: {str(e2)}")
@@ -191,7 +200,7 @@ async def search_location(query: str):
         if "results" not in data:
             return []
             
-        return data["results"]
+        return _clean_floats(data, 1)["results"]
     except Exception as e:
         print(f"Search ERROR: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to search location: {str(e)}")

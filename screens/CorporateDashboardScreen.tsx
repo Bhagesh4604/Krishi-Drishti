@@ -84,7 +84,7 @@ const FarmerTile: React.FC<{
       <p className="text-[8px] text-[#616B68] mb-2">NDVI</p>
 
       <p className="text-[10px] text-[#001A11] font-bold truncate">{farmer.name}</p>
-      <p className="text-[9px] text-[#616B68] truncate">{farmer.crop} · {farmer.area} ac</p>
+      <p className="text-[9px] text-[#616B68] truncate">{farmer.crop} · {Number(farmer.area || 0).toFixed(1)} ac</p>
 
       <div className="flex items-center justify-between mt-2">
         <span className="text-[9px] text-[#616B68]">{farmer.daysToHarvest}d harvest</span>
@@ -455,10 +455,10 @@ const CorporateDashboardScreen: React.FC<Props> = ({ navigateTo }) => {
                     <div className="grid grid-cols-3 gap-3">
                       {[
                         { label: 'Crop', value: selectedFarmer.crop },
-                        { label: 'Area', value: `${selectedFarmer.area} acres` },
+                        { label: 'Area', value: `${Number(selectedFarmer.area || 0).toFixed(1)} acres` },
                         { label: 'Harvest', value: `${selectedFarmer.daysToHarvest}d` },
-                        { label: 'Est. Yield', value: `${selectedFarmer.estimatedYieldTons}t` },
-                        { label: 'Moisture', value: `${selectedFarmer.moisture}%` },
+                        { label: 'Est. Yield', value: `${Number(selectedFarmer.estimatedYieldTons || 0).toFixed(1)}t` },
+                        { label: 'Moisture', value: `${Number(selectedFarmer.moisture || 0).toFixed(0)}%` },
                         { label: 'Health', value: lvl.label },
                       ].map(item => (
                         <div key={item.label} className="rounded-xl p-3 text-center" style={{ background: '#F7F9F8' }}>

@@ -1057,7 +1057,7 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
                         { label: 'Baseline SOC', value: `${carbon?.baseline_soc_tons_per_ha?.toFixed(3)} t/ha`, icon: '🌱' },
                         { label: 'Current SOC', value: `${carbon?.estimated_soc_tons_per_ha?.toFixed(3)} t/ha`, icon: '🌿' },
                         { label: 'Incremental CO₂e', value: `${carbon?.incremental_tco2e_per_ha?.toFixed(3)} tCO₂e/ha`, icon: '🌍' },
-                        { label: 'Area', value: `${analysis?.area_hectares} ha`, icon: '📐' },
+                        { label: 'Area', value: `${Number(analysis?.area_hectares || 0).toFixed(2)} ha`, icon: '📐' },
                       ].map(item => (
                         <div key={item.label} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid #1a2a1a' }}>
                           <span className="text-[11px] text-gray-500">{item.icon} {item.label}</span>

@@ -191,7 +191,7 @@ const WeatherModal: React.FC<WeatherModalProps> = ({ weather, locationName, onCl
                         <div className="flex items-center gap-2 text-white/60 text-xs font-bold uppercase mb-2">
                             <Thermometer size={14} /> UV Index
                         </div>
-                        <div className="text-2xl font-bold">{weather.daily.uv_index_max?.[0] || 'N/A'}</div>
+                        <div className="text-2xl font-bold">{weather.daily.uv_index_max?.[0] !== undefined ? Number(weather.daily.uv_index_max[0]).toFixed(1) : 'N/A'}</div>
                         <div className="text-xs text-white/70 mt-1">Moderate</div>
                     </div>
                     <div className="bg-white/10 backdrop-blur-3xl rounded-2xl p-4 border border-white/20 shadow-lg">
@@ -204,7 +204,7 @@ const WeatherModal: React.FC<WeatherModalProps> = ({ weather, locationName, onCl
                         <div className="flex items-center gap-2 text-white/60 text-xs font-bold uppercase mb-2">
                             <Droplets size={14} /> Humidity
                         </div>
-                        <div className="text-2xl font-bold">{weather.current.relative_humidity_2m}%</div>
+                        <div className="text-2xl font-bold">{Math.round(Number(weather.current.relative_humidity_2m))}%</div>
                     </div>
                     <div className="bg-white/10 backdrop-blur-3xl rounded-2xl p-4 border border-white/20 shadow-lg">
                         <div className="flex items-center gap-2 text-white/60 text-xs font-bold uppercase mb-2">

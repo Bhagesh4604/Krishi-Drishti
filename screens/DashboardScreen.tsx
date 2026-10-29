@@ -364,10 +364,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
         <div className="grid grid-cols-2 gap-4 relative z-10" style={{ perspective: '900px' }}>
           {[
-            { label: 'Soil temp', value: weather?.current?.soil_temperature_0cm !== undefined ? `+${Math.round(weather.current.soil_temperature_0cm)} C` : '-- C', icon: <Thermometer size={18} />, chipBg: 'linear-gradient(140deg,#a7f3d0,#34d399)', chipColor: '#047857' },
-            { label: 'Humidity', value: `${weather?.current?.relative_humidity_2m ?? '--'}%`, icon: <Droplets size={18} fill="currentColor" />, chipBg: 'linear-gradient(140deg,#bfdbfe,#60a5fa)', chipColor: '#1d4ed8' },
-            { label: 'Wind', value: `${weather?.current?.wind_speed_10m ?? '--'} m/s`, icon: <Wind size={18} />, chipBg: 'linear-gradient(140deg,#fde68a,#fbbf24)', chipColor: '#b45309' },
-            { label: 'Precipitation', value: `${weather?.current?.precipitation ?? '--'} mm`, icon: <CloudRain size={18} fill="currentColor" />, chipBg: 'linear-gradient(140deg,#c7d2fe,#818cf8)', chipColor: '#4338ca' },
+            { label: 'Soil temp', value: weather?.current?.soil_temperature_0cm !== undefined ? `+${Math.round(Number(weather.current.soil_temperature_0cm))}°C` : '--°C', icon: <Thermometer size={18} />, chipBg: 'linear-gradient(140deg,#a7f3d0,#34d399)', chipColor: '#047857' },
+            { label: 'Humidity', value: `${weather?.current?.relative_humidity_2m !== undefined ? Math.round(Number(weather.current.relative_humidity_2m)) : '--'}%`, icon: <Droplets size={18} fill="currentColor" />, chipBg: 'linear-gradient(140deg,#bfdbfe,#60a5fa)', chipColor: '#1d4ed8' },
+            { label: 'Wind', value: `${weather?.current?.wind_speed_10m !== undefined ? Number(weather.current.wind_speed_10m).toFixed(1) : '--'} m/s`, icon: <Wind size={18} />, chipBg: 'linear-gradient(140deg,#fde68a,#fbbf24)', chipColor: '#b45309' },
+            { label: 'Precipitation', value: `${weather?.current?.precipitation !== undefined ? Number(weather.current.precipitation).toFixed(1) : '--'} mm`, icon: <CloudRain size={18} fill="currentColor" />, chipBg: 'linear-gradient(140deg,#c7d2fe,#818cf8)', chipColor: '#4338ca' },
           ].map((pill, i) => (
             <Tilt3D key={i} maxTilt={9} className="rounded-[2rem]">
               <div variants={itemVariants} className="glass rounded-[2rem] p-4 flex items-center gap-3 cursor-default h-full">
