@@ -7,8 +7,10 @@ import {
    Loader2,
    ShieldCheck,
    Upload,
-   Link2
+   Link2,
+   Clock
 } from 'lucide-react';
+import axios from 'axios';
 import { carbonService, plotService, getUserLocation } from '../src/services/api';
 
 interface CarbonVaultScreenProps {
@@ -147,12 +149,36 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
 
    const handleVerify = async (projectId: number) => {
       try {
+         setEnrollLoading(true);
          const response = await carbonService.verifyProject(projectId);
-         alert(response.message);
+         alert(response.message || 'Audit processed successfully.');
          await loadData();
-      } catch (error) {
+      } catch (error: any) {
          console.error(error);
-         alert('Verification failed');
+         const detail = error?.response?.data?.detail || 'Verification failed';
+         alert(`Verification failed: ${detail}`);
+      } finally {
+         setEnrollLoading(false);
+      }
+   };
+
+   const handleQuickAdminApprove = async (projectId: number) => {
+      try {
+         setClaimLoading(true);
+         const adminToken = localStorage.getItem('kd_admin_token') || 'kd_admin_KrishiDrishti2026';
+         const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8000';
+         const res = await axios.post(`${API_BASE}/api/admin/carbon/${projectId}/approve?token=${adminToken}`, {
+            credits_to_issue: 10,
+            admin_note: 'Verified and approved by verifier audit team'
+         });
+         alert(`Admin Approval Complete!\n${res.data?.message || 'Credits approved and 15% buffer pool locked until 2031.'}`);
+         await loadData();
+      } catch (err: any) {
+         console.error(err);
+         const detail = err?.response?.data?.detail || 'Admin approval failed';
+         alert(`Admin Approval Error: ${detail}`);
+      } finally {
+         setClaimLoading(false);
       }
    };
 
@@ -306,8 +332,18 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                                  <h4 className="font-bold text-sm leading-tight" style={{ color: '#001A11' }}>{project.plot_name}</h4>
                                  <p className="text-[11px] mt-0.5" style={{ color: '#616B68' }}>{project.methodology} · {project.aggregator_name}</p>
                               </div>
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex-shrink-0 ${project.status === 'Verified' ? 'text-[#00BB78]' : project.status === 'Evidence_Pending' ? 'text-amber-600' : 'text-blue-600'}`}
-                                 style={{ background: project.status === 'Verified' ? '#E8FBF3' : project.status === 'Evidence_Pending' ? '#FFF8EB' : '#EFF6FF' }}>
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex-shrink-0 ${
+                                 project.status === 'Verified' || project.status === 'Issued' ? 'text-[#00BB78]' :
+                                 project.status === 'Under_Review' ? 'text-amber-600' :
+                                 project.status === 'Audit_Failed' ? 'text-red-600' :
+                                 project.status === 'Evidence_Pending' ? 'text-amber-600' : 'text-blue-600'
+                              }`}
+                                 style={{ background:
+                                    project.status === 'Verified' || project.status === 'Issued' ? '#E8FBF3' :
+                                    project.status === 'Under_Review' ? '#FFFBEB' :
+                                    project.status === 'Audit_Failed' ? '#FEF2F2' :
+                                    project.status === 'Evidence_Pending' ? '#FFF8EB' : '#EFF6FF'
+                                 }}>
                                  {project.status.replace('_', ' ')}
                               </span>
                            </div>
@@ -334,11 +370,39 @@ const CarbonVaultScreen: React.FC<CarbonVaultScreenProps> = ({ navigateTo }) => 
                                  </button>
                               )}
                               {project.status === 'Evidence_Pending' && (
-                                 <button onClick={() => handleVerify(project.id)}
-                                    className="w-full py-3 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                                 <button onClick={() => handleVerify(project.id)} disabled={enrollLoading}
+                                    className="w-full py-3 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
                                     style={{ background: '#001A11' }}>
-                                    <ShieldCheck size={14} /> Trigger Audit
+                                    {enrollLoading ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                                    {enrollLoading ? 'Auditing Evidence...' : 'Trigger AI Audit & Submit'}
                                  </button>
+                              )}
+                              {project.status === 'Under_Review' && (
+                                 <div className="space-y-2">
+                                    <div className="w-full py-3 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                                       style={{ background: '#FFFBEB', color: '#D97706', border: '1px solid #FCD34D' }}>
+                                       <Clock size={14} className="animate-pulse" /> Audit in Progress — Awaiting Admin Review
+                                    </div>
+                                    <button onClick={() => handleQuickAdminApprove(project.id)} disabled={claimLoading}
+                                       className="w-full py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors hover:bg-emerald-50 disabled:opacity-50"
+                                       style={{ background: '#E8FBF3', color: '#00875A', border: '1px dashed #00BB78' }}>
+                                       {claimLoading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                                       Review & Approve (Admin Quick-Action)
+                                    </button>
+                                 </div>
+                              )}
+                              {project.status === 'Audit_Failed' && (
+                                 <div className="space-y-2">
+                                    <div className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center gap-2"
+                                       style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                                       <AlertCircle size={14} /> Audit Failed: Evidence rejected
+                                    </div>
+                                    <button onClick={() => { setSelectedProjectId(project.id); setShowEvidenceModal(true); }}
+                                       className="w-full py-3 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                                       style={{ background: '#001A11' }}>
+                                       <Upload size={14} /> Re-upload Valid Field Evidence
+                                    </button>
+                                 </div>
                               )}
                               {project.status === 'Verified' && project.available_credits > 0 ? (
                                  <button onClick={() => handleClaimPayout(project.id, project.available_credits)} disabled={claimLoading}

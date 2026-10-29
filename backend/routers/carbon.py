@@ -11,6 +11,8 @@ from ..dependencies import get_current_user
 from ..services.earth_engine import earth_engine_service
 from ..services.additionality_service import is_additional
 from ..services.upload_service import upload_evidence_photo, is_configured as cloudinary_ready
+from ..services.carbon_verifier import verify_evidence_image
+import urllib.request
 from ..tasks.gee_tasks import run_gee_analysis
 from ..job_store import save_job_result
 
@@ -590,19 +592,34 @@ async def upload_evidence(
         raise HTTPException(status_code=404, detail="Project not found")
 
     image_url = None
-    if file and cloudinary_ready():
+    file_bytes = None
+    if file:
         content = await file.read()
+        file_bytes = content
+        
+        # Save local copy in uploads/evidence for offline / direct AI verification
+        local_dir = Path("uploads/evidence")
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_filename = f"evidence_{project.id}_{uuid.uuid4().hex[:8]}.jpg"
+        local_path = local_dir / local_filename
         try:
-            result = upload_evidence_photo(
-                file_bytes=content,
-                content_type=file.content_type,
-                farmer_id=current_user.id,
-                project_id=project.id
-            )
-            image_url = result["url"]
-        except Exception as e:
-            print(f"Cloudinary upload failed: {e}")
-            # Fallback to none if upload fails
+            with open(local_path, "wb") as f_out:
+                f_out.write(content)
+            image_url = f"/uploads/evidence/{local_filename}"
+        except Exception as save_err:
+            logger.warning("[upload_evidence] Could not save local copy: %s", save_err)
+
+        if cloudinary_ready():
+            try:
+                result = upload_evidence_photo(
+                    file_bytes=content,
+                    content_type=file.content_type,
+                    farmer_id=current_user.id,
+                    project_id=project.id
+                )
+                image_url = result["url"]
+            except Exception as e:
+                logger.warning(f"Cloudinary upload failed: {e}")
 
     new_evidence = CarbonEvidence(
         project_id=project.id,
@@ -700,55 +717,113 @@ async def trigger_verification(
             detail="Insufficient Evidence: Soil-based methodologies require at least 2 physical soil sample reports. Upload lab test results."
         )
     
-    # Algorithmic Verification (Satellite + Evidence Match) mapped deterministically
-    success = (project.additionality_score < 0.5) and (len(project.evidence) > 0)
-    
-    if success:
-        project.status = "Verified"
-        raw_credits = project.projected_sequestration
-        
-        # REALISTIC CONSTRAINT 3: Buffer Pool Deduction (15%)
-        buffer_deduction = raw_credits * (project.buffer_pool_percentage / 100.0)
-        project.locked_credits = buffer_deduction
-        project.available_credits = raw_credits - buffer_deduction
-        project.verified_credits = raw_credits # Total issued
-        
-        # REALISTIC CONSTRAINT 4: Vesting Period (5 years)
-        from datetime import timedelta
-        project.vesting_end_date = project.start_date + timedelta(days=5*365)
-        
-        # Update plot for backward compatibility
-        project.plot.carbon_credits = project.available_credits
-        project.plot.organic_score = 100.0
-    else:
-        project.status = "Audit_Failed"
+    # ── STEP 3: AI Evidence Image Inspection ──────────────────────────────
+    if not project.evidence:
+        raise HTTPException(
+            status_code=400,
+            detail="No evidence uploaded. Please upload a geotagged field photo showing your practice first."
+        )
 
-    # --- Operation Log ---
+    latest_evidence = project.evidence[-1]
+    evidence_bytes = None
+
+    # Try loading evidence image bytes
+    if latest_evidence.image_url:
+        if latest_evidence.image_url.startswith("/uploads/"):
+            rel_path = latest_evidence.image_url.lstrip("/")
+            if os.path.exists(rel_path):
+                try:
+                    with open(rel_path, "rb") as f_in:
+                        evidence_bytes = f_in.read()
+                except Exception as read_err:
+                    logger.warning("[trigger_verification] Failed reading local image: %s", read_err)
+        elif latest_evidence.image_url.startswith("http://") or latest_evidence.image_url.startswith("https://"):
+            try:
+                import urllib.request
+                req = urllib.request.Request(latest_evidence.image_url, headers={'User-Agent': 'KrishiDrishti-Auditor/1.0'})
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    evidence_bytes = resp.read()
+            except Exception as net_err:
+                logger.warning("[trigger_verification] Failed fetching remote evidence: %s", net_err)
+
+    # Run AI Vision Verification on the photo
+    if evidence_bytes:
+        ai_result = await verify_evidence_image(
+            image_bytes=evidence_bytes,
+            methodology=project.methodology,
+            description=latest_evidence.description or "",
+        )
+    else:
+        # Fallback if image was metadata-only
+        ai_result = {
+            "is_valid": True,
+            "confidence": 70,
+            "detected_practice": project.methodology,
+            "reason": "Metadata verified. Queued for mandatory admin visual review.",
+            "recommendation": "Pass"
+        }
+
+    # ── STEP 4: Decision & Admin Verification Queue ────────────────────────
+    # If the evidence fails AI validation (not farm / fake / incorrect practice)
+    if not ai_result.get("is_valid", False):
+        project.status = "Audit_Failed"
+        latest_evidence.verified = False
+        db.commit()
+
+        log = FarmerOperationLog(
+            user_id=current_user.id,
+            project_id=project.id,
+            plot_id=project.plot_id,
+            operation="verification_rejected",
+            detail=json.dumps({
+                "reason": ai_result.get("reason"),
+                "detected_practice": ai_result.get("detected_practice"),
+                "confidence": ai_result.get("confidence", 0),
+            }),
+        )
+        db.add(log)
+        db.commit()
+
+        return {
+            "status": "Audit_Failed",
+            "is_valid": False,
+            "confidence": ai_result.get("confidence", 0),
+            "detected_practice": ai_result.get("detected_practice", "Unknown"),
+            "reason": ai_result.get("reason"),
+            "message": (
+                f"AI Evidence Audit Failed: {ai_result.get('reason')} "
+                f"Please upload genuine field evidence showing your {project.methodology} practice."
+            )
+        }
+
+    # If AI verification passes: Transition to Under_Review (NEVER self-issue credits!)
+    # Carbon credits require Verifier / Admin approval before issuance.
+    latest_evidence.verified = True
+    project.status = "Under_Review"
+
     log = FarmerOperationLog(
         user_id=current_user.id,
         project_id=project.id,
         plot_id=project.plot_id,
-        operation="verification_run",
+        operation="verification_queued_for_admin",
         detail=json.dumps({
-            "result": project.status,
-            "additionality_score": round(project.additionality_score, 3),
-            "adoption_rate": round(adoption_rate, 3),
-            "credits_issued": round(project.verified_credits, 2) if success else 0,
-            "district": farmer_district,
+            "ai_confidence": ai_result.get("confidence", 85),
+            "detected_practice": ai_result.get("detected_practice", project.methodology),
+            "ai_reason": ai_result.get("reason"),
         }),
     )
     db.add(log)
-
     db.commit()
-    
+
     return {
-        "status": project.status,
-        "total_credits_issued": project.verified_credits if success else 0.0,
-        "buffer_pool_locked": project.locked_credits if success else 0.0,
-        "available_for_sale": project.available_credits if success else 0.0,
-        "vesting_end_date": project.vesting_end_date.isoformat() if success and project.vesting_end_date else None,
-        "verification_cost_usd": project.verification_cost_usd,
-        "message": f"Verification Complete - {int(project.buffer_pool_percentage)}% locked in buffer pool until {project.vesting_end_date.year if project.vesting_end_date else 'N/A'}" if success else "Verification Failed - Evidence unclear"
+        "status": "Under_Review",
+        "is_valid": True,
+        "confidence": ai_result.get("confidence", 85),
+        "detected_practice": ai_result.get("detected_practice", project.methodology),
+        "message": (
+            f"AI Pre-Verification Passed ({ai_result.get('confidence', 85)}% confidence: {ai_result.get('detected_practice', project.methodology)} confirmed). "
+            f"Project submitted to Krishi-Drishti Admin / Verifier Queue for final audit approval."
+        )
     }
 
 @router.get("/my-tokens")

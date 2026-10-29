@@ -56,7 +56,7 @@ def _get_api_key() -> str:
 
 class GeminiWrapper:
     def __init__(self, model_names=None):
-        self.model_names = model_names or ["gemini-2.5-flash", "gemini-3.5-flash-lite"]
+        self.model_names = model_names or ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]
         self.api_key = _get_api_key()
         if genai:
             self.client = genai.Client(api_key=self.api_key)

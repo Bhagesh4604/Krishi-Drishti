@@ -329,7 +329,7 @@ def credit_queue(
     if status_filter:
         q = q.filter(CarbonProject.status == status_filter)
     else:
-        q = q.filter(CarbonProject.status == "Evidence_Pending")
+        q = q.filter(CarbonProject.status.in_(["Under_Review", "Evidence_Pending"]))
 
     projects = q.order_by(CarbonProject.start_date.asc()).all()
 
@@ -399,7 +399,7 @@ def approve_credits(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if project.status not in ["Evidence_Pending", "Verified"]:
+    if project.status not in ["Under_Review", "Evidence_Pending", "Verified"]:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot approve project in status '{project.status}'",
@@ -413,7 +413,9 @@ def approve_credits(
     project.verified_credits = credits
     project.available_credits = credits_available
     project.locked_credits = buffer_locked
-    project.status = "Issued"
+    from datetime import timedelta
+    project.vesting_end_date = project.start_date + timedelta(days=5*365)
+    project.status = "Verified"
     project.admin_reviewed_at = datetime.utcnow()
     project.admin_notes = body.admin_note
 

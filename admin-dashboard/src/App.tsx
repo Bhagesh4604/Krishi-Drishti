@@ -357,7 +357,7 @@ const OverviewView = () => {
           <h3 style={{ fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 20 }}>Project Status Overview</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {loading ? Array(4).fill(0).map((_, i) => <Skeleton key={i} h={40} />) : stats?.project_statuses.map(ps => {
-              const colors: Record<string, string> = { Verified: '#00ff87', Issued: '#00d4ff', Evidence_Pending: '#ffd93d', Rejected: '#ff6b6b', Draft: '#888' };
+              const colors: Record<string, string> = { Verified: '#00ff87', Issued: '#00d4ff', Evidence_Pending: '#ffd93d', Under_Review: '#ffaa00', Rejected: '#ff6b6b', Draft: '#888' };
               const c = colors[ps.status] || '#888';
               return (
                 <div key={ps.status} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(0,0,0,0.3)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -483,7 +483,7 @@ const CarbonView = () => {
                   <span>NDVI Δ: {((p.current_ndvi || 0) - (p.baseline_ndvi || 0)).toFixed(3)}</span>
                 </div>
               </div>
-              {p.status === 'Evidence_Pending' && (
+              {(p.status === 'Evidence_Pending' || p.status === 'Under_Review') && (
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button onClick={() => approve(p.project_id)} style={{ padding: '10px 20px', background: 'rgba(0,255,135,0.1)', border: '1px solid rgba(0,255,135,0.4)', borderRadius: 12, color: '#00ff87', cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>✓ Approve</button>
                   <button style={{ padding: '10px 20px', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.4)', borderRadius: 12, color: '#ff6b6b', cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>✕ Reject</button>

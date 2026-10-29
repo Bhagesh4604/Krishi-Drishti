@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from slowapi import _rate_limit_exceeded_handler
@@ -81,6 +82,9 @@ app.include_router(crop_cycles.router)
 app.include_router(sse_analysis.router)
 app.include_router(translate.router)
 app.include_router(irrigation.router)
+
+os.makedirs("uploads/evidence", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def read_root():
