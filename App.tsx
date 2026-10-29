@@ -164,6 +164,30 @@ const AppContent: React.FC = () => {
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const [traceVerifyId, setTraceVerifyId] = useState<string | undefined>(undefined);
   const [screenData, setScreenData] = useState<any>(null);
+  const [navVisible, setNavVisible] = useState(true);
+  const lastScrollTop = useRef(0);
+
+  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
+    const currentTop = e.currentTarget.scrollTop;
+    const diff = currentTop - lastScrollTop.current;
+
+    // Scrolling down -> smoothly tuck away floating navigation & FAB so background content is fully visible
+    if (diff > 12 && currentTop > 60) {
+      if (navVisible) setNavVisible(false);
+      if (fabMenuOpen) setFabMenuOpen(false);
+    } 
+    // Scrolling up -> bring back navigation & FAB
+    else if (diff < -8) {
+      if (!navVisible) setNavVisible(true);
+    }
+
+    lastScrollTop.current = currentTop;
+
+    // Always show when near very top
+    if (currentTop <= 20 && !navVisible) {
+      setNavVisible(true);
+    }
+  };
 
   // Admin fast-path handled above at state init time
 
@@ -465,6 +489,7 @@ const AppContent: React.FC = () => {
     }
     setCurrentScreen(screen);
     setFabMenuOpen(false);
+    setNavVisible(true);
   };
 
   const handleLogin = async () => {
@@ -810,7 +835,16 @@ const AppContent: React.FC = () => {
           border: '1px solid rgba(255,255,255,0.06)',
         }}
       >
-      <main className={`flex-1 overflow-y-auto mobile-container relative ${showNav ? 'pb-20' : 'pb-0'}`}>
+      <main
+        onScroll={handleMainScroll}
+        className={`flex-1 overflow-y-auto mobile-container relative ${showNav ? 'pb-32 sm:pb-36' : 'pb-6'}`}
+        style={{
+          paddingBottom: showNav
+            ? 'calc(9rem + env(safe-area-inset-bottom, 0px))'
+            : 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={currentScreen}
@@ -828,12 +862,15 @@ const AppContent: React.FC = () => {
             </React.Suspense>
           </motion.div>
         </AnimatePresence>
+        {showNav && (
+          <div className="h-16 w-full shrink-0 pointer-events-none" aria-hidden="true" />
+        )}
       </main>
 
-      {/* ============ ENHANCED FLOATING ACTION BUTTON WITH EXPANDABLE MENU ============ */}
-      {showNav && (
+      {/* ============ FLOATING ACTION BUTTON WITH EXPANDABLE MENU ============ */}
+      {showNav && !isVoiceActive && (
         <>
-          {/* Backdrop when FAB menu is open */}
+          {/* Subtle click-away backdrop when FAB menu is open (NO heavy blur so app stays clearly visible) */}
           <AnimatePresence>
             {fabMenuOpen && (
               <motion.div
@@ -841,7 +878,7 @@ const AppContent: React.FC = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setFabMenuOpen(false)}
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[90] rounded-b-[2.5rem]"
+                className="absolute inset-0 bg-black/15 z-[32] rounded-b-[2.5rem]"
               />
             )}
           </AnimatePresence>
@@ -851,21 +888,21 @@ const AppContent: React.FC = () => {
             {fabMenuOpen && (
               <motion.button
                 initial={{ scale: 0, y: 0, opacity: 0 }}
-                animate={{ scale: 1, y: -80, opacity: 1 }}
+                animate={{ scale: 1, y: -65, opacity: 1 }}
                 exit={{ scale: 0, y: 0, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 onClick={() => {
                   setIsVoiceActive(true);
                   setFabMenuOpen(false);
                 }}
-                className="absolute bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-full shadow-2xl shadow-purple-500/50 flex items-center justify-center z-[100] border-2 border-white/30"
+                className="absolute bottom-20 right-5 w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-full shadow-lg shadow-purple-500/40 flex items-center justify-center z-[36] border-2 border-white/40 active:scale-95 transition-transform"
               >
-                <Mic size={22} />
+                <Mic size={19} />
                 <motion.span
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="absolute right-16 bg-gray-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-lg"
+                  className="absolute right-14 bg-gray-900/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap shadow-md"
                 >
                   Voice Assistant
                 </motion.span>
@@ -878,21 +915,21 @@ const AppContent: React.FC = () => {
             {fabMenuOpen && (
               <motion.button
                 initial={{ scale: 0, y: 0, opacity: 0 }}
-                animate={{ scale: 1, y: -160, opacity: 1 }}
+                animate={{ scale: 1, y: -125, opacity: 1 }}
                 exit={{ scale: 0, y: 0, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.05 }}
                 onClick={() => {
                   setCurrentScreen('chat');
                   setFabMenuOpen(false);
                 }}
-                className="absolute bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-full shadow-2xl shadow-blue-500/50 flex items-center justify-center z-[100] border-2 border-white/30"
+                className="absolute bottom-20 right-5 w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-full shadow-lg shadow-blue-500/40 flex items-center justify-center z-[36] border-2 border-white/40 active:scale-95 transition-transform"
               >
-                <MessageCircle size={22} />
+                <MessageCircle size={19} />
                 <motion.span
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.15 }}
-                  className="absolute right-16 bg-gray-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-lg"
+                  className="absolute right-14 bg-gray-900/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap shadow-md"
                 >
                   AI Chat
                 </motion.span>
@@ -900,68 +937,31 @@ const AppContent: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* Main FAB Button with pulse effect */}
+          {/* Main FAB Button with compact modern design */}
           <motion.button
             onClick={() => setFabMenuOpen(!fabMenuOpen)}
-            whileTap={{ scale: 0.9 }}
-            className="absolute bottom-24 right-6 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center z-[101] overflow-hidden"
+            whileTap={{ scale: 0.92 }}
+            animate={{
+              y: navVisible ? 0 : 90,
+              opacity: navVisible ? 1 : 0,
+            }}
+            transition={{ type: "spring", stiffness: 280, damping: 26 }}
+            className={`absolute bottom-20 right-5 w-12 h-12 rounded-full shadow-xl flex items-center justify-center z-[35] overflow-hidden border border-white/30 ${
+              navVisible ? 'pointer-events-auto' : 'pointer-events-none'
+            }`}
             style={{
               background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-              boxShadow: '0 10px 40px rgba(16, 185, 129, 0.5)',
+              boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
             }}
           >
-            {/* Pulse rings */}
-            {!fabMenuOpen && (
-              <>
-                <motion.div
-                  animate={{
-                    scale: [1, 1.8],
-                    opacity: [0.5, 0],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeOut",
-                  }}
-                  className="absolute inset-0 rounded-full bg-green-400"
-                />
-                <motion.div
-                  animate={{
-                    scale: [1, 1.8],
-                    opacity: [0.5, 0],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeOut",
-                    delay: 1,
-                  }}
-                  className="absolute inset-0 rounded-full bg-emerald-400"
-                />
-              </>
-            )}
-
             {/* Icon with rotation animation */}
             <motion.div
               animate={{ rotate: fabMenuOpen ? 135 : 0 }}
-              transition={{ type: "spring", stiffness: 200 }}
+              transition={{ type: "spring", stiffness: 220 }}
               className="relative z-10"
             >
-              <Sparkles size={28} className="text-white drop-shadow-lg" />
+              <Sparkles size={22} className="text-white drop-shadow-sm" />
             </motion.div>
-
-            {/* Shimmer effect */}
-            <motion.div
-              animate={{
-                x: ['-100%', '200%'],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
-            />
           </motion.button>
         </>
       )}
@@ -981,9 +981,14 @@ const AppContent: React.FC = () => {
         </React.Suspense>
       )}
 
-      {showNav && (
-        <BottomNav currentScreen={currentScreen} onNavigate={navigateTo} />
+      {showNav && !isVoiceActive && (
+        <BottomNav
+          currentScreen={currentScreen}
+          onNavigate={navigateTo}
+          visible={navVisible && !fabMenuOpen}
+        />
       )}
+
       </div>
     </div>
   );

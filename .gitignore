@@ -6,6 +6,9 @@ backend/.env
 *.pyc
 __pycache__/
 *.db
+*.db.bak
+*.db-shm
+*.db-wal
 backend/uploads/
 *.code-search
 .DS_Store

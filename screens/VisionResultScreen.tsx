@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, Language, VisionMode } from '../types';
-import { ArrowLeft, Leaf, Droplets, ThermometerSun, AlertCircle, CheckCircle2, ChevronRight, Download, Share2 } from 'lucide-react';
+import { ArrowLeft, Leaf, Droplets, ThermometerSun, AlertCircle, CheckCircle2, ChevronRight, Download, Share2, RefreshCw, RotateCcw } from 'lucide-react';
 import { aiService } from '../src/services/api';
 import { imageWorkerClient } from '../src/utils/imageWorkerClient';
 
@@ -14,32 +14,45 @@ interface VisionResultScreenProps {
 
 const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, image, mode, language, t }) => {
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
   const [result, setResult] = useState<any>(null);
 
-  useEffect(() => {
-    const analyzeImage = async () => {
-      if (!image) return;
-      try {
-        setLoading(true);
-        // Offload Base64 decoding & Blob creation to Web Worker background thread
-        const blob = await imageWorkerClient.dataUriToBlob(image);
-        const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
-        const data = await aiService.diagnose(file, mode);
-        
-        setResult(data);
-      } catch (e) {
-        // Mock fallback on hard failure
-        setResult({
-          diagnosis: 'Connection Failed',
-          confidence: 0,
-          summary: 'Could not connect to the Krishi-Drishti AI backend. Please ensure the server is running.',
-          health_score: 0,
-          remedies: []
-        });
-      } finally {
-        setLoading(false);
+  const analyzeImage = async () => {
+    if (!image) return;
+    try {
+      setLoading(true);
+      // Offload Base64 decoding & Blob creation to Web Worker background thread
+      const blob = await imageWorkerClient.dataUriToBlob(image);
+      const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
+      const data = await aiService.diagnose(file, mode);
+      
+      setResult(data);
+    } catch (e: any) {
+      const isAuthError = e?.response?.status === 401;
+      const isTimeout = e?.code === 'ECONNABORTED' || e?.message?.includes('timeout');
+      
+      let summaryText = 'Could not connect to the Krishi-Drishti AI backend. Please ensure your internet connection is active and tap Retry.';
+      if (isAuthError) {
+        summaryText = 'Your session may have expired. You can retry immediately or re-login if required.';
+      } else if (isTimeout) {
+        summaryText = 'The AI server is waking up from standby (Render cold-start). Please tap Retry in a few seconds.';
       }
-    };
+
+      setResult({
+        diagnosis: 'Connection Failed',
+        confidence: 0,
+        summary: summaryText,
+        health_score: 0,
+        remedies: [],
+        isError: true,
+      });
+    } finally {
+      setLoading(false);
+      setRetrying(false);
+    }
+  };
+
+  useEffect(() => {
     analyzeImage();
   }, [image, mode]);
 
@@ -137,6 +150,26 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
               <p className="text-gray-600 text-sm leading-relaxed">
                 {result.summary || 'No detailed summary provided.'}
               </p>
+
+              {(result.isError || result.diagnosis === 'Connection Failed') && (
+                <div className="mt-4 pt-3 border-t border-red-100 flex items-center gap-3">
+                  <button
+                    onClick={() => { setRetrying(true); analyzeImage(); }}
+                    disabled={loading || retrying}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors"
+                  >
+                    <RefreshCw size={16} className={retrying ? 'animate-spin' : ''} />
+                    {retrying ? 'Retrying...' : 'Retry Analysis'}
+                  </button>
+                  <button
+                    onClick={() => navigateTo('vision')}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <RotateCcw size={16} />
+                    Rescan
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -197,10 +230,30 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
       {/* ── BOTTOM ACTION BAR ── */}
       {!loading && result && (
         <div className="sticky bottom-0 w-full p-4 bg-white border-t border-gray-200 z-30">
-          <button onClick={() => navigateTo('chat', { initialMessage: `I just scanned my crop and it was diagnosed with ${result.diagnosis} (Health: ${result.health_score}%). Can you explain exactly what causes this and what my immediate next steps should be?` })} className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors">
-            Consult Agronomist AI
-            <ChevronRight size={18} />
-          </button>
+          {(result.isError || result.diagnosis === 'Connection Failed') ? (
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigateTo('vision')}
+                className="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-3.5 font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <RotateCcw size={16} />
+                Retake
+              </button>
+              <button
+                onClick={() => { setRetrying(true); analyzeImage(); }}
+                disabled={loading || retrying}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl py-3.5 font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                <RefreshCw size={16} className={retrying ? 'animate-spin' : ''} />
+                {retrying ? 'Connecting to AI...' : 'Retry Analysis'}
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => navigateTo('chat', { initialMessage: `I just scanned my crop and it was diagnosed with ${result.diagnosis} (Health: ${result.health_score}%). Can you explain exactly what causes this and what my immediate next steps should be?` })} className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors">
+              Consult Agronomist AI
+              <ChevronRight size={18} />
+            </button>
+          )}
         </div>
       )}
 

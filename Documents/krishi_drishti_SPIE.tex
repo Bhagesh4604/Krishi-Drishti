@@ -43,7 +43,7 @@
 \captionsetup[table]{position=above, justification=justified, singlelinecheck=false,
                       indention=1.5em, font=small, labelfont=bf}
 
-\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
+\hypersetup{colorlinks=false,hidelinks}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt}
 \newcommand{\rupee}{Rs.\,}
@@ -102,9 +102,9 @@ Direct physical monitoring of soil organic carbon (SOC) across fragmented agrari
 \section{Introduction}
 % ====================================================================
 
-Quantifying soil organic carbon (SOC) across agrarian landscapes represents one of the most critical challenges in contemporary environmental imaging and terrestrial carbon accounting.\textsuperscript{3} Although adopting regenerative cultivation techniques---such as minimal soil inversion, continuous vegetative shielding, and diversified agroforestry---substantially elevates subsurface carbon sequestration, verifying these gains traditionally mandates destructive chemical soil core extraction followed by protracted laboratory spectrochemical analyses.\textsuperscript{4} With individual soil diagnostic audits routinely exceeding USD\,\$1,500 to \$3,000 per agricultural holding and requiring extensive physical sampling itineraries,\textsuperscript{4} traditional monitoring mechanisms prove financially impractical for small-scale agrarian holdings that dominate developing economies, where median parcel sizes average barely one hectare.\textsuperscript{13} Consequently, hundreds of millions of agrarian operators remain excluded from emerging environmental finance mechanisms and voluntary carbon registries.
+Quantifying soil organic carbon (SOC) across agrarian landscapes represents one of the most critical challenges in contemporary environmental imaging and terrestrial carbon accounting.\textsuperscript{1} Although adopting regenerative cultivation techniques---such as minimal soil inversion, continuous vegetative shielding, and diversified agroforestry---substantially elevates subsurface carbon sequestration, verifying these gains traditionally mandates destructive chemical soil core extraction followed by protracted laboratory spectrochemical analyses.\textsuperscript{2} With individual soil diagnostic audits routinely exceeding USD\,\$1,500 to \$3,000 per agricultural holding and requiring extensive physical sampling itineraries,\textsuperscript{2} traditional monitoring mechanisms prove financially impractical for small-scale agrarian holdings that dominate developing economies, where median parcel sizes average barely one hectare.\textsuperscript{3} Consequently, hundreds of millions of agrarian operators remain excluded from emerging environmental finance mechanisms and voluntary carbon registries.
 
-Recent advancements in spaceborne multispectral imaging offer an appealing non-destructive alternative to empirical ground extraction. The European Space Agency Copernicus Sentinel-2 constellation provides continuous multispectral imaging across 13 spectral bands spanning the visible, red-edge, near-infrared (NIR), and shortwave-infrared (SWIR) domains with spatial resolutions reaching 10\,m and a five-day repeat observation interval.\textsuperscript{6,10} By capturing subtle variations in surface spectral reflectance that correlate strongly with topsoil humus concentration and iron oxide absorption features,\textsuperscript{11,12} spaceborne electronic imaging enables non-contact digital measurement, reporting, and verification (dMRV) across geographically dispersed holdings at zero marginal per-hectare imaging expense.\textsuperscript{10} 
+Recent advancements in spaceborne multispectral imaging offer an appealing non-destructive alternative to empirical ground extraction. The European Space Agency Copernicus Sentinel-2 constellation provides continuous multispectral imaging across 13 spectral bands spanning the visible, red-edge, near-infrared (NIR), and shortwave-infrared (SWIR) domains with spatial resolutions reaching 10\,m and a five-day repeat observation interval.\textsuperscript{4,5} By capturing subtle variations in surface spectral reflectance that correlate strongly with topsoil humus concentration and iron oxide absorption features,\textsuperscript{4,5} spaceborne electronic imaging enables non-contact digital measurement, reporting, and verification (dMRV) across geographically dispersed holdings at zero marginal per-hectare imaging expense.\textsuperscript{5} 
 
 In this work, we propose Krishi-Drishti (``Farmer's Vision''), an integrated optical remote sensing and computer vision platform engineered specifically for autonomous topsoil carbon quantification and decentralized verification. Our primary technical contributions are summarized as follows:
 \begin{itemize}[noitemsep,topsep=4pt]
@@ -116,28 +116,28 @@ In this work, we propose Krishi-Drishti (``Farmer's Vision''), an integrated opt
 
 % ====================================================================
 \section{Related Work}
-% ====================================================================
 
-\subsection{Multispectral satellite observation of terrestrial soils}
-The utility of spaceborne multispectral sensors for quantifying soil properties has advanced rapidly with the availability of atmospherically corrected surface reflectance data. Vaudour et al.\textsuperscript{6} showed that aggregating cloud-screened Sentinel-2 acquisitions over multi-month temporal windows while enforcing bare-soil masking yields robust spatial estimates of topsoil organic matter across temperate agricultural plots. Khaddi et al.\textsuperscript{10} reviewed optical remote sensing methodologies and observed that ensemble learning algorithms substantially outperform parametric spectral regressors when handling non-linear reflectance variations induced by soil moisture and soil roughness. Building on these principles, Triantakonstantis and Karakostas\textsuperscript{14} demonstrated that stacked generalization models successfully reconcile localized spectral anomalies in European croplands. However, these investigations were primarily conceived as regional cartographic mapping exercises rather than end-to-end certification instruments accessible to rural landholders.
+\subsection{Carbon market protocols and empirical ground sampling}
+Empirical in-situ soil sampling combined with dry combustion or wet chemical oxidation remains the benchmark standard in historical carbon methodologies.\textsuperscript{1,3} Nevertheless, as underscored by Abiri et al.,\textsuperscript{2} the logistical friction and monetary expenditure required to maintain on-site sampling teams severely restrict scalable program deployment. While Bhatia\textsuperscript{6} analyzed computational decision-support tools for developing agriculture, prior models operate purely in advisory modes without quantifiable carbon verification or monetizable credit mechanisms. Krishi-Drishti overcomes this fundamental barrier by operationalizing digital compliance rules into an automated dMRV pipeline that issues verified, monetizable credits directly to smallholders.
 
-\subsection{Remote optical sensing versus empirical ground sampling}
-Empirical in-situ soil sampling combined with dry combustion or wet chemical oxidation remains the benchmark standard in historical carbon methodologies.\textsuperscript{3,13} Nevertheless, as underscored by Abiri et al.,\textsuperscript{4} the logistical friction and monetary expenditure required to maintain on-site sampling teams severely restrict scalable program deployment. While Bhatia\textsuperscript{1} analyzed computational decision-support tools for developing agriculture, prior models operate purely in advisory modes without quantifiable carbon verification or monetizable credit mechanisms. Alternative precision agriculture initiatives have explored in-situ IoT probe arrays;\textsuperscript{2,5} for instance, Saha et al.\textsuperscript{17} deployed multi-parametric capacitive probe nodes to achieve 97.3\% crop status recognition. Yet, the high capital outlay and maintenance demands of physical sensors render them unsuitable for fragmented agrarian landscapes. Spaceborne spectral radiometry fundamentally overcomes these deployment barriers by deriving physical reflectance signatures remotely, obviating in-field hardware installations.
+\subsection{In-situ IoT sensing versus orbital radiometry}
+Alternative precision agriculture initiatives have explored in-situ IoT probe arrays;\textsuperscript{7,8} for instance, Saha et al.\textsuperscript{9} deployed multi-parametric capacitive probe nodes to achieve 97.3\% crop status recognition. Yet, the high capital outlay and maintenance demands of physical sensors render them unsuitable for fragmented agrarian landscapes. Spaceborne spectral radiometry fundamentally overcomes these deployment barriers by deriving physical reflectance signatures remotely, obviating in-field hardware installations and eliminating capital expenses for smallholders.
 
-\subsection{Band selection and machine learning for spectral carbon inversion}
-Prior literature confirms that specific regions of the electromagnetic spectrum exhibit heightened sensitivity to organic constituents. Iswarya and Tamizhazhagan\textsuperscript{12} demonstrated that integrating visible, red-edge, and shortwave-infrared wavelengths alongside derived soil indices (such as the Bare Soil Index and Modified Soil Adjusted Vegetation Index) significantly enhances quantile regression accuracy across southern Indian soils. Xiao et al.\textsuperscript{11} achieved elevated correlation coefficients using support vector regression on hyperspectral datasets, but noted that acquiring high-resolution hyperspectral imagery across expansive geographic regions remains cost-prohibitive. Our work synthesizes the band-selection protocols validated in Refs.\,11\,and\,12 with an efficient multispectral stacking architecture executing directly over freely available Sentinel-2 imagery.
+\subsection{Spaceborne multispectral observation and soil organic carbon modeling}
+The utility of spaceborne multispectral sensors for quantifying soil properties has advanced rapidly with the availability of atmospherically corrected surface reflectance data. Vaudour et al.\textsuperscript{4} showed that aggregating cloud-screened Sentinel-2 acquisitions over multi-month temporal windows while enforcing bare-soil masking yields robust spatial estimates of topsoil organic matter across temperate agricultural plots. Khaddi et al.\textsuperscript{5} reviewed optical remote sensing methodologies and observed that ensemble learning algorithms substantially outperform parametric spectral regressors when handling non-linear reflectance variations. Building on these principles, Triantakonstantis and Karakostas\textsuperscript{10} demonstrated that stacked generalization models successfully reconcile localized spectral anomalies in European croplands. Furthermore, Iswarya and Tamizhazhagan\textsuperscript{11} demonstrated that integrating visible, red-edge, and shortwave-infrared wavelengths alongside derived soil indices (such as BSI and MSAVI) significantly enhances quantile regression accuracy across southern Indian soils. Xiao et al.\textsuperscript{12} achieved elevated correlation coefficients using support vector regression on hyperspectral datasets, but noted that acquiring high-resolution hyperspectral imagery remains cost-prohibitive. Our work synthesizes the band-selection protocols validated in Refs.\,12\,and\,11 with an efficient multispectral stacking architecture executing directly over freely available Sentinel-2 imagery.
 
 \subsection{Computer vision diagnostics and bioacoustics in precision agriculture}
-Complementing spaceborne observations, proximal optical imaging enables micro-scale monitoring of foliar health. Prior computer vision systems have attained high recognition rates on standardized leaf databases; Iftikhar et al.\textsuperscript{7} reported 98.1\% multi-crop classification accuracy using deep convolutional topologies, Hasan et al.\textsuperscript{8} realized 97.9\% on rice pathogens, and Askale et al.\textsuperscript{9} optimized maize pathology recognition for mobile handhelds. Nonetheless, existing vision diagnostic tools operate purely in diagnostic isolation, providing recommendations that frequently involve synthetic biocides that disqualify farmers from carbon registry compliance. Parallel efforts in ecological acoustic sensing by Kershenbaum et al.\textsuperscript{15} and Hearon et al.\textsuperscript{16} demonstrated the feasibility of passive acoustic indices for pest and biodiversity monitoring, but lack integration into agricultural carbon certification. Krishi-Drishti bridges this schism by coupling edge-computed optical disease diagnosis and auxiliary bioacoustic telemetry directly with regenerative carbon advisory filters.
+Complementing spaceborne observations, proximal optical imaging enables micro-scale monitoring of foliar health. Prior computer vision systems have attained high recognition rates on standardized leaf databases; Iftikhar et al.\textsuperscript{13} reported 98.1\% multi-crop classification accuracy using deep convolutional topologies, Hasan et al.\textsuperscript{14} realized 97.9\% on rice pathogens, and Askale et al.\textsuperscript{15} optimized maize pathology recognition for mobile handhelds. Nonetheless, existing vision diagnostic tools operate purely in diagnostic isolation, providing recommendations that frequently involve synthetic biocides that disqualify farmers from carbon registry compliance. Parallel efforts in ecological acoustic sensing by Kershenbaum et al.\textsuperscript{16} and Hearon et al.\textsuperscript{17} demonstrated the feasibility of passive acoustic indices for pest and biodiversity monitoring, but lack integration into agricultural carbon certification. Krishi-Drishti bridges this schism by coupling edge-computed optical disease diagnosis and auxiliary bioacoustic telemetry directly with regenerative carbon advisory filters.
 
 % ====================================================================
+
 \section{Methodology}
 % ====================================================================
 
 \subsection{Optical sensor specifications and data pipeline}
 Primary remote sensing observations are acquired by the MultiSpectral Instrument (MSI) aboard Sentinel-2A and Sentinel-2B. The sensor measures 13 discrete spectral bands spanning from 443\,nm to 2190\,nm with ground sampling distances (GSD) of 10\,m, 20\,m, and 60\,m. In this study, we ingest Level-2A Bottom-of-Atmosphere (BOA) surface reflectance tiles from Google Earth Engine (collection identifier \texttt{COPERNICUS/S2\_SR\_HARMONIZED}).
 
-To isolate clean soil signatures, raw pixel tiles undergo automated cloud screening via the QA60 quality flag bitmask, removing both dense cloud formations and cirrus obscurations. Because active vegetative canopies conceal the underlying soil surface, we compute the Normalized Difference Vegetation Index (NDVI) across each temporal scene. Pixels exhibiting $\text{NDVI} \geq 0.30$ are masked out, retaining solely unshielded bare soil. A rolling 90-day median composite is subsequently synthesized across the masked image collection, ensuring that transient agricultural residues and sporadic cloud shadows are statistically suppressed while preserving at least one cloud-free observation per holding across seasonal transitions.\textsuperscript{6}
+To isolate clean soil signatures, raw pixel tiles undergo automated cloud screening via the QA60 quality flag bitmask, removing both dense cloud formations and cirrus obscurations. Because active vegetative canopies conceal the underlying soil surface, we compute the Normalized Difference Vegetation Index (NDVI) across each temporal scene. Pixels exhibiting $\text{NDVI} \geq 0.30$ are masked out, retaining solely unshielded bare soil. A rolling 90-day median composite is subsequently synthesized across the masked image collection, ensuring that transient agricultural residues and sporadic cloud shadows are statistically suppressed while preserving at least one cloud-free observation per holding across seasonal transitions.\textsuperscript{4}
 
 \subsection{Spectral feature engineering}
 For each geo-demarcated farm polygon, we extract twelve primary spectral predictors consisting of eight raw reflectance channels and four calibrated radiometric indices. The raw reflectance bands comprise:
@@ -159,13 +159,13 @@ Complementing the surface reflectance bands, four mathematical spectral indices 
 Each predictor value represents the spatial median across all qualifying bare-soil pixels within the parcel boundary.
 
 \subsection{Stacking ensemble regression architecture}
-Given the complex non-linear interactions between multi-wavelength reflectance, organic matter chromophores, and soil moisture variations, single learning algorithms frequently exhibit generalization vulnerabilities across diverse pedological units.\textsuperscript{14} We formulate a heterogeneous stacking ensemble that combines three diverse base regressors:
+Given the complex non-linear interactions between multi-wavelength reflectance, organic matter chromophores, and soil moisture variations, single learning algorithms frequently exhibit generalization vulnerabilities across diverse pedological units.\textsuperscript{10} We formulate a heterogeneous stacking ensemble that combines three diverse base regressors:
 \begin{enumerate}[noitemsep,topsep=2pt]
   \item \textbf{Random Forest (RF):} An ensemble of 200 de-correlated decision trees configured with maximum depth 15, providing robust variance reduction and insensitivity to spectral outliers.
   \item \textbf{XGBoost:} A gradient-boosted decision tree architecture utilizing 300 boosting iterations, a learning shrinkage rate of 0.05, and column subsampling ratio of 0.8, optimized for non-linear residual minimization.
   \item \textbf{CatBoost:} An ordered gradient boosting algorithm designed to handle high-order feature interactions and smooth target distributions across varying regional soil textures.
 \end{enumerate}
-Out-of-fold cross-validation estimates from the base models form a combined meta-feature space, which trains an $L_2$-regularized Ridge regression meta-learner to assign optimal predictive weighting to each algorithm. Ground-truth supervision is derived from 50 depth-stratified field core samples (0--30\,cm depth, SOC range 3.2--28.6\,g/kg) gathered across agricultural districts in Karnataka, Maharashtra, and Tamil Nadu.\textsuperscript{12}
+Out-of-fold cross-validation estimates from the base models form a combined meta-feature space, which trains an $L_2$-regularized Ridge regression meta-learner to assign optimal predictive weighting to each algorithm. Ground-truth supervision is derived from 50 depth-stratified field core samples (0--30\,cm depth, SOC range 3.2--28.6\,g/kg) gathered across agricultural districts in Karnataka, Maharashtra, and Tamil Nadu.\textsuperscript{11}
 
 \subsection{Carbon stock quantification and verification logic}
 Inverted SOC percentage values are converted into volumetric areal carbon stock ($\text{tC/ha}$) using the Intergovernmental Panel on Climate Change (IPCC) Tier-2 formulation:
@@ -173,7 +173,7 @@ Inverted SOC percentage values are converted into volumetric areal carbon stock 
   \text{SOC}_{\text{stock}} = \left(\frac{\text{SOC}_{\%}}{100}\right) \times \rho_b \times D \times 10
   \label{eq:soc_stock}
 \end{equation}
-where $\rho_b$ denotes bulk soil density in $\text{g/cm}^3$ and $D$ represents profile depth ($0.30\,$m). Net sequestered metric tonnes of $\text{CO}_2\text{e}$ across the landholding are determined by scaling by parcel surface area and adjusting through standard regulatory discounts (10\% leakage allowance and 15\% permanence risk reserve) compliant with Verra VM0042 and BEE criteria.\textsuperscript{3,13}
+where $\rho_b$ denotes bulk soil density in $\text{g/cm}^3$ and $D$ represents profile depth ($0.30\,$m). Net sequestered metric tonnes of $\text{CO}_2\text{e}$ across the landholding are determined by scaling by parcel surface area and adjusting through standard regulatory discounts (10\% leakage allowance and 15\% permanence risk reserve) compliant with Verra VM0042 and BEE criteria.\textsuperscript{1,3}
 
 To ensure immutable auditability without decentralized consensus computational penalties, each certified carbon increment is stamped with a unique HarvestToken digest:
 \begin{equation}
@@ -314,11 +314,11 @@ Table\,4 compares Krishi-Drishti with related agricultural AI and remote sensing
     \toprule
     \textbf{Investigated System} & \textbf{Primary Modality} & \textbf{Performance} & \textbf{Structural Limitations} \\
     \midrule
-    Iftikhar et al.\textsuperscript{7} & Deep CNN (3 crops)          & 98.1\% acc.    & Pathology only; no carbon accounting. \\
-    Hasan et al.\textsuperscript{8}    & Lightweight CNN (Rice)      & 97.9\% acc.    & Single crop; lacks offset integration. \\
-    Saha et al.\textsuperscript{17}    & In-situ IoT sensor grid     & 97.3\% acc.    & Capital-intensive hardware; no dMRV. \\
-    Iswarya \& Tamizhazhagan\textsuperscript{12} & Quantile RF on Sentinel-2 & High $R^2$ & Cartographic mapping only; no audit loop. \\
-    Xiao et al.\textsuperscript{11}    & Support Vector Regression   & $R^2 = 0.96$   & Requires expensive supplementary covariates. \\
+    Iftikhar et al.\textsuperscript{13} & Deep CNN (3 crops)          & 98.1\% acc.    & Pathology only; no carbon accounting. \\
+    Hasan et al.\textsuperscript{14}    & Lightweight CNN (Rice)      & 97.9\% acc.    & Single crop; lacks offset integration. \\
+    Saha et al.\textsuperscript{9}    & In-situ IoT sensor grid     & 97.3\% acc.    & Capital-intensive hardware; no dMRV. \\
+    Iswarya \& Tamizhazhagan\textsuperscript{11} & Quantile RF on Sentinel-2 & High $R^2$ & Cartographic mapping only; no audit loop. \\
+    Xiao et al.\textsuperscript{12}    & Support Vector Regression   & $R^2 = 0.96$   & Requires expensive supplementary covariates. \\
     \textbf{Krishi-Drishti (Ours)}     & \textbf{Multispectral dMRV + Stacking ML} & \textbf{$R^2 = 0.89$; 88.1\%} & \textbf{Autonomous end-to-end certification without physical sensors.} \\
     \bottomrule
   \end{tabularx}
@@ -326,10 +326,10 @@ Table\,4 compares Krishi-Drishti with related agricultural AI and remote sensing
 
 As summarized in Table~\ref{tab:comp_spie}, existing agricultural remote sensing and AI diagnostic investigations leave several operational and structural chasms that Krishi-Drishti directly resolves:
 \begin{enumerate}[noitemsep,topsep=2pt]
-  \item \textbf{Decoupled Diagnostic Vision:} Prior computer vision frameworks (Refs.\,7, 8, and 9) achieve high recognition accuracy on foliar pathologies, but operate without connection to environmental carbon registries. Crucially, conventional automated advisories often recommend synthetic chemical treatments that disqualify smallholders from regenerative carbon offset eligibility. Krishi-Drishti circumvents this by filtering MobileNetV2 optical diagnostics through an LLM constrained strictly to biological and organic remedies.
-  \item \textbf{Hardware and Maintenance Overhead:} In-situ precision agriculture architectures, such as the multi-parametric IoT sensor arrays evaluated in Refs.\,2, 5, and 17, demand continuous capital expenditure and technical upkeep that exceed the economic capacity of smallholders farming under two hectares. Krishi-Drishti replaces all physical in-ground hardware by leveraging free, public Sentinel-2 multispectral surface reflectance,\textsuperscript{6,10} reducing marginal verification costs to zero.
-  \item \textbf{Lack of End-to-End Monetization Pipelines:} Optical SOC regression studies, including the quantile random forests of Iswarya and Tamizhazhagan\textsuperscript{12}, the stacking models of Triantakonstantis and Karakostas\textsuperscript{14}, and the support vector regression of Xiao et al.,\textsuperscript{11} demonstrate the feasibility of satellite carbon estimation but terminate at cartographic mapping. Similarly, while Bhatia\textsuperscript{1} examined AI decision support and Abiri et al.\textsuperscript{4} analyzed smallholder economic barriers, neither operationalized verifiable carbon credit issuance. Krishi-Drishti bridges this gap by directly linking Sentinel-2 stacking regression to a Four-Pillar dMRV gate and SHA-256 HarvestToken ledger co-aligned with Verra VM0042 and CCTS/BEE regulatory standards.\textsuperscript{3,13}
-  \item \textbf{Ecological Telemetry Convergence:} Whereas specialized bioacoustic tools (Refs.\,15 and 16) function exclusively for standalone biodiversity and pest research, Krishi-Drishti incorporates bioacoustic monitoring as an embedded module to corroborate co-benefit claims within the primary carbon credit dashboard.
+  \item \textbf{Decoupled Diagnostic Vision:} Prior computer vision frameworks (Refs.\,13, 14, and 15) achieve high recognition accuracy on foliar pathologies, but operate without connection to environmental carbon registries. Crucially, conventional automated advisories often recommend synthetic chemical treatments that disqualify smallholders from regenerative carbon offset eligibility. Krishi-Drishti circumvents this by filtering MobileNetV2 optical diagnostics through an LLM constrained strictly to biological and organic remedies.
+  \item \textbf{Hardware and Maintenance Overhead:} In-situ precision agriculture architectures, such as the multi-parametric IoT sensor arrays evaluated in Refs.\,7, 8, and 9, demand continuous capital expenditure and technical upkeep that exceed the economic capacity of smallholders farming under two hectares. Krishi-Drishti replaces all physical in-ground hardware by leveraging free, public Sentinel-2 multispectral surface reflectance,\textsuperscript{4,5} reducing marginal verification costs to zero.
+  \item \textbf{Lack of End-to-End Monetization Pipelines:} Optical SOC regression studies, including the quantile random forests of Iswarya and Tamizhazhagan\textsuperscript{11}, the stacking models of Triantakonstantis and Karakostas\textsuperscript{10}, and the support vector regression of Xiao et al.,\textsuperscript{12} demonstrate the feasibility of satellite carbon estimation but terminate at cartographic mapping. Similarly, while Bhatia\textsuperscript{6} examined AI decision support and Abiri et al.\textsuperscript{2} analyzed smallholder economic barriers, neither operationalized verifiable carbon credit issuance. Krishi-Drishti bridges this gap by directly linking Sentinel-2 stacking regression to a Four-Pillar dMRV gate and SHA-256 HarvestToken ledger co-aligned with Verra VM0042 and CCTS/BEE regulatory standards.\textsuperscript{1,3}
+  \item \textbf{Ecological Telemetry Convergence:} Whereas specialized bioacoustic tools (Refs.\,16 and 17) function exclusively for standalone biodiversity and pest research, Krishi-Drishti incorporates bioacoustic monitoring as an embedded module to corroborate co-benefit claims within the primary carbon credit dashboard.
 \end{enumerate}
 
 % ====================================================================
@@ -359,59 +359,56 @@ The authors express their gratitude to the European Space Agency (ESA) Copernicu
 % ====================================================================
 \renewcommand{\refname}{References}
 \begin{thebibliography}{17}
-% ====================================================================
-
-\bibitem{bhatia2025}
-Bhatia, M., ``Artificial intelligence for sustainable agriculture in developing nations,'' \emph{IEEE Trans. Comput. Soc. Syst.}, 2025.
-
-\bibitem{thilakarathne2024}
-Thilakarathne, N. et al., ``Cloud-assisted predictive analytics for precision agriculture,'' \emph{IEEE Access}, vol.~12, pp.~11023--11035, 2024.
-
-\bibitem{gokul2024}
-Gokul, K. et al., ``India's carbon credit trading scheme: agricultural integration,'' \emph{Nat. Clim. Policy}, vol.~8, no.~2, pp.~145--162, 2024.
+\bibitem{gokul2026}
+Gokul, S., Nongkynrih, P., Rabha, L., Rai, R., and Shukla, B.~D., `Carbon credit mechanisms for sustainable agriculture and opportunities in North East India,'' {\itshape Discover Sustain.} {\bfseries 7}(1), 857 (2026).
 
 \bibitem{abiri2023}
-Abiri, N. et al., ``Digital agriculture and smallholder economic resilience,'' \emph{World Dev. Perspect.}, vol.~31, p.~100512, 2023.
-
-\bibitem{nawaz2024}
-Nawaz, A. and Babar, M., ``Edge-AI and IoT architectures for low-resource farming,'' \emph{Comput. Electron. Agric.}, vol.~218, p.~108670, 2024.
-
-\bibitem{vaudour2022}
-Vaudour, E. et al., ``Temporal mosaicking of Sentinel-2 bare soil observations for organic carbon mapping,'' \emph{Remote Sens. Environ.}, vol.~272, p.~112953, 2022.
-
-\bibitem{iftikhar2024}
-Iftikhar, S. et al., ``Deep transfer learning for multi-crop pathology classification,'' \emph{Comput. Electron. Agric.}, vol.~219, p.~108789, 2024.
-
-\bibitem{hasan2024}
-Hasan, M. et al., ``Lightweight convolutional networks for edge agricultural diagnostics,'' \emph{IEEE Trans. AgriFood Electron.}, vol.~2, no.~1, pp.~45--56, 2024.
-
-\bibitem{askale2024}
-Askale, D. et al., ``Mobile deployment of deep neural networks for foliar diagnostics,'' \emph{Smart Agric. Technol.}, vol.~7, p.~100392, 2024.
-
-\bibitem{khaddi2024}
-Khaddi, Z. et al., ``Machine learning and geospatial methods for soil organic carbon: a review,'' \emph{Geoderma Reg.}, vol.~36, p.~e00754, 2024.
-
-\bibitem{xiao2024}
-Xiao, C. et al., ``Hyperspectral and multispectral estimation of topsoil carbon constituents,'' \emph{ISPRS J. Photogramm. Remote Sens.}, vol.~208, pp.~112--128, 2024.
-
-\bibitem{iswarya2024}
-Iswarya, P. and Tamizhazhagan, K., ``Quantile regression forests for satellite-derived soil carbon,'' \emph{Environ. Monit. Assess.}, vol.~196, no.~4, p.~342, 2024.
+Abiri, R., Shahverdi, N., Salleh, F.~M., Azizi, N. A.~P., and Nor, N. A.~M., `Application of digital technologies for ensuring agricultural productivity,'' {\itshape Heliyon} {\bfseries 9}(12), e22601 (2023).
 
 \bibitem{hamrick2023}
-Hamrick, K., ``State of voluntary carbon markets 2023,'' \emph{Ecosystem Marketplace}, Tech. Rep., 2023.
+Hamrick, K., [State of Voluntary Carbon Markets 2023], Forest Trends, Ecosystem Marketplace, Washington, DC (2023).
+
+\bibitem{vaudour2022}
+Vaudour, E., Gomez, C., Fouad, Y., and Lagacherie, P., `Satellite imagery to map topsoil organic carbon content over cultivated areas: An overview,'' {\itshape Remote Sens.} {\bfseries 14}(12), 2917 (2022).
+
+\bibitem{khaddi2026}
+Khaddi, E., Benmansour, A., and Boubaker, K., `Shaping smarter prediction: A literature review of GIS, remote sensing and ML applications in digital SOC mapping,'' {\itshape Turk. J. Remote Sens.} {\bfseries 8}(2), 1808033 (2026).
+
+\bibitem{bhatia2025}
+Bhatia, A., `An AI-powered agricultural decision support system for smallholder farmers in India,'' {\itshape Smart Agric. Technol.}, SSRN-6944006 (2025).
+
+\bibitem{thilakarathne2022}
+Thilakarathne, N.~N., Basnayake, N., Withanage, T., Weliwatta, D., Jayakody, H., and Wickramasinghe, A., `A cloud enabled crop recommendation platform for machine learning-driven precision farming,'' {\itshape Sensors} {\bfseries 22}(16), 6299 (2022).
+
+\bibitem{nawaz2025}
+Nawaz, M. and Babar, M. I.~K., `IoT and AI for smart agriculture in resource-constrained environments,'' {\itshape Discover Internet of Things} {\bfseries 5}(1), 24 (2025).
+
+\bibitem{saha2025}
+Saha, G., Roy, S.~K., and Ghosh, P.~K., `Smart IoT-driven precision agriculture: Land mapping, crop prediction, and irrigation system,'' {\itshape PLOS ONE} {\bfseries 20}(3), e0319268 (2025).
 
 \bibitem{triantakonstantis2025}
-Triantakonstantis, D. and Karakostas, A., ``Soil organic carbon monitoring via stacked ensembles,'' \emph{Remote Sens.}, vol.~17, no.~2, p.~312, 2025.
+Triantakonstantis, D. and Karakostas, A., `Soil organic carbon monitoring and modelling via machine learning methods using soil and remote sensing data,'' {\itshape Agriculture} {\bfseries 15}(8), 910 (2025).
+
+\bibitem{iswarya2026}
+Iswarya, R. and Tamizhazhagan, V., `Satellite-derived prediction of soil organic carbon under bare-soil conditions using Sentinel-2 spectral indices and quantile regression forests,'' {\itshape Int. J. AI Mach. Learn.} {\bfseries 6}(6s), 76 (2026).
+
+\bibitem{xiao2024}
+Xiao, X., Zhang, S., and Shen, H., `Environmental variables improve the accuracy of remote sensing estimation of soil organic carbon content,'' {\itshape Sci. Rep.} {\bfseries 14}(1), 18964 (2024).
+
+\bibitem{iftikhar2024}
+Iftikhar, M., Yousaf, M.~H., and Fatima, A., `Plant disease management: a fine-tuned enhanced CNN approach with mobile app integration,'' {\itshape Artif. Intell. Rev.} {\bfseries 57}(7), 167 (2024).
+
+\bibitem{hasan2023}
+Hasan, M.~M., Shin, J., and Rahim, M.~A., `Enhancing rice crop management: disease classification using CNNs and mobile application integration,'' {\itshape Agriculture} {\bfseries 13}(8), 1549 (2023).
+
+\bibitem{askale2025}
+Askale, G.~T., Debelee, T.~G., and Ayalew, F.~S., `Mobile based deep CNN model for maize leaf disease detection and classification,'' {\itshape Plant Methods} {\bfseries 21}(1), 72 (2025).
 
 \bibitem{kershenbaum2024}
-Kershenbaum, A. et al., ``Bioacoustic monitoring for biodiversity and pest management,'' \emph{Ecol. Inform.}, vol.~80, p.~102498, 2024.
+Kershenbaum, A., Blumstein, D.~T., and Roch, M.~A., `Automatic detection for bioacoustic research: a practical guide from and for biologists and computer scientists,'' {\itshape Biol. Rev.} {\bfseries 99}(6), 13155 (2024).
 
-\bibitem{hearon2023}
-Hearon, P. et al., ``Acoustic indices for ecological monitoring in agricultural landscapes,'' \emph{Bioacoustics}, vol.~32, no.~4, pp.~421--438, 2023.
-
-\bibitem{saha2024}
-Saha, A. et al., ``Integrated multi-sensor IoT and machine learning for smart farming,'' \emph{IEEE Internet Things J.}, vol.~11, no.~8, pp.~14210--14223, 2024.
-
+\bibitem{hearon2025}
+Hearon, L.~E., Burk, T.~R., and Seltzer, C.~M., `buzzdetect: an open-source deep learning tool for automated bioacoustic pollinator monitoring,'' {\itshape J. Insect Sci.} {\bfseries 25}(6), ieaf104 (2025).
 \end{thebibliography}
 
 % ====================================================================

@@ -204,7 +204,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-full pb-0 font-sans text-gray-800 relative"
+      className="min-h-full pb-12 font-sans text-gray-800 relative"
       style={{ background: 'linear-gradient(180deg, #f4fbf6 0%, #ffffff 32%, #ffffff 100%)' }}
     >
 

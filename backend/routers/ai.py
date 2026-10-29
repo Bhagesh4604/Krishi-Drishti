@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -13,7 +14,7 @@ from PIL import Image
 import io
 from ..database import get_db
 from ..models import ChatMessage, User, StressReport
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, get_current_user_optional
 from ..services.satellite import get_real_satellite_data
 from ..services.rag_indexer import get_rag_engine
 from ..services.weather_fetcher import get_bioclimatic_data
@@ -42,17 +43,16 @@ def _use_local_model() -> bool:
     except Exception:
         return False
 
-import base64
-_BK = "QVEuQWI4Uk42SV9MaVJDSjJCQ3V1d2J3M09RRlRXYTZZRDZrckQ0VXFvNWtOSHY2UEhneEE="
 
 def _get_api_key() -> str:
+    """Return the Gemini API key from the environment. Never falls back to a hardcoded value."""
     key = (os.getenv("GEMINI_API_KEY") or "").strip()
-    if key:
-        return key
-    try:
-        return base64.b64decode(_BK).decode("utf-8")
-    except Exception:
-        return ""
+    if not key:
+        logger.warning(
+            "[ai] GEMINI_API_KEY is not set. AI features requiring Gemini will be unavailable. "
+            "Set GEMINI_API_KEY in your environment or .env file."
+        )
+    return key
 
 class GeminiWrapper:
     def __init__(self, model_names=None):
@@ -103,12 +103,13 @@ async def analyze_stress(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # 1. Get Satellite Data (from Google Earth Engine or local fallback)
+    # 1. Get Satellite Data (from Google Earth Engine)
     sat_data = get_real_satellite_data(request.lat, request.lng)
-    
-    # 2. Prepare Default/Fallback response
-    final_stress = sat_data['stress_level']
-    recommendation = sat_data['satellite_analysis']
+
+    # 2. Prepare defaults – only trust values when data_available is True
+    sat_available = sat_data.get("data_available", False)
+    final_stress = sat_data.get("stress_level") or "Unknown"
+    recommendation = sat_data.get("satellite_analysis", "Satellite data unavailable.")
     vra_nitrogen = "Standard application"
     vra_water = "Standard application"
     vra_pesticide = "Standard application"
@@ -246,7 +247,7 @@ async def train_soc_calibration(
         total_moisture += moisture
         total_et += et
 
-    print(f"Training SOC Model. X (Bioclimatic): {bioclimatic_array}, y (SOC): {soc_array}")
+    logger.info("[train_soc] Training SOC model with %d data points.", len(bioclimatic_array))
 
     
     # 2. Train Multiple Linear Regression Model (Scikit-Learn)
@@ -303,15 +304,16 @@ async def train_soc_calibration(
                 "carbon_credit_potential": "Build a baseline history of 3 years to enter carbon markets."
             }
 
-        return {
+        response_payload = {
             "success": True,
             "model": model_result,
-            "data_points": {
-                "bioclimatic_values": bioclimatic_array,
-                "soc_values": soc_array
-            },
-            "ai_insights": ai_insights
+            "n_samples": len(soc_array),
+            "ai_insights": ai_insights,
         }
+        # Surface the overfitting warning (if any) at the top level for easy UI display
+        if model_result.get("warning"):
+            response_payload["model_warning"] = model_result["warning"]
+        return response_payload
     except Exception as e:
         return {"error": f"Failed to train SOC Multiple Linear Regression: {e}"}
 
@@ -533,7 +535,7 @@ def _generate_chat_response(prompt: str, user_message: str = "", user: User = No
     return _build_agronomic_fallback(user_message, user_name=user_name, district=district, crops=crops)
 
 
-DISEASE_INFERENCE_TIMEOUT = float(os.getenv("DISEASE_INFERENCE_TIMEOUT_SECONDS", "12.0"))
+DISEASE_INFERENCE_TIMEOUT = float(os.getenv("DISEASE_INFERENCE_TIMEOUT_SECONDS", "60.0"))  # 60s covers Keras cold-load + inference
 GEMINI_INFERENCE_TIMEOUT = float(os.getenv("GEMINI_INFERENCE_TIMEOUT_SECONDS", "10.0"))
 
 
@@ -573,7 +575,7 @@ async def diagnose_crop(
     request: Request,
     file: UploadFile = File(...),
     mode: str = Form("diagnosis"),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Crop disease diagnosis endpoint.

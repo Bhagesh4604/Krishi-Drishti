@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Krishi-Drishti | Final Presentation 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;}
+:root{
+  --green:#10d98f;--green-dim:#0aa069;--green-dark:#065c3e;
+  --gold:#f5c842;--gold-dim:#c49a15;
+  --blue:#38c9f8;--blue-dim:#0e8cb5;
+  --purple:#b06cf5;--red:#ff5f6d;
+  --bg:#040d16;--bg2:#071423;--bg3:#0b1e35;
+  --glass:rgba(255,255,255,0.04);--glass-b:rgba(255,255,255,0.08);
+  --text:#e8f4f0;--muted:#8aabb0;
+}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow:hidden;height:100vh;width:100vw;}
+canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+/* ── Slide system ── */
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden;}
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:2.5rem 3.5rem 4.5rem;
+  opacity:0;pointer-events:none;z-index:5;
+  transform:translateX(80px) scale(0.97);
+  transition:transform .55s cubic-bezier(.22,1,.36,1), opacity .45s ease;
+}
+.slide.active{opacity:1;pointer-events:auto;z-index:10;transform:translateX(0) scale(1);}
+.slide.exit{opacity:0;transform:translateX(-80px) scale(0.97);transition:transform .4s ease,opacity .3s ease;}
+
+/* ── Glass cards ── */
+.g{background:var(--glass);border:1px solid var(--glass-b);border-radius:16px;backdrop-filter:blur(12px);}
+.g-green{background:rgba(16,217,143,.07);border:1px solid rgba(16,217,143,.25);border-radius:16px;backdrop-filter:blur(12px);}
+.g-gold{background:rgba(245,200,66,.07);border:1px solid rgba(245,200,66,.25);border-radius:16px;backdrop-filter:blur(12px);}
+.g-blue{background:rgba(56,201,248,.07);border:1px solid rgba(56,201,248,.25);border-radius:16px;backdrop-filter:blur(12px);}
+.g-purple{background:rgba(176,108,245,.07);border:1px solid rgba(176,108,245,.25);border-radius:16px;backdrop-filter:blur(12px);}
+
+/* ── Gradient text ── */
+.tg{background:linear-gradient(120deg,var(--green),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tg2{background:linear-gradient(120deg,var(--gold),#ff9f43);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tg3{background:linear-gradient(120deg,var(--purple),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tg4{background:linear-gradient(120deg,var(--green),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+
+/* ── Glow shadows ── */
+.shadow-green{box-shadow:0 0 30px rgba(16,217,143,.2),0 8px 32px rgba(0,0,0,.4);}
+.shadow-gold{box-shadow:0 0 30px rgba(245,200,66,.2),0 8px 32px rgba(0,0,0,.4);}
+.shadow-blue{box-shadow:0 0 30px rgba(56,201,248,.2),0 8px 32px rgba(0,0,0,.4);}
+
+/* ── Animated badges ── */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;}
+.badge-green{background:rgba(16,217,143,.12);border:1px solid rgba(16,217,143,.35);color:var(--green);}
+.badge-gold{background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.35);color:var(--gold);}
+.badge-blue{background:rgba(56,201,248,.12);border:1px solid rgba(56,201,248,.35);color:var(--blue);}
+.badge-red{background:rgba(255,95,109,.12);border:1px solid rgba(255,95,109,.35);color:var(--red);}
+.badge-purple{background:rgba(176,108,245,.12);border:1px solid rgba(176,108,245,.35);color:var(--purple);}
+.dot-pulse{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
+
+/* ── Stat counters ── */
+.stat-num{font-family:'JetBrains Mono',monospace;font-weight:700;line-height:1;}
+
+/* ── Slide header ── */
+.slide-header{margin-bottom:1.2rem;}
+.slide-tag{font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--green);display:flex;align-items:center;gap:6px;margin-bottom:.35rem;}
+.slide-tag::before{content:'';display:block;width:18px;height:2px;background:var(--green);border-radius:2px;}
+.slide-title{font-size:1.85rem;font-weight:900;color:#fff;line-height:1.15;}
+.slide-sub{font-size:.85rem;color:var(--muted);margin-top:.2rem;font-weight:400;}
+
+/* ── Metric cards ── */
+.metric{padding:1rem;border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;}
+.metric .label{font-size:.65rem;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.08em;}
+.metric .value{font-size:1.6rem;font-weight:900;font-family:'JetBrains Mono',monospace;}
+.metric .sub{font-size:.62rem;color:var(--muted);}
+
+/* ── Table ── */
+.ptable{width:100%;border-collapse:collapse;font-size:.72rem;}
+.ptable th{background:rgba(16,217,143,.08);color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.07em;padding:.55rem .7rem;text-align:left;border-bottom:1px solid var(--glass-b);}
+.ptable td{padding:.5rem .7rem;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr.highlight{background:rgba(16,217,143,.06);}
+.ptable tr:hover td{background:rgba(255,255,255,.02);}
+
+/* ── Progress bar ── */
+.pbar{height:5px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:99px;transition:width 1.5s cubic-bezier(.22,1,.36,1) .5s;}
+
+/* ── Phone mockup frame ── */
+.phone-frame{
+  background:linear-gradient(145deg,#1a2536,#0d1a2c);
+  border:2px solid rgba(255,255,255,.12);
+  border-radius:36px;
+  padding:10px;
+  box-shadow:0 30px 80px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.15);
+  position:relative;overflow:hidden;
+}
+.phone-frame::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:80px;height:6px;background:rgba(255,255,255,.15);border-radius:0 0 8px 8px;z-index:2;
+}
+.phone-screen{border-radius:28px;overflow:hidden;width:100%;aspect-ratio:9/18;object-fit:cover;}
+
+/* ── App flow arrows ── */
+.flow-arrow{display:flex;align-items:center;justify-content:center;color:var(--green);font-size:1.2rem;opacity:.6;}
+
+/* ── Nav toolbar ── */
+#nav{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:100;
+  display:flex;align-items:center;gap:6px;
+  background:rgba(7,20,35,.85);border:1px solid rgba(255,255,255,.09);
+  border-radius:20px;padding:8px 14px;backdrop-filter:blur(20px);
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+#nav button{
+  background:none;border:none;cursor:pointer;color:var(--muted);
+  padding:6px 8px;border-radius:10px;transition:all .2s;display:flex;align-items:center;gap:5px;
+  font-family:'Outfit',sans-serif;font-size:.72rem;font-weight:600;
+}
+#nav button:hover{background:rgba(255,255,255,.07);color:#fff;}
+#nav button.active-btn{color:var(--green);}
+#nav .divider{width:1px;height:18px;background:rgba(255,255,255,.1);}
+#nav .counter{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;
+  background:rgba(16,217,143,.1);border:1px solid rgba(16,217,143,.2);
+  color:var(--green);padding:4px 10px;border-radius:8px;font-weight:700;
+}
+#nav .timer{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);}
+
+/* ── Speaker notes drawer ── */
+#notes-panel{
+  position:fixed;right:0;top:0;bottom:0;width:380px;
+  background:rgba(4,13,22,.95);border-left:1px solid rgba(255,255,255,.08);
+  z-index:200;transform:translateX(100%);transition:transform .35s cubic-bezier(.22,1,.36,1);
+  display:flex;flex-direction:column;backdrop-filter:blur(20px);
+  padding:1.5rem;overflow:hidden;
+}
+#notes-panel.open{transform:translateX(0);}
+#notes-panel h3{font-size:.9rem;font-weight:800;color:#fff;margin-bottom:.3rem;}
+
+/* ── Overview modal ── */
+#overview{
+  position:fixed;inset:0;background:rgba(4,13,22,.95);z-index:300;
+  display:none;flex-direction:column;padding:2rem;backdrop-filter:blur(20px);
+  overflow-y:auto;
+}
+#overview.show{display:flex;}
+
+/* ── Lightbox ── */
+#lightbox{
+  position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:400;
+  display:none;align-items:center;justify-content:center;padding:2rem;
+  backdrop-filter:blur(8px);
+}
+#lightbox.show{display:flex;}
+#lightbox img{max-width:90vw;max-height:85vh;object-fit:contain;border-radius:12px;border:1px solid rgba(255,255,255,.1);}
+#lightbox-cap{color:var(--muted);font-size:.75rem;text-align:center;margin-top:1rem;font-family:'JetBrains Mono',monospace;}
+
+/* ── Laser ── */
+#laser{
+  position:fixed;pointer-events:none;z-index:9999;
+  width:16px;height:16px;border-radius:50%;
+  background:radial-gradient(circle,#ff4545,#ff0000);
+  box-shadow:0 0 12px 4px rgba(255,0,0,.6),0 0 30px 10px rgba(255,0,0,.3);
+  transform:translate(-50%,-50%);display:none;
+}
+
+/* ── Animated entry for card elements ── */
+.slide.active .anim{animation:fadeUp .5s ease forwards;}
+.slide.active .anim:nth-child(1){animation-delay:.1s;}
+.slide.active .anim:nth-child(2){animation-delay:.2s;}
+.slide.active .anim:nth-child(3){animation-delay:.3s;}
+.slide.active .anim:nth-child(4){animation-delay:.4s;}
+.slide.active .anim:nth-child(5){animation-delay:.5s;}
+.slide.active .anim:nth-child(6){animation-delay:.6s;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+.anim{opacity:0;}
+
+/* ── Print ── */
+@media print{
+  body,#deck{overflow:visible;height:auto;}
+  .slide{position:relative;opacity:1;visibility:visible;transform:none;pointer-events:auto;
+    page-break-after:always;height:100vh;display:flex;}
+  #nav,#notes-panel,#overview,#lightbox,#laser,canvas#bg{display:none!important;}
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(16,217,143,.3);border-radius:99px;}
+
+/* ── Section number dot ── */
+.sec-dot{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:6px;
+  background:rgba(16,217,143,.15);border:1px solid rgba(16,217,143,.3);
+  color:var(--green);font-size:.65rem;font-weight:900;font-family:'JetBrains Mono',monospace;
+}
+
+/* ── Pillar gate pill ── */
+.pillar-pill{
+  display:flex;align-items:center;gap:8px;padding:.65rem 1rem;border-radius:12px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+}
+.pillar-num{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:900;font-family:'JetBrains Mono',monospace;flex-shrink:0;
+}
+
+/* Timeline */
+.timeline-item{display:flex;gap:14px;align-items:flex-start;}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.tl-line{width:1px;background:rgba(255,255,255,.08);flex:1;min-height:30px;margin:0 auto;}
+
+/* Comparison row */
+.cmp-row{display:grid;grid-template-columns:1fr 1px 1fr;gap:1rem;align-items:center;}
+.cmp-divider{background:rgba(255,255,255,.08);height:100%;}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="laser"></div>
+
+<div id="deck">
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 1 — CINEMATIC TITLE
+═══════════════════════════════════════════════════════════ -->
+<section class="slide active" id="s1">
+  <div style="height:100%;display:flex;flex-direction:column;justify-content:space-between;max-width:1300px;margin:0 auto;width:100%;">
+    
+    <!-- Top bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#10d98f,#065c3e);display:flex;align-items:center;justify-content:center;font-size:.9rem;">🌿</div>
+        <div>
+          <div style="font-size:.62rem;font-weight:800;color:var(--green);letter-spacing:.12em;text-transform:uppercase;">Impact College of Engineering & Applied Sciences</div>
+          <div style="font-size:.6rem;color:var(--muted);">Dept. of Computer Science (Data Science) · Visvesvaraya Technological University · Bangalore</div>
+        </div>
+      </div>
+      <div class="badge badge-green"><span class="dot-pulse"></span>Final Year Project Defense 2026</div>
+    </div>
+
+    <!-- Hero content -->
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:1.5rem 0;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+        <div class="badge badge-green">🛰️ Remote Sensing</div>
+        <div class="badge badge-blue">🤖 Deep Learning</div>
+        <div class="badge badge-gold">🔐 Cryptographic Tokenization</div>
+        <div class="badge badge-purple">📱 Android Mobile App</div>
+      </div>
+
+      <h1 class="anim" style="font-size:3.2rem;font-weight:900;line-height:1.1;color:#fff;margin-bottom:.5rem;">
+        <span class="tg">KRISHI-DRISHTI</span>
+        <span style="font-size:1.8rem;font-weight:400;color:var(--muted);"> (कृषि-दृष्टि)</span>
+      </h1>
+      <h2 class="anim" style="font-size:1.4rem;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:1.2rem;line-height:1.4;">
+        Satellite-Driven Carbon Credit Verification for Smallholder Farmers<br>
+        <span style="color:var(--muted);font-weight:400;font-size:1.1rem;">Using Sentinel-2 Remote Sensing · Four-Pillar dMRV · SHA-256 HarvestTokens</span>
+      </h2>
+
+      <!-- Core KPI cards -->
+      <div class="anim" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;max-width:900px;">
+        <div class="metric g-green shadow-green">
+          <div class="label">SOC Accuracy</div>
+          <div class="value tg">0.89</div>
+          <div class="sub">R² Score</div>
+        </div>
+        <div class="metric g-blue shadow-blue">
+          <div class="label">Verification</div>
+          <div class="value tg3">&lt;48h</div>
+          <div class="sub">vs 6–18 months</div>
+        </div>
+        <div class="metric g-gold shadow-gold">
+          <div class="label">Farm Income</div>
+          <div class="value tg2">₹4,500</div>
+          <div class="sub">~$54 USD / year</div>
+        </div>
+        <div class="metric g" style="border-color:rgba(176,108,245,.25);">
+          <div class="label">Usability SUS</div>
+          <div class="value tg3">84.0</div>
+          <div class="sub">Excellent Grade</div>
+        </div>
+        <div class="metric g">
+          <div class="label">Hash Integrity</div>
+          <div class="value" style="color:var(--green);">0 / 47</div>
+          <div class="sub">Mismatches</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team & Guide footer -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid rgba(255,255,255,.06);padding-top:1rem;">
+      <div class="g" style="padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.2rem;">Project Team</div>
+          <div style="font-weight:800;color:#fff;font-size:.88rem;">
+            <span style="color:var(--green);">Bhagesh Biradar</span> · Manjunath Khot · Jayanth R · Pruthviraja S
+          </div>
+          <div style="font-size:.65rem;color:var(--muted);">8th Semester B.E. · CSE (Data Science)</div>
+        </div>
+        <div class="badge badge-green" style="font-size:.6rem;">TEAM 04</div>
+      </div>
+      <div class="g" style="padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.2rem;">Project Guides</div>
+          <div style="font-weight:800;color:#fff;font-size:.88rem;">Dr. Rama Krishna K · Dr. Sheethal Aji Mani</div>
+          <div style="font-size:.65rem;color:var(--muted);">Professor & Head · Dept. of Computer Science</div>
+        </div>
+        <div class="badge badge-blue" style="font-size:.6rem;">ICEAS-VTU</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 2 — PROBLEM STATEMENT
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s2">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">🔴 Research Motivation</div>
+      <div class="slide-title">The <span class="tg">$2 Billion Carbon Paradox</span></div>
+      <div class="slide-sub">Why 86% of India's 146 million farmers are locked out of the global voluntary carbon market</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.5rem;flex:1;align-items:center;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <!-- Problem card 1 -->
+        <div class="anim g" style="padding:1.1rem 1.2rem;border-left:3px solid var(--red);border-radius:0 16px 16px 0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem;">
+            <span style="font-size:1.4rem;">💸</span>
+            <strong style="color:#fff;font-size:1rem;">Astronomical Audit Cost: $1,500 – $3,000 per Farm</strong>
+          </div>
+          <p style="font-size:.78rem;color:var(--muted);line-height:1.6;">
+            Conventional MRV demands depth-stratified soil core extraction, chemical lab spectrography (Walkley-Black oxidation), certified VVB auditor travel. For a 1-hectare farm generating ~3–5 tCO₂e at ₹1,200/tonne, verification alone costs 10–30× the gross revenue.
+          </p>
+          <div style="margin-top:.6rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="badge badge-red">Lab Testing: ₹1.5L–₹2.5L</span>
+            <span class="badge badge-red">Auditor Travel Cost</span>
+            <span class="badge badge-red">Annual Lab Renewal</span>
+          </div>
+        </div>
+        <!-- Problem card 2 -->
+        <div class="anim g" style="padding:1.1rem 1.2rem;border-left:3px solid var(--gold);border-radius:0 16px 16px 0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem;">
+            <span style="font-size:1.4rem;">⏰</span>
+            <strong style="color:#fff;font-size:1rem;">Crippling 6–18 Month Verification Cycle</strong>
+          </div>
+          <p style="font-size:.78rem;color:var(--muted);line-height:1.6;">
+            Physical soil coring, courier delays to certified labs, 3-layer bureaucratic audit review, and VVB sign-off add up to 6 to 18 months before any payout. Subsistence farmers cannot wait a year and a half for supplementary income.
+          </p>
+          <div style="margin-top:.6rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="badge badge-gold">Field Coring: 2 weeks</span>
+            <span class="badge badge-gold">Lab Analysis: 1–3 months</span>
+            <span class="badge badge-gold">VVB Audit: 6–12 months</span>
+          </div>
+        </div>
+        <!-- Problem card 3 -->
+        <div class="anim g" style="padding:1.1rem 1.2rem;border-left:3px solid var(--green);border-radius:0 16px 16px 0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem;">
+            <span style="font-size:1.4rem;">🌾</span>
+            <strong style="color:#fff;font-size:1rem;">Mass Exclusion: 86.2% of Farmers (<2 ha)</strong>
+          </div>
+          <p style="font-size:.78rem;color:var(--muted);line-height:1.6;">
+            India has 146M agricultural landholdings of which 126M are under 2 hectares. The $2B global voluntary carbon market (Hamrick, 2023) has developed entirely around large corporate estates and industrial plantations.
+          </p>
+          <div style="margin-top:.6rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="badge badge-green">146M Farmers</span>
+            <span class="badge badge-green">86.2% Marginal</span>
+            <span class="badge badge-green">~11% GHG Emissions</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right: Impact visualization -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:12px;height:100%;justify-content:center;">
+        <div class="g-green shadow-green" style="padding:1.4rem;border-radius:20px;text-align:center;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;">Global Carbon Market Size</div>
+          <div style="font-size:3rem;font-weight:900;color:#fff;font-family:'JetBrains Mono',monospace;">$2B</div>
+          <div style="font-size:.7rem;color:var(--muted);">Voluntary Carbon Market (2023)</div>
+        </div>
+        <div class="g" style="padding:1rem 1.2rem;">
+          <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.7rem;">Carbon Credit Price Range</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
+            <span style="font-size:.72rem;color:var(--muted);">Floor</span><span style="font-size:.72rem;color:var(--muted);">Ceiling</span>
+          </div>
+          <div class="pbar"><div class="pbar-fill" style="width:100%;background:linear-gradient(90deg,var(--green-dim),var(--green));"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:.3rem;">
+            <span style="font-size:.78rem;font-weight:800;color:var(--green);">$15 / tCO₂e</span>
+            <span style="font-size:.78rem;font-weight:800;color:var(--gold);">$50 / tCO₂e</span>
+          </div>
+        </div>
+        <div class="g-green" style="padding:1.2rem;border-radius:16px;">
+          <div style="font-size:.7rem;color:var(--green);font-weight:800;margin-bottom:.5rem;">✅ KRISHI-DRISHTI SOLUTION</div>
+          <div style="display:flex;flex-direction:column;gap:.4rem;font-size:.75rem;color:var(--text);">
+            <div style="display:flex;justify-content:space-between;"><span>Marginal Verification Cost:</span><strong style="color:var(--green);">₹ 0.00</strong></div>
+            <div style="display:flex;justify-content:space-between;"><span>Verification Latency:</span><strong style="color:var(--blue);">< 48 Hours</strong></div>
+            <div style="display:flex;justify-content:space-between;"><span>Regulatory Alignment:</span><strong style="color:var(--gold);">Verra VM0042</strong></div>
+            <div style="display:flex;justify-content:space-between;"><span>Hardware Required:</span><strong style="color:var(--green);">Smartphone Only</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 3 — APP DEMO: DASHBOARD
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s3">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">📱 App Demo — Screen 1</div>
+      <div class="slide-title">Farmer Dashboard — <span class="tg">The Mission Control</span></div>
+      <div class="slide-sub">Every farmer's personalized agricultural intelligence hub — powered by real-time satellite and AI data</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:220px 1fr;gap:2rem;flex:1;align-items:start;">
+      <!-- Phone mockup -->
+      <div class="anim" style="position:relative;">
+        <div class="phone-frame shadow-green" style="max-width:210px;">
+          <img src="assets/app_dashboard_demo_1792811034420.jpg" class="phone-screen" alt="Dashboard Demo" style="cursor:pointer;" onclick="openLightbox(this.src,'Figure: Krishi-Drishti Farmer Dashboard — Carbon Wallet, NDVI Health Metrics, Satellite Farm Map')">
+        </div>
+      </div>
+      
+      <!-- Feature details -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="anim g-green" style="padding:1rem 1.2rem;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem;">
+            <span style="font-size:1.3rem;">💳</span>
+            <strong style="color:#fff;">Carbon Wallet Card — Live Credit Portfolio</strong>
+          </div>
+          <p style="font-size:.77rem;color:var(--muted);line-height:1.55;">Displays verified tCO₂e credits in real time: Available Credits, Locked Buffer Pool (15%), and INR/USD value. The Withdraw button sends payouts directly via UPI/bank through 4 aggregators.</p>
+        </div>
+        <div class="anim g" style="padding:1rem 1.2rem;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem;">
+            <span style="font-size:1.3rem;">🌿</span>
+            <strong style="color:#fff;">Soil Health Overview — NDVI, SOC, Health Score</strong>
+          </div>
+          <p style="font-size:.77rem;color:var(--muted);line-height:1.55;">Real-time farm health metrics derived from the Sentinel-2 satellite engine: NDVI Vegetation Index, Soil Organic Carbon estimate, and composite Health Score — updated every 5 days.</p>
+        </div>
+        <div class="anim g" style="padding:1rem 1.2rem;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem;">
+            <span style="font-size:1.3rem;">🗺️</span>
+            <strong style="color:#fff;">Live Farm Activity Map — Satellite Thumbnail</strong>
+          </div>
+          <p style="font-size:.77rem;color:var(--muted);line-height:1.55;">Miniature satellite thumbnail of all registered farm plots with their GPS-polygon outlines, active field count, and average soil health status.</p>
+        </div>
+        <div class="anim" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div class="g" style="padding:.7rem .8rem;border-radius:12px;text-align:center;">
+            <div style="font-size:1.2rem;margin-bottom:.2rem;">🌐</div>
+            <div style="font-size:.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;">Languages</div>
+            <div style="font-weight:800;color:var(--gold);font-size:.85rem;">8 Indian</div>
+          </div>
+          <div class="g" style="padding:.7rem .8rem;border-radius:12px;text-align:center;">
+            <div style="font-size:1.2rem;margin-bottom:.2rem;">📡</div>
+            <div style="font-size:.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;">Connectivity</div>
+            <div style="font-weight:800;color:var(--blue);font-size:.85rem;">Offline SQLite</div>
+          </div>
+          <div class="g" style="padding:.7rem .8rem;border-radius:12px;text-align:center;">
+            <div style="font-size:1.2rem;margin-bottom:.2rem;">⚡</div>
+            <div style="font-size:.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;">Platform</div>
+            <div style="font-weight:800;color:var(--green);font-size:.85rem;">Android APK</div>
+          </div>
+        </div>
+        <div class="anim g-gold" style="padding:.8rem 1rem;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.2rem;">🏆</span>
+          <div><strong style="color:var(--gold);font-size:.82rem;">SUS Usability Score: 84.0 / 100</strong><span style="color:var(--muted);font-size:.72rem;margin-left:.5rem;">Certified "Excellent" on Bangor Usability Scale by rural farmers with basic 4G smartphones.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 4 — APP DEMO: AI CROP DOCTOR
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s4">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">📱 App Demo — Screen 2</div>
+      <div class="slide-title">AI Crop Doctor — <span class="tg">Organic-First Disease Intelligence</span></div>
+      <div class="slide-sub">88.1% accurate on-device disease detection paired with Gemini 2.5 Flash for regenerative treatment advice</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:220px 1fr;gap:2rem;flex:1;align-items:start;">
+      <div class="anim">
+        <div class="phone-frame shadow-green" style="max-width:210px;">
+          <img src="assets/app_ai_doctor_demo_1792811059878.jpg" class="phone-screen" alt="AI Doctor Demo" style="cursor:pointer;" onclick="openLightbox(this.src,'Figure: AI Crop Disease Detection — MobileNetV2 / TFLite inference with Gemini 2.5 Flash organic-first treatment')">
+        </div>
+      </div>
+      
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <!-- Step 1 -->
+        <div class="anim" style="display:flex;align-items:flex-start;gap:12px;">
+          <div class="sec-dot">1</div>
+          <div class="g" style="flex:1;padding:.85rem 1rem;">
+            <strong style="color:#fff;font-size:.88rem;">📸 Photo Capture — 1-Tap Leaf Scan</strong>
+            <p style="font-size:.75rem;color:var(--muted);margin-top:.3rem;line-height:1.55;">Farmer taps the camera button, points at a symptomatic leaf. The Capacitor Camera plugin captures a native high-resolution JPEG and immediately uploads to the FastAPI backend for inference.</p>
+          </div>
+        </div>
+        <!-- Step 2 -->
+        <div class="anim" style="display:flex;align-items:flex-start;gap:12px;">
+          <div class="sec-dot">2</div>
+          <div class="g-blue" style="flex:1;padding:.85rem 1rem;">
+            <strong style="color:#fff;font-size:.88rem;">🔬 EfficientNet-B0 / TFLite Inference — 58ms</strong>
+            <p style="font-size:.75rem;color:var(--muted);margin-top:.3rem;line-height:1.55;">The 5.2 MB quantized TFLite model runs on the Render server (< 25 MB RAM). Warm inference completes in 58–202 ms, returning: Disease Class, Confidence Score (0–100%), and Health Score.</p>
+            <div style="margin-top:.5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:.65rem;">
+              <div class="badge badge-blue">88.1% Accuracy</div>
+              <div class="badge badge-green">58ms Latency</div>
+              <div class="badge badge-gold">5 Crop Classes</div>
+            </div>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="anim" style="display:flex;align-items:flex-start;gap:12px;">
+          <div class="sec-dot">3</div>
+          <div class="g" style="flex:1;padding:.85rem 1rem;">
+            <strong style="color:#fff;font-size:.88rem;">🌱 Gemini 2.5 Flash — Organic Remediation Plan</strong>
+            <p style="font-size:.75rem;color:var(--muted);margin-top:.3rem;line-height:1.55;">Diagnosis flows to Gemini 2.5 Flash API with <em>strict regenerative prompt guards</em>. The LLM generates organic-first treatments (neem oil, Trichoderma viride, crop rotation) that preserve soil microbiome and protect carbon credit eligibility under VM0042.</p>
+            <div class="g-green" style="margin-top:.5rem;padding:.5rem .7rem;border-radius:10px;font-size:.7rem;color:var(--green);">
+              ✅ <strong>Carbon Credit Status: SAFE</strong> — No synthetic agrochemicals prescribed
+            </div>
+          </div>
+        </div>
+        <!-- Key differentiator -->
+        <div class="anim g-gold" style="padding:.9rem 1.1rem;">
+          <div style="font-size:.72rem;font-weight:800;color:var(--gold);margin-bottom:.3rem;">⚡ THE KEY INNOVATION: Why This Matters for Carbon Credits</div>
+          <p style="font-size:.75rem;color:var(--muted);line-height:1.55;">Standard apps (Iftikhar et al., Hasan et al.) recommend chemical fungicides like Mancozeb and Hexaconazole. Under Verra VM0042, these destroy soil microbial communities and <strong style="color:var(--red);">DISQUALIFY</strong> the farmer from carbon credit programs. Our system is the first disease classifier in literature that enforces organic compliance.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 5 — APP DEMO: SATELLITE MAP & CARBON VAULT
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s5">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">📱 App Demo — Screens 3 & 4</div>
+      <div class="slide-title">Satellite Farm Map + <span class="tg">Carbon Credit Vault</span></div>
+      <div class="slide-sub">GPS polygon boundary mapping, NDVI heatmaps, and the cryptographic credit wallet in action</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;flex:1;align-items:start;">
+      <!-- Satellite map -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="anim" style="display:flex;gap:14px;">
+          <div class="phone-frame shadow-blue" style="max-width:160px;flex-shrink:0;">
+            <img src="assets/app_satellite_map_demo_1792811113241.jpg" class="phone-screen" alt="Satellite Map" style="cursor:pointer;" onclick="openLightbox(this.src,'Figure: Satellite Farm Map — Leaflet.js GPS polygon mapping with Sentinel-2 NDVI heatmap overlay (10m resolution)')">
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center;">
+            <div class="badge badge-blue">🛰️ Sentinel-2 10m Resolution</div>
+            <h3 style="color:#fff;font-size:.95rem;font-weight:800;">Farm Boundary GPS Mapping</h3>
+            <p style="font-size:.72rem;color:var(--muted);line-height:1.55;">Farmer draws a precise GPS polygon using Leaflet.js on a high-res satellite basemap. Shoelace algorithm computes exact acreage.</p>
+            <div style="display:flex;flex-direction:column;gap:5px;font-size:.7rem;">
+              <div class="g" style="padding:.4rem .7rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">Last Satellite Scan</span><strong style="color:var(--blue);">3 days ago</strong></div>
+              <div class="g" style="padding:.4rem .7rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">NDVI Index</span><strong style="color:var(--green);">0.72 (Healthy)</strong></div>
+              <div class="g" style="padding:.4rem .7rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">Plot Area</span><strong style="color:var(--gold);">1.1 Hectares</strong></div>
+              <div class="g" style="padding:.4rem .7rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">NDVI Anomaly</span><strong style="color:var(--green);">None Detected</strong></div>
+            </div>
+          </div>
+        </div>
+        <div class="anim g-blue" style="padding:.8rem 1rem;">
+          <strong style="color:var(--blue);font-size:.8rem;">🌍 Heatmap Legend: Vegetation Stress Mapping</strong>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:.4rem;font-size:.68rem;text-align:center;">
+            <div style="background:rgba(255,95,109,.15);padding:.3rem;border-radius:8px;border:1px solid rgba(255,95,109,.25);"><div style="color:var(--red);font-weight:800;">🔴 Red</div><div style="color:var(--muted);">Severe Stress<br>NDVI &lt; 0.2</div></div>
+            <div style="background:rgba(245,200,66,.1);padding:.3rem;border-radius:8px;border:1px solid rgba(245,200,66,.2);"><div style="color:var(--gold);font-weight:800;">🟡 Amber</div><div style="color:var(--muted);">Moderate<br>NDVI 0.2–0.5</div></div>
+            <div style="background:rgba(16,217,143,.08);padding:.3rem;border-radius:8px;border:1px solid rgba(16,217,143,.2);"><div style="color:var(--green);font-weight:800;">🟢 Green</div><div style="color:var(--muted);">Healthy<br>NDVI &gt; 0.5</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Carbon vault -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="anim" style="display:flex;gap:14px;">
+          <div class="phone-frame shadow-green" style="max-width:160px;flex-shrink:0;">
+            <img src="assets/app_carbon_vault_demo_1792811088448.jpg" class="phone-screen" alt="Carbon Vault" style="cursor:pointer;" onclick="openLightbox(this.src,'Figure: Carbon Credit Vault — VM0042 verified credits, 4-Pillar gate status, and SHA-256 HarvestToken with QR proof')">
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center;">
+            <div class="badge badge-gold">🏦 Verra VM0042 Aligned</div>
+            <h3 style="color:#fff;font-size:.95rem;font-weight:800;">Carbon Credit Wallet</h3>
+            <p style="font-size:.72rem;color:var(--muted);line-height:1.55;">Displays all verified credits with real-time INR/USD valuation. One-tap Withdraw to UPI bank via 4 carbon aggregators.</p>
+            <div style="display:flex;flex-direction:column;gap:5px;font-size:.7rem;">
+              <div class="g" style="padding:.4rem .7rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">Verified Credits</span><strong style="color:var(--gold);">4.51 tCO₂e</strong></div>
+              <div class="g" style="padding:.4rem .7rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">Wallet Balance</span><strong style="color:var(--green);">₹5,412</strong></div>
+              <div class="g" style="padding:.4rem .7rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">Token ID</span><strong style="color:var(--blue);font-family:'JetBrains Mono',monospace;font-size:.65rem;">KD-HTK-2026-00047</strong></div>
+              <div class="g" style="padding:.4rem .7rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">Compliance</span><strong style="color:var(--green);">VM0042 ✅</strong></div>
+            </div>
+          </div>
+        </div>
+        <!-- Pillar status -->
+        <div class="anim g" style="padding:.8rem 1rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem;">4-Pillar MRV Gate Status</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div class="pillar-pill">
+              <div class="pillar-num" style="background:rgba(16,217,143,.15);color:var(--green);">P1</div>
+              <div style="flex:1;"><div style="font-size:.72rem;font-weight:700;color:#fff;">GPS Boundary</div><div style="font-size:.62rem;color:var(--green);">✅ PASSED</div></div>
+            </div>
+            <div class="pillar-pill">
+              <div class="pillar-num" style="background:rgba(56,201,248,.15);color:var(--blue);">P2</div>
+              <div style="flex:1;"><div style="font-size:.72rem;font-weight:700;color:#fff;">Soil Lab Cert</div><div style="font-size:.62rem;color:var(--green);">✅ PASSED</div></div>
+            </div>
+            <div class="pillar-pill">
+              <div class="pillar-num" style="background:rgba(245,200,66,.15);color:var(--gold);">P3</div>
+              <div style="flex:1;"><div style="font-size:.72rem;font-weight:700;color:#fff;">Satellite Scan</div><div style="font-size:.62rem;color:var(--green);">✅ PASSED</div></div>
+            </div>
+            <div class="pillar-pill">
+              <div class="pillar-num" style="background:rgba(176,108,245,.15);color:var(--purple);">P4</div>
+              <div style="flex:1;"><div style="font-size:.72rem;font-weight:700;color:#fff;">Field Evidence</div><div style="font-size:.62rem;color:var(--green);">✅ PASSED</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 6 — 5-LAYER SYSTEM ARCHITECTURE
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s6">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">⚙️ System Engineering</div>
+      <div class="slide-title">Five-Layer <span class="tg">System Architecture</span></div>
+      <div class="slide-sub">Complete decoupled microservice architecture from satellite Earth Observation to farmer UPI payout</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;flex:1;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="anim g" style="padding:.9rem 1.1rem;border-left:3px solid #3b82f6;">
+          <div style="font-size:.6rem;font-weight:900;color:#3b82f6;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem;">LAYER 1 · PRESENTATION</div>
+          <strong style="color:#fff;font-size:.9rem;">Farmer Mobile App & Admin Console</strong>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:.25rem;line-height:1.5;">React 18 + TypeScript, Vite 5, Tailwind CSS, Capacitor 5.x Android APK, Leaflet.js GPS mapping, Framer Motion animations, 8 regional languages, Aurora glassmorphism, Tilt3D cards.</p>
+          <div style="margin-top:.4rem;display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="badge badge-blue" style="font-size:.6rem;">37 Screen Modules</span><span class="badge badge-blue" style="font-size:.6rem;">React.lazy Code-Split</span>
+          </div>
+        </div>
+        <div class="anim g" style="padding:.9rem 1.1rem;border-left:3px solid var(--green);">
+          <div style="font-size:.6rem;font-weight:900;color:var(--green);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem;">LAYER 2 · API GATEWAY & SECURITY</div>
+          <strong style="color:#fff;font-size:.9rem;">FastAPI 0.115 Async Gateway</strong>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:.25rem;line-height:1.5;">Python 3.10 ASGI non-blocking event loops, JWT token auth (python-jose), SQLAlchemy ORM, Celery + APScheduler background workers, asyncio.wait_for inference isolation, 28 router modules.</p>
+          <div style="margin-top:.4rem;display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="badge badge-green" style="font-size:.6rem;">28 Router Modules</span><span class="badge badge-green" style="font-size:.6rem;">OAuth2/JWT Auth</span>
+          </div>
+        </div>
+        <div class="anim g" style="padding:.9rem 1.1rem;border-left:3px solid var(--gold);">
+          <div style="font-size:.6rem;font-weight:900;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem;">LAYER 3 · CORE INTELLIGENCE ENGINES</div>
+          <strong style="color:#fff;font-size:.9rem;">Carbon Vault · ML Models · dMRV Gate</strong>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:.25rem;line-height:1.5;">Sentinel-2 GEE Pipeline, SOC Stacking Ensemble (RF+XGB+CatBoost+Ridge), VM0042 Credit Calculator, TFLite Disease Vision, Agri-RAG BM25+FAISS, Audio Bioacoustic CNN, Yield Predictor RF.</p>
+          <div style="margin-top:.4rem;display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="badge badge-gold" style="font-size:.6rem;">6 ML Models</span><span class="badge badge-gold" style="font-size:.6rem;">GEE Python API</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="anim g" style="padding:.9rem 1.1rem;border-left:3px solid var(--purple);">
+          <div style="font-size:.6rem;font-weight:900;color:var(--purple);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem;">LAYER 4 · DATA MANAGEMENT & CRYPTOGRAPHY</div>
+          <strong style="color:#fff;font-size:.9rem;">Persistence & SHA-256 HarvestToken Ledger</strong>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:.25rem;line-height:1.5;">PostgreSQL (production) / SQLite (mobile offline), SQLAlchemy ORM, SHA-256 block-chained HarvestToken ledger, daily Merkle Root Anchor aggregation, CarbonVault.sol Solidity smart contract.</p>
+          <div style="margin-top:.4rem;display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="badge badge-purple" style="font-size:.6rem;">SHA-256 Chaining</span><span class="badge badge-purple" style="font-size:.6rem;">Merkle Root Daily</span>
+          </div>
+        </div>
+        <div class="anim g" style="padding:.9rem 1.1rem;border-left:3px solid var(--blue);">
+          <div style="font-size:.6rem;font-weight:900;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem;">LAYER 5 · EXTERNAL INTEGRATIONS</div>
+          <strong style="color:#fff;font-size:.9rem;">Cloud Earth Observation, GenAI & Payments</strong>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:.25rem;line-height:1.5;">Google Earth Engine Python API (Service Account), Gemini 2.5 Flash REST API, Open-Meteo hyper-local weather, Razorpay UPI payment gateway, Krishi-Drishti GCP Beta, TrayamBhu, Grow Indigo, Boomitra aggregators.</p>
+          <div style="margin-top:.4rem;display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="badge badge-blue" style="font-size:.6rem;">Google Earth Engine</span><span class="badge badge-blue" style="font-size:.6rem;">Gemini 2.5 Flash</span>
+          </div>
+        </div>
+        <div class="anim g-green" style="padding:.9rem 1.1rem;">
+          <div class="anim" style="font-size:.65rem;font-weight:800;color:var(--green);margin-bottom:.4rem;">📊 TECH STACK OVERVIEW</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;font-size:.68rem;">
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Frontend:</span><span>React 18 + Capacitor 5</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Backend:</span><span>FastAPI + Python 3.10</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">ML:</span><span>TFLite + scikit-learn</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Database:</span><span>PostgreSQL / SQLite</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Satellite:</span><span>Sentinel-2 via GEE</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--muted);">Deploy:</span><span>Render + Vercel</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 7 — SENTINEL-2 REMOTE SENSING PIPELINE
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s7">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">🛰️ Remote Sensing Core</div>
+      <div class="slide-title">Sentinel-2 Multispectral <span class="tg">Data Pipeline</span></div>
+      <div class="slide-sub">Replacing $3,000 laboratory soil spectrography with free ESA satellite Earth Observation via Google Earth Engine</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.5rem;flex:1;align-items:center;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <!-- 4 pipeline steps -->
+        <div class="anim g" style="padding:.9rem 1.1rem;display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:9px;background:rgba(56,201,248,.15);border:1px solid rgba(56,201,248,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.75rem;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--blue);">01</div>
+          <div>
+            <strong style="color:#fff;font-size:.88rem;">Level-2A BOA Imagery Retrieval (GEE API)</strong>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:.2rem;line-height:1.5;">Sentinel-2 Level-2A Bottom-of-Atmosphere reflectance with atmospheric corrections applied. Queried via <code style="background:rgba(255,255,255,.05);padding:1px 5px;border-radius:4px;color:var(--blue);">ee</code> Python API with GEE Service Account Auth at 10m × 10m spatial resolution, 5-day global revisit frequency.</p>
+          </div>
+        </div>
+        <div class="anim g" style="padding:.9rem 1.1rem;display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:9px;background:rgba(16,217,143,.15);border:1px solid rgba(16,217,143,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.75rem;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--green);">02</div>
+          <div>
+            <strong style="color:#fff;font-size:.88rem;">QA60 Cloud Bitmasking + Atmospheric Filtering</strong>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:.2rem;line-height:1.5;">The satellite's native <code style="background:rgba(255,255,255,.05);padding:1px 5px;border-radius:4px;color:var(--green);">QA60</code> bitmask band classifies every pixel as cloud/cirrus/clear. Opaque clouds (bit 10) and cirrus (bit 11) are automatically masked — this eliminates all atmospheric scattering distortion.</p>
+          </div>
+        </div>
+        <div class="anim g" style="padding:.9rem 1.1rem;display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:9px;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.75rem;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--gold);">03</div>
+          <div>
+            <strong style="color:#fff;font-size:.88rem;">90-Day Rolling Median Composite (Vaudour 2022)</strong>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:.2rem;line-height:1.5;">Aggregates all clear-sky observations within a 90-day sliding window into a single clean composite image. Guarantees at least 1–3 unobstructed observations per plot without introducing seasonal vegetation bias.</p>
+          </div>
+        </div>
+        <div class="anim g" style="padding:.9rem 1.1rem;display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:9px;background:rgba(176,108,245,.15);border:1px solid rgba(176,108,245,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.75rem;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--purple);">04</div>
+          <div>
+            <strong style="color:#fff;font-size:.88rem;">Bare-Soil NDVI < 0.3 Threshold + 12-Band Vector</strong>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:.2rem;line-height:1.5;">Dense crop canopy masks the soil spectral signal. By filtering pixels where <strong style="color:var(--purple);">NDVI &lt; 0.3</strong> during fallow/post-harvest windows, we isolate pure bare topsoil reflectance and extract the 12-dimensional feature vector.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: spectral band info & figure preview -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="anim g-blue shadow-blue" style="padding:1rem;cursor:pointer;" onclick="openLightbox('assets/fig_satellite_pipeline.jpg','Figure 2: Sentinel-2 GEE Satellite Processing Pipeline — cloud masking, temporal compositing, bare-soil isolation, and 12-band feature extraction.')">
+          <img src="assets/fig_satellite_pipeline.jpg" style="width:100%;border-radius:10px;object-fit:contain;max-height:180px;background:#000;" alt="Satellite Pipeline">
+          <div style="text-align:center;font-size:.6rem;color:var(--muted);margin-top:.4rem;font-family:'JetBrains Mono',monospace;">🔍 Click to zoom high-res figure</div>
+        </div>
+        <div class="anim g" style="padding:.9rem 1rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem;">12-Dimensional Feature Vector</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;font-size:.68rem;">
+            <div style="padding:.35rem .6rem;background:rgba(16,217,143,.07);border:1px solid rgba(16,217,143,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--green);">NDVI</div>
+            <div style="padding:.35rem .6rem;background:rgba(16,217,143,.07);border:1px solid rgba(16,217,143,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--green);">EVI</div>
+            <div style="padding:.35rem .6rem;background:rgba(16,217,143,.07);border:1px solid rgba(16,217,143,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--green);">BSI</div>
+            <div style="padding:.35rem .6rem;background:rgba(16,217,143,.07);border:1px solid rgba(16,217,143,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--green);">MSAVI</div>
+            <div style="padding:.35rem .6rem;background:rgba(56,201,248,.07);border:1px solid rgba(56,201,248,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--blue);">B2 Blue</div>
+            <div style="padding:.35rem .6rem;background:rgba(56,201,248,.07);border:1px solid rgba(56,201,248,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--blue);">B4 Red</div>
+            <div style="padding:.35rem .6rem;background:rgba(56,201,248,.07);border:1px solid rgba(56,201,248,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--blue);">B5/B6/B7 RedEdge</div>
+            <div style="padding:.35rem .6rem;background:rgba(56,201,248,.07);border:1px solid rgba(56,201,248,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--blue);">B8 NIR</div>
+            <div style="padding:.35rem .6rem;background:rgba(245,200,66,.07);border:1px solid rgba(245,200,66,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;color:var(--gold);grid-column:1/-1;">B11/B12 SWIR (Key SOC bands)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 8 — SOC STACKING ENSEMBLE ML MODEL
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s8">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">🤖 ML Core Model</div>
+      <div class="slide-title">Stacking Ensemble <span class="tg">SOC Prediction</span> — R² = 0.89</div>
+      <div class="slide-sub">Achieving R² = 0.89, RMSE = 1.52 g/kg across 50 geo-referenced Indian farmland plots — within Verra VM0042 tolerance</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1.1fr;gap:1.5rem;flex:1;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <!-- Architecture flow -->
+        <div class="anim g" style="padding:1rem 1.2rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.7rem;">Three-Layer Stacking Architecture</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+              <div style="padding:.6rem;background:rgba(16,217,143,.07);border:1px solid rgba(16,217,143,.2);border-radius:10px;text-align:center;">
+                <div style="font-size:.65rem;font-weight:800;color:var(--green);">Random Forest</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#fff;font-weight:700;margin:.2rem 0;">0.82</div>
+                <div style="font-size:.6rem;color:var(--muted);">n_est=200, d=15</div>
+              </div>
+              <div style="padding:.6rem;background:rgba(56,201,248,.07);border:1px solid rgba(56,201,248,.2);border-radius:10px;text-align:center;">
+                <div style="font-size:.65rem;font-weight:800;color:var(--blue);">XGBoost</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#fff;font-weight:700;margin:.2rem 0;">0.85</div>
+                <div style="font-size:.6rem;color:var(--muted);">rounds=300, lr=0.05</div>
+              </div>
+              <div style="padding:.6rem;background:rgba(176,108,245,.07);border:1px solid rgba(176,108,245,.2);border-radius:10px;text-align:center;">
+                <div style="font-size:.65rem;font-weight:800;color:var(--purple);">CatBoost</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#fff;font-weight:700;margin:.2rem 0;">0.83</div>
+                <div style="font-size:.6rem;color:var(--muted);">symmetric, depth=6</div>
+              </div>
+            </div>
+            <div style="text-align:center;color:var(--muted);font-size:.8rem;padding:.3rem;">⬇ 5-Fold Out-of-Fold Predictions ⬇</div>
+            <div style="padding:.75rem;background:rgba(245,200,66,.08);border:2px solid rgba(245,200,66,.3);border-radius:12px;text-align:center;">
+              <div style="font-size:.65rem;font-weight:800;color:var(--gold);">Ridge Regression Meta-Learner (L2 Regularized)</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;color:var(--gold);font-weight:900;margin:.25rem 0;">R² = 0.89 · RMSE = 1.52</div>
+              <div style="font-size:.6rem;color:var(--muted);">Ensemble Winner · Best-in-class across all base learners</div>
+            </div>
+          </div>
+        </div>
+        <div class="anim g-green" style="padding:.85rem 1rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--green);margin-bottom:.3rem;">🔑 KEY SPECTRAL INSIGHT: Feature Importance</div>
+          <div style="display:flex;flex-direction:column;gap:.35rem;font-size:.72rem;">
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:.2rem;"><span style="color:var(--gold);">BSI (Bare Soil Index)</span><span style="font-weight:700;">24.3% importance</span></div>
+              <div class="pbar"><div class="pbar-fill" style="width:72%;background:var(--gold);"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:.2rem;"><span style="color:var(--blue);">SWIR Band B11</span><span style="font-weight:700;">19.8% importance</span></div>
+              <div class="pbar"><div class="pbar-fill" style="width:60%;background:var(--blue);"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:.2rem;"><span style="color:var(--purple);">Red-Edge Band B5</span><span style="font-weight:700;">15.1% importance</span></div>
+              <div class="pbar"><div class="pbar-fill" style="width:46%;background:var(--purple);"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="anim g shadow-green" style="padding:.8rem;cursor:pointer;" onclick="openLightbox('assets/fig_training.jpg','Figure 3: SOC Model Training Curves — 5-fold CV metric progression comparing RF, XGBoost, CatBoost, and the Stacking Ensemble.')">
+          <img src="assets/fig_training.jpg" style="width:100%;border-radius:10px;object-fit:contain;max-height:180px;background:#000;" alt="Training Curves">
+          <div style="text-align:center;font-size:.6rem;color:var(--muted);margin-top:.4rem;font-family:'JetBrains Mono',monospace;">🔍 Click to zoom — Training curve comparison</div>
+        </div>
+        <!-- Results table -->
+        <div class="anim g" style="overflow:hidden;border-radius:12px;">
+          <div style="background:rgba(16,217,143,.07);padding:.55rem .8rem;font-size:.6rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.05);">Performance Comparison Table (50 Indian Farm Plots)</div>
+          <table class="ptable">
+            <tr><th>Model</th><th>R² Score</th><th>RMSE (g/kg)</th><th>MAE (g/kg)</th></tr>
+            <tr><td>Random Forest</td><td>0.82</td><td>1.94</td><td>1.51</td></tr>
+            <tr><td>XGBoost</td><td>0.85</td><td>1.79</td><td>1.38</td></tr>
+            <tr><td>CatBoost</td><td>0.83</td><td>1.88</td><td>1.44</td></tr>
+            <tr class="highlight"><td><strong>Stacking Ensemble ✅</strong></td><td><strong style="color:var(--green);">0.89</strong></td><td><strong style="color:var(--green);">1.52</strong></td><td><strong style="color:var(--green);">1.19</strong></td></tr>
+          </table>
+        </div>
+        <div class="anim g-gold" style="padding:.7rem 1rem;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.2rem;">✅</span>
+          <div style="font-size:.72rem;"><strong style="color:var(--gold);">Verra VM0042 Compliance:</strong> <span style="color:var(--muted);">Our RMSE = 1.52 g/kg is well within the &le;3.0 g/kg digital evidence tolerance required by the voluntary carbon market standard.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 9 — FOUR-PILLAR dMRV + HARVEST TOKEN
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s9">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">🔐 Regulatory Compliance</div>
+      <div class="slide-title">Four-Pillar dMRV + <span class="tg">HarvestToken Ledger</span></div>
+      <div class="slide-sub">Verra VM0042 · India CCTS/BEE · Gold Standard LUF — from farm enrollment to verified crypto-provenance</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;flex:1;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="anim g" style="padding:.9rem 1.1rem;cursor:pointer;" onclick="openLightbox('assets/fig_four_pillar_mrv.jpg','Figure 4: Four-Pillar MRV Evidence Architecture — each pillar must independently pass before HarvestToken minting.')">
+          <img src="assets/fig_four_pillar_mrv.jpg" style="width:100%;border-radius:10px;object-fit:contain;max-height:160px;background:#000;" alt="Four Pillar MRV">
+          <div style="text-align:center;font-size:.6rem;color:var(--muted);margin-top:.3rem;font-family:'JetBrains Mono',monospace;">🔍 Click to zoom — Four Pillar Architecture</div>
+        </div>
+        <!-- Pillar pills -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="anim pillar-pill g">
+            <div class="pillar-num" style="background:rgba(16,217,143,.15);color:var(--green);font-size:.7rem;">P1</div>
+            <div style="flex:1;"><div style="font-size:.75rem;font-weight:700;color:#fff;">GPS Boundary & Farmer Activity Log</div><div style="font-size:.62rem;color:var(--muted);">Shoelace polygon area · Farmer KYC · Practice enrollment · VM0042 §5</div></div>
+            <div class="badge badge-green" style="font-size:.6rem;">100% (12/12)</div>
+          </div>
+          <div class="anim pillar-pill g">
+            <div class="pillar-num" style="background:rgba(56,201,248,.15);color:var(--blue);font-size:.7rem;">P2</div>
+            <div style="flex:1;"><div style="font-size:.75rem;font-weight:700;color:#fff;">Accredited Soil Laboratory Certificate</div><div style="font-size:.62rem;color:var(--muted);">≥30cm depth · Lab accreditation ID · IPCC Tier-2 bulk density</div></div>
+            <div class="badge badge-blue" style="font-size:.6rem;">83.3% (10/12)</div>
+          </div>
+          <div class="anim pillar-pill g">
+            <div class="pillar-num" style="background:rgba(245,200,66,.15);color:var(--gold);font-size:.7rem;">P3</div>
+            <div style="flex:1;"><div style="font-size:.75rem;font-weight:700;color:#fff;">Sentinel-2 GEE Temporal Scan (≤180 days)</div><div style="font-size:.62rem;color:var(--muted);">SOC inversion · 10% leakage deduction · 15% permanence buffer pool</div></div>
+            <div class="badge badge-gold" style="font-size:.6rem;">100% (12/12)</div>
+          </div>
+          <div class="anim pillar-pill g">
+            <div class="pillar-num" style="background:rgba(176,108,245,.15);color:var(--purple);font-size:.7rem;">P4</div>
+            <div style="flex:1;"><div style="font-size:.75rem;font-weight:700;color:#fff;">Geotagged Field Evidence + Admin Audit</div><div style="font-size:.62rem;color:var(--muted);">Time-stamped GPS photo · Verification Report KD-VR-… · Admin sign-off</div></div>
+            <div class="badge badge-purple" style="font-size:.6rem;">91.7% (11/12)</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="anim g" style="padding:.9rem 1.1rem;cursor:pointer;" onclick="openLightbox('assets/fig_harvest_token.jpg','Figure 6: SHA-256 HarvestToken Hash Chaining and Merkle Root Anchor architecture.')">
+          <img src="assets/fig_harvest_token.jpg" style="width:100%;border-radius:10px;object-fit:contain;max-height:140px;background:#000;" alt="HarvestToken">
+          <div style="text-align:center;font-size:.6rem;color:var(--muted);margin-top:.3rem;font-family:'JetBrains Mono',monospace;">🔍 Click to zoom — SHA-256 Ledger Architecture</div>
+        </div>
+        <!-- Hash chaining formula -->
+        <div class="anim g-green" style="padding:1rem 1.1rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--green);margin-bottom:.5rem;">🔗 SHA-256 Block Chaining Formula</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--green);background:rgba(0,0,0,.4);padding:.7rem;border-radius:10px;line-height:1.7;word-break:break-all;">
+            H<sub>n</sub> = SHA256( crop_type<sub>n</sub> ‖ yield<sub>n</sub> ‖ GPS<sub>n</sub> ‖ NDVI<sub>n</sub> ‖ CO2eq<sub>n</sub> ‖ H<sub>n-1</sub> )
+          </div>
+          <p style="font-size:.7rem;color:var(--muted);margin-top:.5rem;line-height:1.5;">Altering ANY field in any previous block breaks the entire downstream hash chain — making retroactive fraud <strong style="color:var(--red);">computationally detectable</strong> without a live blockchain node.</p>
+        </div>
+        <!-- Live hash demo -->
+        <div class="anim g" style="padding:.9rem 1.1rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;">🔴 Live Tamper Detection Demo (Type to Test)</div>
+          <input id="hashInput" type="text" value="KD-HTK-2026-00047|Wheat|3.49tCO2e|GPS:13.08,77.58" oninput="liveHash()" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.45rem .7rem;color:#fff;font-family:'JetBrains Mono',monospace;font-size:.63rem;outline:none;margin-bottom:.4rem;">
+          <div id="hashBadge" class="badge badge-green" style="font-size:.6rem;margin-bottom:.4rem;">⚡ CHAIN INTACT · ORIGINAL PAYLOAD</div>
+          <div id="hashOutput" style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--green);background:rgba(0,0,0,.4);padding:.5rem .7rem;border-radius:8px;word-break:break-all;line-height:1.5;"></div>
+        </div>
+        <div class="anim g-gold" style="padding:.65rem 1rem;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.7rem;color:var(--muted);">Field Pilot: SHA-256 Hash Integrity</span>
+          <strong style="color:var(--gold);font-size:.9rem;font-family:'JetBrains Mono',monospace;">0 / 47 Mismatches</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 10 — RESULTS & VALIDATION
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s10">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">📊 Experimental Results</div>
+      <div class="slide-title">Validation, Benchmarks & <span class="tg">Comparative Analysis</span></div>
+      <div class="slide-sub">82 automated tests · 12-farm pilot · ML inference profiling · SUS usability · Economic impact</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;flex:1;">
+      <!-- Left: MRV table -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="g" style="overflow:hidden;border-radius:12px;">
+          <div style="background:rgba(16,217,143,.07);padding:.55rem .8rem;font-size:.6rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.05);">Four-Pillar Pilot Results (12 Indian Farms · 6 Districts)</div>
+          <table class="ptable">
+            <tr><th>Metric</th><th>Result</th><th>Standard</th></tr>
+            <tr><td>Additionality Accuracy</td><td style="color:var(--green);font-weight:700;">91.7% (11/12)</td><td style="color:var(--muted);font-size:.62rem;">Verra VM0042</td></tr>
+            <tr><td>Pillar 1 GPS Pass Rate</td><td style="color:var(--green);font-weight:700;">100% (12/12)</td><td style="color:var(--muted);font-size:.62rem;">VM0042 §5</td></tr>
+            <tr><td>Pillar 2 Soil Certificate</td><td style="color:var(--gold);font-weight:700;">83.3% (10/12)</td><td style="color:var(--muted);font-size:.62rem;">IPCC M&R</td></tr>
+            <tr><td>Pillar 3 Satellite Scan</td><td style="color:var(--green);font-weight:700;">100% (12/12)</td><td style="color:var(--muted);font-size:.62rem;">Sentinel-2</td></tr>
+            <tr><td>Pillar 4 Evidence & Audit</td><td style="color:var(--green);font-weight:700;">91.7% (11/12)</td><td style="color:var(--muted);font-size:.62rem;">CCTS/VVB</td></tr>
+            <tr class="highlight"><td><strong>End-to-End Latency</strong></td><td style="color:var(--green);font-weight:900;">&lt; 48 Hours</td><td style="color:var(--red);font-weight:700;">vs. 6–18 Months</td></tr>
+            <tr class="highlight"><td><strong>SHA-256 Mismatches</strong></td><td style="color:var(--green);font-weight:900;">0 / 47 Tokens</td><td style="color:var(--muted);font-size:.62rem;">100% Integrity</td></tr>
+          </table>
+        </div>
+        <!-- SUS Score visual -->
+        <div class="g-green" style="padding:.85rem 1rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+            <div style="font-size:.65rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.08em;">System Usability Score (Bangor SUS)</div>
+            <div class="badge badge-green">Above Average</div>
+          </div>
+          <div style="text-align:center;padding:.5rem 0;">
+            <div style="font-size:2.8rem;font-weight:900;color:#fff;font-family:'JetBrains Mono',monospace;">84.0<span style="font-size:1.2rem;color:var(--muted);">/100</span></div>
+            <div style="font-size:.7rem;color:var(--green);font-weight:700;">✅ Certified Excellent · Benchmark &gt; 68.0</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:.6rem;margin-top:.4rem;text-align:center;">
+            <div><div style="font-weight:700;color:#fff;">75.0</div><div style="color:var(--muted);">Farmer 1</div></div>
+            <div><div style="font-weight:700;color:var(--green);">100.0</div><div style="color:var(--muted);">Farmer 2</div></div>
+            <div><div style="font-weight:700;color:#fff;">82.5</div><div style="color:var(--muted);">Farmer 3</div></div>
+            <div><div style="font-weight:700;color:#fff;">70.0</div><div style="color:var(--muted);">Farmer 4</div></div>
+            <div><div style="font-weight:700;color:var(--green);">92.5</div><div style="color:var(--muted);">Farmer 5</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Payout table + ML latency -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="g" style="overflow:hidden;border-radius:12px;">
+          <div style="background:rgba(245,200,66,.07);padding:.55rem .8rem;font-size:.6rem;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.05);">Farmer Carbon Payout Model (₹1,200/tCO₂e · 80% Share)</div>
+          <table class="ptable">
+            <tr><th>Methodology</th><th>ha</th><th>Gross tCO₂e</th><th>Net Credits</th><th style="color:var(--gold);">INR Payout</th></tr>
+            <tr><td>No-Till Farming</td><td>1.1</td><td>4.10</td><td>3.49</td><td style="color:var(--gold);font-weight:700;">₹3,349</td></tr>
+            <tr><td>Cover Cropping</td><td>1.1</td><td>5.30</td><td>4.51</td><td style="color:var(--gold);font-weight:700;">₹5,412</td></tr>
+            <tr><td>Agroforestry</td><td>2.0</td><td>8.40</td><td>7.14</td><td style="color:var(--gold);font-weight:700;">₹8,568</td></tr>
+            <tr><td>Bio-Composting</td><td>0.8</td><td>2.80</td><td>2.38</td><td style="color:var(--gold);font-weight:700;">₹2,856</td></tr>
+            <tr class="highlight"><td><strong>Average (1.1 ha)</strong></td><td><strong>1.1</strong></td><td><strong>4.41</strong></td><td><strong>3.75</strong></td><td style="color:var(--green);font-weight:900;font-size:.9rem;">₹4,500</td></tr>
+          </table>
+        </div>
+        <!-- Payout calculator -->
+        <div class="g" style="padding:.85rem 1rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem;">🧮 Live Income Simulator</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.4rem;">
+            <span style="font-size:.7rem;color:var(--muted);white-space:nowrap;">Farm Size:</span>
+            <input type="range" id="areaSlider" min="0.5" max="5" step="0.1" value="1.5" oninput="calcPayout()" style="flex:1;accent-color:var(--green);">
+            <span id="areaLabel" style="font-size:.72rem;color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace;white-space:nowrap;">1.5 ha</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.6rem;">
+            <span style="font-size:.7rem;color:var(--muted);white-space:nowrap;">Practice:</span>
+            <select id="practSel" onchange="calcPayout()" style="flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;padding:.25rem .5rem;font-size:.7rem;outline:none;">
+              <option value="4.8">Cover Cropping (4.8 tCO₂e/ha)</option>
+              <option value="3.7" selected>No-Till Farming (3.7 tCO₂e/ha)</option>
+              <option value="4.2">Agroforestry (4.2 tCO₂e/ha)</option>
+              <option value="3.5">Composting (3.5 tCO₂e/ha)</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="g-blue" style="padding:.7rem;text-align:center;border-radius:12px;">
+              <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:.2rem;">Net Credits</div>
+              <div id="credOut" style="font-size:1.5rem;font-weight:900;color:var(--blue);font-family:'JetBrains Mono',monospace;">4.72</div>
+              <div style="font-size:.6rem;color:var(--muted);">tCO₂e (after 15% buffer)</div>
+            </div>
+            <div class="g-gold" style="padding:.7rem;text-align:center;border-radius:12px;">
+              <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:.2rem;">Farmer Payout</div>
+              <div id="payOut" style="font-size:1.5rem;font-weight:900;color:var(--gold);font-family:'JetBrains Mono',monospace;">₹5,661</div>
+              <div style="font-size:.6rem;color:var(--muted);">80% share · ~$68 USD</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 11 — COMPARATIVE ANALYSIS vs LITERATURE
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s11">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">📚 Literature Positioning</div>
+      <div class="slide-title">Comparative Analysis vs. <span class="tg">State of the Art</span></div>
+      <div class="slide-sub">How Krishi-Drishti resolves all four critical gaps that existing systems fail to address</div>
+    </div>
+    
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+      <div class="anim g" style="overflow:hidden;border-radius:12px;flex:1;">
+        <table class="ptable" style="width:100%;height:100%;">
+          <tr>
+            <th>System & Reference</th>
+            <th>Technology</th>
+            <th>Best Accuracy</th>
+            <th style="color:var(--red);">Critical Gap</th>
+            <th style="color:var(--green);">Krishi-Drishti Solution</th>
+          </tr>
+          <tr>
+            <td><strong style="color:#fff;">Iftikhar et al. (2024)</strong><br><span style="color:var(--muted);font-size:.6rem;">Mobile Crop Disease CNN</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:.65rem;">Enhanced CNN (3 crops)</td>
+            <td style="color:var(--green);font-weight:700;">98.1%</td>
+            <td style="color:var(--red);font-size:.72rem;">Prescribes synthetic chemicals. No carbon linkage.</td>
+            <td style="color:var(--green);font-size:.72rem;">Routes to Gemini Flash for organic-first carbon-safe advice.</td>
+          </tr>
+          <tr>
+            <td><strong style="color:#fff;">Hasan et al. (2024)</strong><br><span style="color:var(--muted);font-size:.6rem;">Lightweight CNN, Rice</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:.65rem;">Lightweight CNN (Rice only)</td>
+            <td style="color:var(--green);font-weight:700;">97.9%</td>
+            <td style="color:var(--red);font-size:.72rem;">Single crop, no SOC, no credit pipeline.</td>
+            <td style="color:var(--green);font-size:.72rem;">Multi-crop + integrated dMRV carbon engine.</td>
+          </tr>
+          <tr>
+            <td><strong style="color:#fff;">Saha et al. (2024)</strong><br><span style="color:var(--muted);font-size:.6rem;">IoT + RF Precision Agri</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:.65rem;">Multi-sensor IoT + RF</td>
+            <td style="color:var(--green);font-weight:700;">97.3%</td>
+            <td style="color:var(--red);font-size:.72rem;">Hardware costs $200–$500. No carbon MRV.</td>
+            <td style="color:var(--green);font-size:.72rem;">Zero field hardware. Sentinel-2 replaces all probes.</td>
+          </tr>
+          <tr>
+            <td><strong style="color:#fff;">Iswarya & Tamizhazhagan (2024)</strong><br><span style="color:var(--muted);font-size:.6rem;">QRF + Sentinel-2 SOC</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:.65rem;">Quantile Random Forest</td>
+            <td style="color:var(--gold);font-weight:700;">High R² (Regional)</td>
+            <td style="color:var(--red);font-size:.72rem;">Academic SOC map only. No credit issuance.</td>
+            <td style="color:var(--green);font-size:.72rem;">Automated VM0042 credit pipeline + wallet payout.</td>
+          </tr>
+          <tr>
+            <td><strong style="color:#fff;">Kershenbaum et al. (2024)</strong><br><span style="color:var(--muted);font-size:.6rem;">Bioacoustic CNN Research</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:.65rem;">Audio Spectrogram CNN</td>
+            <td style="color:var(--gold);font-weight:700;">Bioacoustic Index</td>
+            <td style="color:var(--red);font-size:.72rem;">Isolated research tool. No farm workflow integration.</td>
+            <td style="color:var(--green);font-size:.72rem;">Embedded as biodiversity co-benefit evidence in dMRV.</td>
+          </tr>
+          <tr style="background:rgba(16,217,143,.06);border-top:2px solid rgba(16,217,143,.3);">
+            <td><strong style="color:var(--green);font-size:.85rem;">Krishi-Drishti (Ours)</strong><br><span style="color:var(--muted);font-size:.6rem;">End-to-End Platform</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--green);">4-Pillar dMRV + Sentinel-2 + SHA-256 + VM0042</td>
+            <td style="color:var(--green);font-weight:900;">R²=0.89 · 88.1%</td>
+            <td style="color:var(--green);font-weight:700;font-size:.72rem;" colspan="2">✅ Full End-to-End · Hardware-Free · CBAM-Compliant · Multi-Crop · UPI Payouts · SUS 84/100</td>
+          </tr>
+        </table>
+      </div>
+      <!-- Gap summary -->
+      <div class="anim" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <div class="g-green" style="padding:.6rem .8rem;border-radius:12px;text-align:center;"><div style="font-size:.6rem;font-weight:800;color:var(--green);text-transform:uppercase;margin-bottom:.2rem;">Gap 1 Solved</div><div style="font-size:.7rem;color:#fff;font-weight:700;">Organic Diagnosis & Carbon Compliance</div></div>
+        <div class="g-blue" style="padding:.6rem .8rem;border-radius:12px;text-align:center;"><div style="font-size:.6rem;font-weight:800;color:var(--blue);text-transform:uppercase;margin-bottom:.2rem;">Gap 2 Solved</div><div style="font-size:.7rem;color:#fff;font-weight:700;">Zero Hardware Field Sensing</div></div>
+        <div class="g-gold" style="padding:.6rem .8rem;border-radius:12px;text-align:center;"><div style="font-size:.6rem;font-weight:800;color:var(--gold);text-transform:uppercase;margin-bottom:.2rem;">Gap 3 Solved</div><div style="font-size:.7rem;color:#fff;font-weight:700;">VM0042 End-to-End Credit Pipeline</div></div>
+        <div class="g-purple" style="padding:.6rem .8rem;border-radius:12px;text-align:center;"><div style="font-size:.6rem;font-weight:800;color:var(--purple);text-transform:uppercase;margin-bottom:.2rem;">Gap 4 Solved</div><div style="font-size:.7rem;color:#fff;font-weight:700;">Bioacoustic Integrated to Farm</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 12 — CONCLUSION & VIVA DEFENSE
+═══════════════════════════════════════════════════════════ -->
+<section class="slide" id="s12">
+  <div style="height:100%;display:flex;flex-direction:column;max-width:1300px;margin:0 auto;width:100%;">
+    <div class="slide-header anim">
+      <div class="slide-tag">🎓 Conclusion & Viva Defense</div>
+      <div class="slide-title">Contributions, Impact & <span class="tg">Open for Questions</span></div>
+      <div class="slide-sub">Krishi-Drishti demonstrates that satellite + ML + cryptography can democratize the $2B voluntary carbon market</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;flex:1;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <!-- Final contributions -->
+        <div class="anim g-green shadow-green" style="padding:1.1rem 1.2rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem;">🏆 Primary Academic Contributions</div>
+          <div style="display:flex;flex-direction:column;gap:.45rem;font-size:.75rem;">
+            <div style="display:flex;align-items:flex-start;gap:8px;"><span style="color:var(--green);flex-shrink:0;">✅</span><span><strong>First end-to-end smallholder dMRV platform</strong> eliminating the $3,000 per-farm verification cost barrier for 126M Indian marginal farmers.</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px;"><span style="color:var(--green);flex-shrink:0;">✅</span><span><strong>Stacking Ensemble SOC model</strong> achieving R²=0.89, RMSE=1.52 g/kg from free Sentinel-2 GEE imagery — no lab required.</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px;"><span style="color:var(--green);flex-shrink:0;">✅</span><span><strong>SHA-256 HarvestToken cryptographic ledger</strong> providing CBAM-compliant carbon provenance with zero on-chain gas overhead.</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px;"><span style="color:var(--green);flex-shrink:0;">✅</span><span><strong>Organic-first Edge AI</strong> ensuring disease diagnosis preserves carbon credit eligibility under Verra VM0042.</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px;"><span style="color:var(--green);flex-shrink:0;">✅</span><span><strong>SUS 84.0/100 Excellent</strong> usability across rural smallholders with basic 4G smartphones.</span></div>
+          </div>
+        </div>
+        <!-- Publication info -->
+        <div class="anim g" style="padding:.85rem 1rem;display:flex;flex-direction:column;gap:.4rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">📄 Research Publication</div>
+          <div style="font-size:.75rem;color:#fff;">Submitted to: <strong>ITEGAM-JETIA Journal</strong> (Engineering & Technology for Industrial Applications) & <strong>SPIE Proceedings 2026</strong></div>
+          <div style="font-size:.68rem;color:var(--muted);">DOI: <code style="font-family:'JetBrains Mono',monospace;font-size:.63rem;color:var(--blue);">https://doi.org/10.5935/jetia.XXXXX.XXX</code></div>
+        </div>
+        <!-- Team -->
+        <div class="anim g" style="padding:.85rem 1rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">🎓 Team & Department</div>
+          <div style="font-size:.78rem;color:#fff;font-weight:700;"><span style="color:var(--green);">Bhagesh Biradar</span> · Manjunath Khot · Jayanth R · Pruthviraja S</div>
+          <div style="font-size:.7rem;color:var(--muted);margin-top:.2rem;">Guided by <strong>Dr. Rama Krishna K</strong> · <strong>Dr. Sheethal Aji Mani</strong></div>
+          <div style="font-size:.65rem;color:var(--muted);">Dept. CSE (Data Science) · Impact College of Engineering · VTU · 2026</div>
+        </div>
+      </div>
+
+      <!-- Viva Q&A -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="g-blue" style="padding:.85rem 1rem;">
+          <div style="font-size:.65rem;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;">🛡️ Viva Defense — Top 4 Examiner Questions</div>
+          <div style="display:flex;flex-direction:column;gap:.7rem;font-size:.72rem;">
+            <div style="background:rgba(0,0,0,.3);padding:.6rem .8rem;border-radius:10px;border-left:3px solid var(--green);">
+              <strong style="color:var(--green);display:block;margin-bottom:.2rem;">Q1: How can satellite replace physical soil lab testing?</strong>
+              <span style="color:var(--muted);line-height:1.5;">A: BSI, SWIR Band B11, and Red-Edge B5 capture organic matter molecular vibrational absorption. Our Stacking Ensemble with 50 ground-truth calibration points achieves RMSE=1.52 g/kg, within Verra's ≤3.0 g/kg dMRV tolerance threshold.</span>
+            </div>
+            <div style="background:rgba(0,0,0,.3);padding:.6rem .8rem;border-radius:10px;border-left:3px solid var(--blue);">
+              <strong style="color:var(--blue);display:block;margin-bottom:.2rem;">Q2: How do you prevent greenwashing and false claims?</strong>
+              <span style="color:var(--muted);line-height:1.5;">A: Additionality Engine checks ICAR/NABARD district-level adoption data. If &gt;50% already use the practice, the project is auto-rejected. 3 years of pre-enrollment historical satellite NDVI baseline also locks the baseline.</span>
+            </div>
+            <div style="background:rgba(0,0,0,.3);padding:.6rem .8rem;border-radius:10px;border-left:3px solid var(--gold);">
+              <strong style="color:var(--gold);display:block;margin-bottom:.2rem;">Q3: Why hash chaining instead of full on-chain Ethereum?</strong>
+              <span style="color:var(--muted);line-height:1.5;">A: Ethereum gas fees of $0.50–$5.00 per transaction would consume 5–15% of smallholder earnings. SHA-256 local chaining provides identical tamper-evidence at zero cost. Daily Merkle roots can optionally anchor to Polygon Layer-2.</span>
+            </div>
+            <div style="background:rgba(0,0,0,.3);padding:.6rem .8rem;border-radius:10px;border-left:3px solid var(--purple);">
+              <strong style="color:var(--purple);display:block;margin-bottom:.2rem;">Q4: Why 88.1% when CNN papers show 98%?</strong>
+              <span style="color:var(--muted);line-height:1.5;">A: Those achieve 98% on single-crop controlled-light datasets. Our model covers multi-crop diverse field lighting AND is the FIRST in literature connected to a carbon credit engine with organic remediation compliance checks.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- end #deck -->
+
+<!-- ═══════════════════════════════════════════════════════
+     NAV TOOLBAR
+═══════════════════════════════════════════════════════════ -->
+<nav id="nav">
+  <div class="counter"><span id="cn">01</span><span style="color:rgba(255,255,255,.2);margin:0 2px;">/</span><span style="color:var(--muted);">12</span></div>
+  <div class="divider"></div>
+  <button onclick="prev()" title="← Previous">‹ Prev</button>
+  <button onclick="next()" title="→ Next">Next ›</button>
+  <div class="divider"></div>
+  <button onclick="toggleNotes()" id="notesBtn" title="Speaker Notes (N)">📝 Notes</button>
+  <button onclick="toggleOverview()" title="Slide Overview (O)">⊞ Overview</button>
+  <button onclick="toggleLaser()" id="laserBtn" title="Laser Pointer (L)">🔴 Laser</button>
+  <button onclick="window.print()" title="Print/Export PDF (P)">🖨️ Print</button>
+  <button onclick="toggleFS()" title="Fullscreen (F)">⛶ Full</button>
+  <div class="divider"></div>
+  <div class="timer" id="timer">00:00</div>
+</nav>
+
+<!-- Speaker Notes Panel -->
+<div id="notes-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:.75rem;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:.75rem;">
+    <h3>🎙️ Speaker Notes</h3>
+    <button onclick="toggleNotes()" style="background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:4px 10px;color:var(--muted);cursor:pointer;font-size:.75rem;">✕ Close</button>
+  </div>
+  <div style="font-size:.65rem;color:var(--green);font-family:'JetBrains Mono',monospace;margin-bottom:.75rem;" id="notesSlideMeta">Slide 01 of 12</div>
+  <div id="notesBody" style="flex:1;overflow-y:auto;font-size:.75rem;line-height:1.6;color:var(--muted);"></div>
+  <div style="margin-top:auto;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.06);font-size:.65rem;color:var(--muted);font-family:'JetBrains Mono',monospace;display:flex;justify-content:space-between;">
+    <span>⏱ ~75 sec/slide avg</span><span style="color:var(--green);">Press 'N' to close</span>
+  </div>
+</div>
+
+<!-- Overview Modal -->
+<div id="overview">
+  <div style="max-width:1200px;margin:0 auto;width:100%;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:1.5rem;">
+      <h2 style="font-size:1.1rem;font-weight:800;color:#fff;">⊞ Presentation Index — 12 Slides</h2>
+      <button onclick="toggleOverview()" style="background:rgba(255,255,255,.07);border:none;border-radius:10px;padding:6px 14px;color:var(--muted);cursor:pointer;font-size:.8rem;">✕ Close</button>
+    </div>
+    <div id="overview-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+  <div style="display:flex;flex-direction:column;align-items:center;" onclick="event.stopPropagation()">
+    <button onclick="closeLightbox()" style="align-self:flex-end;background:rgba(255,255,255,.1);border:none;border-radius:10px;padding:6px 14px;color:var(--muted);cursor:pointer;margin-bottom:.75rem;font-size:.8rem;">✕ Close (Esc)</button>
+    <img id="lbImg" src="" alt="Figure" style="max-width:90vw;max-height:78vh;border-radius:12px;border:1px solid rgba(255,255,255,.1);object-fit:contain;">
+    <div id="lbCap" style="font-size:.7rem;color:var(--muted);font-family:'JetBrains Mono',monospace;text-align:center;margin-top:.75rem;max-width:700px;line-height:1.6;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     APPLICATION SCRIPTS
+═══════════════════════════════════════════════════════════ -->
+<script>
+// ── State ──────────────────────────────────────────────
+let cur = 1, total = 12;
+let notesOpen = false, laserOn = false;
+let secs = 0, timerInterval;
+let audioCtx = null;
+
+// ── Slide metadata ──────────────────────────────────────
+const meta = [
+  null,
+  {tag:"Title Slide",notes:"Greet the committee. Bhagesh Biradar presenting Krishi-Drishti — Satellite-Driven Carbon Credit Verification. Mention the research context: 86% of Indian farmers are excluded from the $2B carbon market. Present team and guide names. Set a confident, academic tone."},
+  {tag:"Problem Statement",notes:"Walk through all three problem cards. Emphasize the 'paradox': smallholders do the work of sequestering carbon but can't afford the verification. Use the visual impact numbers: $3,000 per farm vs near-zero with Krishi-Drishti. Key question from examiner: Why is lab testing so expensive? Answer: Soil core extraction + chemical Walkley-Black oxidation + certified auditor fees."},
+  {tag:"App Demo: Dashboard",notes:"'This is what our farmer sees on their Android phone.' Point to the Carbon Wallet card showing 3.49 tCO2e. Explain the real-time soil health metrics — NDVI, SOC, Health Score — all derived from satellite data updated every 5 days. Emphasize: No IoT hardware needed. Only a 4G smartphone. Mention the SUS usability score of 84.0/100 from actual rural farmers."},
+  {tag:"App Demo: AI Doctor",notes:"Walk step by step. Farmer takes a photo of a sick leaf. In 58ms, TFLite model returns a diagnosis. The key innovation: instead of recommending Mancozeb or Hexaconazole, Gemini 2.5 Flash prescribes neem oil and Trichoderma viride. This protects the farmer's carbon credit status. NO other paper in literature does this combination."},
+  {tag:"App Demo: Map & Vault",notes:"Left screen: Farmer draws GPS polygon on satellite map. Shoelace formula computes exact acreage. NDVI heatmap overlays show vegetation stress zones. Right screen: Carbon Credit Vault showing all 4 pillars passed. Token ID KD-HTK-2026-00047 with QR code for buyer verification. This is the full traceability pipeline."},
+  {tag:"System Architecture",notes:"Walk layer by layer from top to bottom. Layer 1: React+Capacitor Android app. Layer 2: FastAPI async gateway. Layer 3: The intelligence core — GEE satellite, ML ensemble, VM0042 calculator. Layer 4: SHA-256 cryptographic ledger. Layer 5: External APIs. Examiner question: Why FastAPI? Answer: Asyncio non-blocking I/O critical for GEE satellite polling and ML thread executor."},
+  {tag:"Sentinel-2 Pipeline",notes:"Point to the 4-step pipeline cards. Each step solves a specific problem: QA60 cloud masking removes atmospheric noise. 90-day rolling composite guarantees coverage even in monsoon season. NDVI<0.3 bare-soil mask isolates soil from crop canopy. 12-band vector captures both visible and SWIR spectral signals correlated to organic matter absorption."},
+  {tag:"ML Model: SOC Stacking",notes:"Explain why a single model was not used: different Indian soil textures respond differently to spectral indices. Random Forest handles outliers. XGBoost captures non-linear patterns. CatBoost natively handles mixed categorical features (different soil types). Ridge Regression meta-learner blends all three optimally. Key result: R²=0.89, well within Verra's ≤3 g/kg tolerance."},
+  {tag:"4-Pillar MRV + HarvestToken",notes:"This is the regulatory compliance slide. Walk each pillar pass rate. Emphasize that Pillar 2 at 83.3% is a usability issue (blurry uploads) not a system failure. For the hash demo: type any character to see a new SHA-256 hash instantly — show that even one character change completely alters the hash. This is how fraud is detected."},
+  {tag:"Results & Benchmarks",notes:"Point to the headline: 48 hours vs 6–18 months. 0/47 hash mismatches. SUS 84.0/100. Use the live income calculator to demonstrate payout in real time — change farm size and practice type. This is a powerful visual for the examiner to see how accessible the platform is."},
+  {tag:"Literature Comparison",notes:"Go row by row. Each existing system has one critical gap. Iftikhar: disease only, no carbon. Saha: needs hardware. Iswarya: SOC only, no credit. Kershenbaum: isolated acoustic tool. Krishi-Drishti solves ALL four gaps simultaneously, plus introduces cryptographic provenance and UPI payouts."},
+  {tag:"Conclusion & Viva",notes:"Wrap up crisply. Summarize the 5 main contributions in 30 seconds. Answer any question from the Q&A cards shown. End with: 'We have demonstrated that satellite remote sensing, ensemble machine learning, and lightweight cryptography can tear down the economic wall that has kept 86% of India's farmers out of carbon markets. We are open for your questions.'"},
+];
+
+// ── Slide transitions ────────────────────────────────────
+function goTo(n, dir='next') {
+  if (n < 1 || n > total) return;
+  const prev = document.getElementById('s' + cur);
+  const next = document.getElementById('s' + n);
+  if (!prev || !next) return;
+  prev.classList.remove('active');
+  prev.classList.add('exit');
+  setTimeout(() => prev.classList.remove('exit'), 450);
+  cur = n;
+  next.classList.add('active');
+  document.getElementById('cn').textContent = String(cur).padStart(2,'0');
+  updateNotes();
+  if (audioCtx) playBeep(400 + cur * 15);
+  // Reset animations
+  next.querySelectorAll('.anim').forEach(el => {
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = '';
+  });
+}
+function next() { if(cur < total) goTo(cur + 1); }
+function prev() { if(cur > 1) goTo(cur - 1); }
+
+// ── Keyboard ───────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  if (['INPUT','SELECT','TEXTAREA'].includes(tag)) return;
+  if (e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next();}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+  else if(e.key==='n'||e.key==='N') toggleNotes();
+  else if(e.key==='o'||e.key==='O') toggleOverview();
+  else if(e.key==='f'||e.key==='F') toggleFS();
+  else if(e.key==='l'||e.key==='L') toggleLaser();
+  else if(e.key==='p'||e.key==='P') window.print();
+  else if(e.key==='Home') goTo(1);
+  else if(e.key==='End') goTo(total);
+  else if(e.key==='Escape'){closeLightbox();if(notesOpen)toggleNotes();if(document.getElementById('overview').classList.contains('show'))toggleOverview();}
+});
+
+// ── Speaker Notes ──────────────────────────────────────
+function toggleNotes() {
+  notesOpen = !notesOpen;
+  document.getElementById('notes-panel').classList.toggle('open', notesOpen);
+  document.getElementById('notesBtn').classList.toggle('active-btn', notesOpen);
+  updateNotes();
+}
+function updateNotes() {
+  const m = meta[cur];
+  if (!m) return;
+  document.getElementById('notesSlideMeta').textContent = `Slide ${String(cur).padStart(2,'0')} of ${total} · ${m.tag}`;
+  document.getElementById('notesBody').innerHTML = `
+    <div style="background:rgba(16,217,143,.06);border:1px solid rgba(16,217,143,.15);border-radius:10px;padding:.75rem;margin-bottom:.75rem;">
+      <div style="font-size:.6rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem;">🎙️ SPOKEN SCRIPT</div>
+      <p style="color:#e0ede8;line-height:1.65;font-size:.72rem;">"${m.notes}"</p>
+    </div>
+    <div style="background:rgba(245,200,66,.05);border:1px solid rgba(245,200,66,.15);border-radius:10px;padding:.75rem;">
+      <div style="font-size:.6rem;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem;">⚡ KEY EXAMINER FOCUS</div>
+      <p style="color:var(--muted);font-size:.7rem;line-height:1.6;">Use the interactive elements on this slide to demonstrate functionality live. Point to charts and figures. Maintain eye contact with the examiner panel.</p>
+    </div>`;
+}
+
+// ── Overview Modal ─────────────────────────────────────
+const slideLabels = ['','Title Slide','Problem Statement','App: Dashboard','App: AI Doctor','App: Map & Vault','System Architecture','Satellite Pipeline','SOC ML Model','4-Pillar + HarvestToken','Results & Benchmarks','Literature Comparison','Conclusion & Viva'];
+function buildOverview() {
+  const grid = document.getElementById('overview-grid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= total; i++) {
+    const d = document.createElement('div');
+    d.style.cssText = `background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1rem;cursor:pointer;transition:all .2s;${i===cur?'border-color:rgba(16,217,143,.5);background:rgba(16,217,143,.07);':''}`;
+    d.innerHTML = `<div style="font-size:.6rem;font-family:'JetBrains Mono',monospace;font-weight:700;color:${i===cur?'var(--green)':'var(--muted)'};margin-bottom:.4rem;">${String(i).padStart(2,'0')}</div><div style="font-size:.75rem;font-weight:700;color:#fff;line-height:1.3;">${slideLabels[i]}</div><div style="font-size:.6rem;color:var(--muted);margin-top:.3rem;">Click to jump</div>`;
+    d.onclick = () => { goTo(i); toggleOverview(); };
+    d.addEventListener('mouseenter', () => { if(i!==cur) d.style.background='rgba(255,255,255,.06)'; });
+    d.addEventListener('mouseleave', () => { if(i!==cur) d.style.background='rgba(255,255,255,.04)'; });
+    grid.appendChild(d);
+  }
+}
+function toggleOverview() {
+  const ov = document.getElementById('overview');
+  ov.classList.toggle('show');
+  if (ov.classList.contains('show')) buildOverview();
+}
+
+// ── Laser Pointer ──────────────────────────────────────
+function toggleLaser() {
+  laserOn = !laserOn;
+  document.getElementById('laser').style.display = laserOn ? 'block' : 'none';
+  document.getElementById('laserBtn').classList.toggle('active-btn', laserOn);
+  document.body.style.cursor = laserOn ? 'none' : '';
+}
+document.addEventListener('mousemove', e => {
+  if (laserOn) {
+    const l = document.getElementById('laser');
+    l.style.left = e.clientX + 'px';
+    l.style.top = e.clientY + 'px';
+  }
+});
+
+// ── Fullscreen ─────────────────────────────────────────
+function toggleFS() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+}
+
+// ── Lightbox ───────────────────────────────────────────
+function openLightbox(src, cap) {
+  document.getElementById('lbImg').src = src;
+  document.getElementById('lbCap').textContent = cap || '';
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+}
+
+// ── Defense Timer ──────────────────────────────────────
+timerInterval = setInterval(() => {
+  secs++;
+  const m = String(Math.floor(secs/60)).padStart(2,'0');
+  const s = String(secs%60).padStart(2,'0');
+  document.getElementById('timer').textContent = `${m}:${s}`;
+}, 1000);
+
+// ── Audio ──────────────────────────────────────────────
+function playBeep(freq=500, dur=0.04) {
+  try {
+    if (!audioCtx) audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch(e){}
+}
+document.addEventListener('click', () => {
+  if (!audioCtx) { try { audioCtx = new(window.AudioContext || window.webkitAudioContext)(); } catch(e){} }
+}, {once:true});
+
+// ── SHA-256 Live Demo ──────────────────────────────────
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function liveHash() {
+  const payload = document.getElementById('hashInput')?.value || '';
+  const hash = await sha256(payload + 'prev_KD_GENESIS_00046');
+  const out = document.getElementById('hashOutput');
+  const badge = document.getElementById('hashBadge');
+  if (out) out.textContent = hash;
+  const isOriginal = payload.includes('KD-HTK-2026-00047') && payload.includes('Wheat');
+  if (badge) {
+    badge.textContent = isOriginal ? '⚡ CHAIN INTACT · ORIGINAL PAYLOAD' : '⚠️ PAYLOAD MODIFIED · NEW HASH COMPUTED';
+    badge.className = 'badge ' + (isOriginal ? 'badge-green' : 'badge-gold');
+  }
+}
+liveHash();
+
+// ── Payout Calculator ──────────────────────────────────
+function calcPayout() {
+  const area = parseFloat(document.getElementById('areaSlider')?.value || 1.5);
+  const factor = parseFloat(document.getElementById('practSel')?.value || 3.7);
+  const net = area * factor * 0.85;
+  const payout = net * 1200 * 0.8;
+  const label = document.getElementById('areaLabel');
+  const credOut = document.getElementById('credOut');
+  const payOut = document.getElementById('payOut');
+  if(label) label.textContent = area.toFixed(1) + ' ha';
+  if(credOut) credOut.textContent = net.toFixed(2);
+  if(payOut) payOut.textContent = '₹' + Math.round(payout).toLocaleString('en-IN');
+}
+calcPayout();
+
+// ── Particle Background Canvas ─────────────────────────
+(function() {
+  const canvas = document.getElementById('bg');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles;
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  function init() {
+    resize();
+    particles = Array.from({length:50}, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random()-.5)*.3, vy: (Math.random()-.5)*.3,
+      r: Math.random()*1.8+.6,
+      c: Math.random()>.5 ? [16,217,143] : [56,201,248]
+    }));
+  }
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    // Draw connections
+    for (let i=0;i<particles.length;i++) {
+      for (let j=i+1;j<particles.length;j++) {
+        const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120) {
+          const a=0.12*(1-dist/120);
+          ctx.beginPath();
+          ctx.strokeStyle=`rgba(16,217,143,${a})`;
+          ctx.lineWidth=.6;
+          ctx.moveTo(particles[i].x,particles[i].y);
+          ctx.lineTo(particles[j].x,particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    // Draw particles
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+      if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${p.c.join(',')},0.5)`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize);
+  init(); draw();
+})();
+
+// ── Progress bars on slide entry (mutation observer) ───
+const observer = new MutationObserver(muts => {
+  muts.forEach(m => {
+    if (m.target.classList.contains('active')) {
+      m.target.querySelectorAll('.pbar-fill').forEach(bar => {
+        const w = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => bar.style.width = w, 100);
+      });
+    }
+  });
+});
+document.querySelectorAll('.slide').forEach(s => observer.observe(s, {attributes:true, attributeFilter:['class']}));
+</script>
+</body>
+</html>

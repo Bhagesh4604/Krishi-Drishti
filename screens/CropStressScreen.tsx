@@ -84,7 +84,7 @@ const CropStressScreen = ({ navigateTo }: { navigateTo: (screen: Screen) => void
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50 relative pb-24 font-sans max-w-md mx-auto shadow-2xl">
+        <div className="flex flex-col min-h-screen bg-slate-50 relative pb-36 font-sans max-w-md mx-auto shadow-2xl">
             {/* 1. Header Section */}
             <div className="bg-white px-6 pt-12 pb-4 flex items-center gap-4 relative z-20 shadow-sm rounded-b-[2rem]">
                 <button

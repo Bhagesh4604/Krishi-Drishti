@@ -43,16 +43,19 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── CORS Middleware ───────────────────────────────────────────────────────────
-# Read allowed origins from env; defaults to all origins for live production & mobile clients.
-CORS_ORIGINS = os.getenv(
-    "CORS_ORIGINS",
-    "*"
-).split(",")
+# Read allowed origins from env. Defaults to "*" only for local development
+# convenience. Set CORS_ORIGINS to a comma-separated list of allowed origins
+# in production, e.g. "https://app.krishidrishti.com,https://admin.krishidrishti.com".
+_cors_env = os.getenv("CORS_ORIGINS", "*").strip()
+CORS_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()]
+
+_allow_wildcard = CORS_ORIGINS == ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=".*",
-    allow_credentials=True,
+    allow_origins=CORS_ORIGINS,
+    allow_origin_regex=None if not _allow_wildcard else None,
+    allow_credentials=not _allow_wildcard,  # credentials forbidden with wildcard per CORS spec
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -177,6 +180,24 @@ def startup_event():
         api_logger.info("  Start a worker with: celery -A backend.celery_app worker --loglevel=info --pool=solo")
     else:
         configure_eager_fallback()
+
+    # --- Warm-start Disease Vision Model ---
+    # Load the TF/Keras model in a background thread at server startup so that
+    # the FIRST user request doesn't block on a ~19s cold load and time out.
+    import threading
+    def _warmup_disease_model():
+        try:
+            api_logger.info("[startup] Pre-loading local disease vision model...")
+            from .ml_models.local_disease_predictor import is_model_ready
+            ready, err = is_model_ready()
+            if ready:
+                api_logger.info("[startup] Local disease model warm-started successfully.")
+            else:
+                api_logger.warning("[startup] Local disease model NOT ready: %s", err)
+        except Exception as e:
+            api_logger.warning("[startup] Disease model warm-start failed: %s", e)
+
+    threading.Thread(target=_warmup_disease_model, daemon=True, name="model-warmup").start()
 
     # --- Background ML Scheduler ---
     scheduler = BackgroundScheduler()

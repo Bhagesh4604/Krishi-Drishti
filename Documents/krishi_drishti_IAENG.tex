@@ -14,23 +14,27 @@
 \usepackage{cite}
 \graphicspath{{../}}
 \newcommand{\rupee}{Rs.\,}
-\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
+\hypersetup{colorlinks=false,hidelinks}
 \captionsetup{font=small, labelfont=bf}
 \setlist[itemize]{noitemsep, topsep=2pt, leftmargin=*}
 
 \begin{document}
 
-\title{\MakeUppercase{Krishi-Drishti: A Mobile-First Digital MRV Architecture for Smallholder Agricultural Carbon Credit Issuance Using Stacking Machine Learning and Cryptographic Tokenization}}
+\title{Krishi-Drishti: A Mobile-First Digital MRV Architecture for Smallholder Agricultural Carbon Credit Issuance Using Stacking Machine Learning and Cryptographic Tokenization}
 
 \author{Rama Krishna~K.,~\IEEEmembership{Member,~IAENG,}
         Sheethal Aji Mani,
         Bhagesh Biradar,~\IEEEmembership{Member,~IAENG,}
         Manjunath Khot,
         Jayanth~R.,~and Pruthviraja~S.%
-\thanks{This work was supported by the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, Visvesvaraya Technological University, Bangalore, Karnataka, India.}%
-\thanks{Dr. Rama Krishna K. (corresponding author) is with the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, India (e-mail: ramakrishna@example.com).}
-\thanks{Bhagesh Biradar, Manjunath Khot, Jayanth R., and Pruthviraja S. are UG researchers in the same department.}
-\thanks{Manuscript received Month 01, 20XX; revised Month 15, 20XX.}}
+\thanks{Manuscript received Month 01, 20XX; revised Month 15, 20XX.}%
+\thanks{This work was supported in part by the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, Visvesvaraya Technological University, Bangalore, Karnataka, India.}%
+\thanks{Dr. Rama Krishna K. is a Professor in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (corresponding author, e-mail: ramakrishna@example.com).}%
+\thanks{Sheethal Aji Mani is an Associate Professor in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: sheethal.amani@example.com).}%
+\thanks{Bhagesh Biradar is an undergraduate researcher in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: bhagesh.biradar@example.com).}%
+\thanks{Manjunath Khot is an undergraduate researcher in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: manjunath.khot@example.com).}%
+\thanks{Jayanth R. is an undergraduate researcher in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: jayanth.r@example.com).}%
+\thanks{Pruthviraja S. is an undergraduate researcher in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: pruthviraja.s@example.com).}}
 
 \markboth{Engineering Letters,~Vol.~XX, No.~XX, Month~20XX}%
 {Rama Krishna et al.: Krishi-Drishti: Digital MRV Architecture for Carbon Credit Issuance}
@@ -46,9 +50,9 @@ Carbon Credit Issuance, Digital MRV, Stacking Ensemble Learning, Cryptographic A
 \end{IEEEkeywords}
 
 \section{Introduction}
-\IEEEPARstart{A}{gricultural} decarbonization represents a pivotal frontier in global climate mitigation, yet certifying carbon sequestration on smallholder farms remains bottlenecked by computational, infrastructural, and economic constraints [3]. In emerging agrarian markets, agrarian holdings are fragmented across millions of sub-two-hectare properties [4]. While sustainable management interventions---such as minimal tillage, residue preservation, and agroforestry---measurably augment organic carbon in the soil profile, conventional carbon certification frameworks rely heavily on manual verification workflows. These legacy auditing pipelines require certified inspectors to conduct physical field surveys and commercial laboratory wet-chemical testing, imposing overhead expenses between USD \$1,500 and \$3,000 per property and spanning audit durations of 6 to 18 months [4], [13]. For a marginal cultivator generating modest annual offset volumes, verification expenditures exceed potential market returns by an order of magnitude.
+\IEEEPARstart{A}{gricultural} decarbonization represents a pivotal frontier in global climate mitigation, yet certifying carbon sequestration on smallholder farms remains bottlenecked by computational, infrastructural, and economic constraints [1]. In emerging agrarian markets, agrarian holdings are fragmented across millions of sub-two-hectare properties [2]. While sustainable management interventions---such as minimal tillage, residue preservation, and agroforestry---measurably augment organic carbon in the soil profile, conventional carbon certification frameworks rely heavily on manual verification workflows. These legacy auditing pipelines require certified inspectors to conduct physical field surveys and commercial laboratory wet-chemical testing, imposing overhead expenses between USD \$1,500 and \$3,000 per property and spanning audit durations of 6 to 18 months [2], [3]. For a marginal cultivator generating modest annual offset volumes, verification expenditures exceed potential market returns by an order of magnitude.
 
-Overcoming this operational impasse requires re-engineering MRV workflows as automated, software-driven digital pipelines (dMRV). Cloud-native geospatial computation platforms and public Earth observation streams provide the raw analytical bandwidth necessary to monitor terrestrial changes at zero marginal per-holding query expense [6], [10]. However, translating raw observation matrices into legally compliant, tamper-resistant carbon assets introduces rigorous software engineering requirements:
+Overcoming this operational impasse requires re-engineering MRV workflows as automated, software-driven digital pipelines (dMRV). Cloud-native geospatial computation platforms and public Earth observation streams provide the raw analytical bandwidth necessary to monitor terrestrial changes at zero marginal per-holding query expense [4], [5]. However, translating raw observation matrices into legally compliant, tamper-resistant carbon assets introduces rigorous software engineering requirements:
 \begin{enumerate}
   \item Developing low-latency asynchronous backends capable of orchestrating geospatial extraction and machine learning inference on demand;
   \item Designing robust stacking regression topologies that generalize across heterogeneous soil types without overfitting localized samples;
@@ -66,17 +70,17 @@ To address these requirements, we present the systems design, algorithmic implem
 
 \section{Related Work}
 
+\subsection{Carbon Accounting Protocols and Verification Systems}
+Regulatory standard-setting organizations have formalized rigorous criteria for voluntary and compliance carbon assets. Gokul et al. [1] analyzed India's domestic Carbon Credit Trading Scheme (CCTS), noting that automated digital verification is indispensable if agricultural sectors are to participate meaningfully. Internationally, Verra's VM0042 methodology defines strict protocols for soil organic carbon estimation and additionality enforcement [3]. Abiri et al. [2] reviewed the socio-economic barriers facing digital carbon adoption, emphasizing that high upfront verification expenses prevent inclusive market access. Bhatia [6] investigated AI-driven decision models for Indian smallholders but omitted carbon accounting and monetization pipelines. Krishi-Drishti operationalizes these regulatory requirements into automated computational gates, linking algorithmic compliance directly with cryptographic tokenization.
+
 \subsection{Cloud-Edge Computing in Agricultural Informatics}
-Modern agricultural decision-support infrastructures increasingly deploy hybrid cloud architectures to bridge rural network latencies. Thilakarathne et al. [2] implemented cloud-assisted predictive frameworks for dynamic crop recommendation, demonstrating significant utility in regional planning. Nawaz and Babar [5] examined edge-AI computing constraints in resource-limited rural environments, highlighting memory and bandwidth limitations as primary failure modes. In broad IoT settings, Saha et al. [17] demonstrated that multi-sensor field nodes achieve 97.3\% recognition accuracy across automated irrigation and mapping tasks. However, physical sensor grids demand capital investment and continuous on-ground maintenance that exceed smallholder capacity. Krishi-Drishti circumvents physical sensor reliance by shifting data acquisition entirely to public satellite constellations, utilizing mobile devices merely as graphical endpoints and photographic capture nodes.
+Modern agricultural decision-support infrastructures increasingly deploy hybrid cloud architectures to bridge rural network latencies. Thilakarathne et al. [7] implemented cloud-assisted predictive frameworks for dynamic crop recommendation, demonstrating significant utility in regional planning. Nawaz and Babar [8] examined edge-AI computing constraints in resource-limited rural environments, highlighting memory and bandwidth limitations as primary failure modes. In broad IoT settings, Saha et al. [9] demonstrated that multi-sensor field nodes achieve 97.3\% recognition accuracy across automated irrigation and mapping tasks. However, physical sensor grids demand capital investment and continuous on-ground maintenance that exceed smallholder capacity. Krishi-Drishti circumvents physical sensor reliance by shifting data acquisition entirely to public satellite constellations, utilizing mobile devices merely as graphical endpoints and photographic capture nodes.
 
 \subsection{Ensemble Machine Learning for Complex Regressions}
-Tabular environmental modeling frequently encounters non-linear feature interactions and localized data sparsity. Khaddi et al. [10] conducted extensive comparisons across machine learning topologies for soil organic carbon modeling, concluding that ensemble techniques consistently outshine individual estimators. Triantakonstantis and Karakostas [14] validated stacked generalization architectures for soil prediction, illustrating that combining tree-based regressors with linear meta-learners mitigates idiosyncratic model biases. Furthermore, Iswarya and Tamizhazhagan [12] demonstrated that quantile random forests yield effective regional soil mapping in Indian agricultural zones, whereas Xiao et al. [11] utilized support vector machines paired with extensive environmental covariates. Our work adopts the stacked generalization paradigm of [14], formulating a tailored ensemble optimized for 12-dimensional spectral feature spaces queryable at runtime.
-
-\subsection{Carbon Accounting Protocols and Verification Systems}
-Regulatory standard-setting organizations have formalized rigorous criteria for voluntary and compliance carbon assets. Gokul et al. [3] analyzed India's domestic Carbon Credit Trading Scheme (CCTS), noting that automated digital verification is indispensable if agricultural sectors are to participate meaningfully. Internationally, Verra's VM0042 methodology defines strict protocols for soil organic carbon estimation and additionality enforcement [13]. Abiri et al. [4] reviewed the socio-economic barriers facing digital carbon adoption, emphasizing that high upfront verification expenses prevent inclusive market access. Bhatia [1] investigated AI-driven decision models for Indian smallholders but omitted carbon accounting and monetization pipelines. Krishi-Drishti operationalizes these regulatory requirements into automated computational gates, linking algorithmic compliance directly with cryptographic tokenization.
+Tabular environmental modeling frequently encounters non-linear feature interactions and localized data sparsity. Khaddi et al. [5] conducted extensive comparisons across machine learning topologies for soil organic carbon modeling, concluding that ensemble techniques consistently outshine individual estimators. Triantakonstantis and Karakostas [10] validated stacked generalization architectures for soil prediction, illustrating that combining tree-based regressors with linear meta-learners mitigates idiosyncratic model biases. Furthermore, Iswarya and Tamizhazhagan [11] demonstrated that quantile random forests yield effective regional soil mapping in Indian agricultural zones, whereas Xiao et al. [12] utilized support vector machines paired with extensive environmental covariates. Our work adopts the stacked generalization paradigm of [10], formulating a tailored ensemble optimized for 12-dimensional spectral feature spaces queryable at runtime.
 
 \subsection{Foliar Computer Vision and Ecological Bioacoustics}
-Deep learning architectures for foliar pathology recognition have attained remarkable precision under laboratory evaluation. Iftikhar et al. [7] developed fine-tuned convolutional networks reaching 98.1\% accuracy, Hasan et al. [8] designed lightweight architectures for rice pathology at 97.9\%, and Askale et al. [9] deployed deep networks onto mobile devices for maize leaf classification. Nevertheless, standard agricultural diagnostics operate independently of environmental compliance frameworks, routinely recommending chemical treatments that violate carbon offset additionality and soil conservation guidelines. Complementing visual modalities, non-invasive bioacoustic monitoring has emerged for automated pest detection. Foundational works by Kershenbaum et al. [15] and Hearon et al. [16] demonstrated acoustic feature extraction and soundscape indices for biodiversity surveillance. However, existing bioacoustic tools operate strictly as academic ecological sensors without integration into agricultural MRV pipelines. Krishi-Drishti integrates on-device MobileNetV2 vision and embedded bioacoustic telemetry with language-model policy guards, ensuring diagnostic guidance and biodiversity metrics align with regenerative farming certification.
+Deep learning architectures for foliar pathology recognition have attained remarkable precision under laboratory evaluation. Iftikhar et al. [13] developed fine-tuned convolutional networks reaching 98.1\% accuracy, Hasan et al. [14] designed lightweight architectures for rice pathology at 97.9\%, and Askale et al. [15] deployed deep networks onto mobile devices for maize leaf classification. Nevertheless, standard agricultural diagnostics operate independently of environmental compliance frameworks, routinely recommending chemical treatments that violate carbon offset additionality and soil conservation guidelines. Complementing visual modalities, non-invasive bioacoustic monitoring has emerged for automated pest detection. Foundational works by Kershenbaum et al. [16] and Hearon et al. [17] demonstrated acoustic feature extraction and soundscape indices for biodiversity surveillance. However, existing bioacoustic tools operate strictly as academic ecological sensors without integration into agricultural MRV pipelines. Krishi-Drishti integrates on-device MobileNetV2 vision and embedded bioacoustic telemetry with language-model policy guards, ensuring diagnostic guidance and biodiversity metrics align with regenerative farming certification.
 
 \section{System Architecture and Implementation}
 
@@ -114,7 +118,7 @@ Out-of-fold predictions generated via 5-fold cross-validation form a $50 \times 
 where $\lambda = 1.0$, preventing over-reliance on any single base model while capturing synergistic predictive boundaries.
 
 \subsection{Algorithmic Additionality and Regulatory Gates}
-To satisfy Verra VM0042 and CCTS additionality protocols [3], [13], the engine enforces an automated boolean filter. For a farm located in administrative district $d$ practicing agronomic technique $p$, eligibility is governed by:
+To satisfy Verra VM0042 and CCTS additionality protocols [1], [3], the engine enforces an automated boolean filter. For a farm located in administrative district $d$ practicing agronomic technique $p$, eligibility is governed by:
 \begin{equation}
   \text{Eligible}(d, p) = \mathbf{1}\bigl[\Phi(d, p) < 0.50\bigr]
   \label{eq:add_filter}
@@ -129,7 +133,7 @@ where $\Phi(d, p)$ denotes the regional adoption penetration index retrieved fro
 \end{figure}
 
 \subsection{Carbon Credit Issuance Engine and Volumetric Stock Inversion}
-Translating inverted SOC concentrations into tradeable carbon credit issuances requires rigorous compliance with IPCC Tier-2 and Verra VM0042 standards [3], [13]. Volumetric soil carbon density ($\text{tC/ha}$) is determined by:
+Translating inverted SOC concentrations into tradeable carbon credit issuances requires rigorous compliance with IPCC Tier-2 and Verra VM0042 standards [1], [3]. Volumetric soil carbon density ($\text{tC/ha}$) is determined by:
 \begin{equation}
   \text{SOC}_{\text{stock}} = \left(\frac{\text{SOC}_{\%}}{100}\right) \times \rho_b \times D \times 10
   \label{eq:soc_stock}
@@ -241,11 +245,11 @@ Table~\ref{tab:comp} positions Krishi-Drishti against prominent agricultural AI 
     \toprule
     \textbf{System / Reference} & \textbf{Core Architecture} & \textbf{Key Metric} & \textbf{Carbon MRV} \\
     \midrule
-    Iftikhar et al. [7] & Deep transfer CNN for three-crop pathology diagnosis & 98.1\% accuracy & No (Pathology only) \\
-    Hasan et al. [8]    & Lightweight CNN for rice pathology on mobile devices & 97.9\% accuracy & No (Single crop only) \\
-    Saha et al. [17]    & Multi-sensor in-situ IoT array for automated irrigation & 97.3\% accuracy & No (Hardware dependent) \\
-    Iswarya et al. [12] & Quantile Random Forest regression on Sentinel-2 bands & High $R^2$ & Partial (SOC mapping only) \\
-    Xiao et al. [11]    & Support Vector Machine with environmental covariates & $R^2 = 0.96$ & No (Cartographic mapping) \\
+    Iftikhar et al. [13] & Deep transfer CNN for three-crop pathology diagnosis & 98.1\% accuracy & No (Pathology only) \\
+    Hasan et al. [14]    & Lightweight CNN for rice pathology on mobile devices & 97.9\% accuracy & No (Single crop only) \\
+    Saha et al. [9]    & Multi-sensor in-situ IoT array for automated irrigation & 97.3\% accuracy & No (Hardware dependent) \\
+    Iswarya et al. [11] & Quantile Random Forest regression on Sentinel-2 bands & High $R^2$ & Partial (SOC mapping only) \\
+    Xiao et al. [12]    & Support Vector Machine with environmental covariates & $R^2 = 0.96$ & No (Cartographic mapping) \\
     \textbf{Krishi-Drishti (Ours)} & \textbf{Stacked Ensemble + Four-Pillar dMRV + SHA-256 Ledger} & \textbf{$R^2 = 0.89$} & \textbf{Yes (End-to-End Issuance)} \\
     \bottomrule
   \end{tabularx}
@@ -253,10 +257,10 @@ Table~\ref{tab:comp} positions Krishi-Drishti against prominent agricultural AI 
 
 As summarized in Table~\ref{tab:comp}, recent literature offers compelling point solutions for agriculture, yet each exhibits critical operational limitations that Krishi-Drishti directly overcomes:
 \begin{enumerate}
-  \item \emph{Crop Pathology Isolation:} Visual diagnostic systems such as Iftikhar et al. [7], Hasan et al. [8], and Askale et al. [9] obtain high classification accuracy (97.9\%--98.1\%), but operate as isolated endpoints without carbon accounting or monetization links. Crucially, conventional models often recommend synthetic fungicides or chemical pesticides that disqualify smallholders from carbon offset programs. Krishi-Drishti overcomes this gap by integrating MobileNetV2 with an LLM advisory layer strictly constrained to organic, carbon-compliant remedies.
-  \item \emph{Hardware-Dependent Sensor Grids:} Physical IoT platforms such as Saha et al. [17], Nawaz and Babar [5], and Thilakarathne et al. [2] achieve high precision but require dedicated on-farm sensory hardware and power infrastructure. These deployment costs are prohibitive for marginal cultivators with sub-two-hectare plots. Krishi-Drishti overcomes this physical dependency by shifting environmental sensing entirely to public orbital Sentinel-2 imagery [6], [10], requiring zero field hardware beyond the farmer's smartphone.
-  \item \emph{Absence of End-to-End MRV Pipelines:} Spatial SOC modeling studies, including the quantile random forests of Iswarya and Tamizhazhagan [12], the stacking models of Triantakonstantis and Karakostas [14], and the support vector regression of Xiao et al. [11], focus strictly on cartographic estimation. None construct a complete verification and crediting pipeline. Similarly, while Bhatia [1] provided AI-driven agricultural decision models and Abiri et al. [4] analyzed economic barriers, neither operationalized verifiable carbon issuance. Krishi-Drishti overcomes these limitations by integrating spectral SOC estimation with automated additionality screening, Four-Pillar verification, and SHA-256 HarvestToken minting aligned with Verra VM0042 and CCTS frameworks [3], [13].
-  \item \emph{Ecological Telemetry Integration:} Standalone bioacoustic systems such as Kershenbaum et al. [15] and Hearon et al. [16] operate strictly as biodiversity monitoring tools. Krishi-Drishti incorporates bioacoustic monitoring as an integrated microservice feeding directly into the carbon project registry to corroborate co-benefit claims.
+  \item \emph{Crop Pathology Isolation:} Visual diagnostic systems such as Iftikhar et al. [13], Hasan et al. [14], and Askale et al. [15] obtain high classification accuracy (97.9\%--98.1\%), but operate as isolated endpoints without carbon accounting or monetization links. Crucially, conventional models often recommend synthetic fungicides or chemical pesticides that disqualify smallholders from carbon offset programs. Krishi-Drishti overcomes this gap by integrating MobileNetV2 with an LLM advisory layer strictly constrained to organic, carbon-compliant remedies.
+  \item \emph{Hardware-Dependent Sensor Grids:} Physical IoT platforms such as Saha et al. [9], Nawaz and Babar [8], and Thilakarathne et al. [7] achieve high precision but require dedicated on-farm sensory hardware and power infrastructure. These deployment costs are prohibitive for marginal cultivators with sub-two-hectare plots. Krishi-Drishti overcomes this physical dependency by shifting environmental sensing entirely to public orbital Sentinel-2 imagery [4], [5], requiring zero field hardware beyond the farmer's smartphone.
+  \item \emph{Absence of End-to-End MRV Pipelines:} Spatial SOC modeling studies, including the quantile random forests of Iswarya and Tamizhazhagan [11], the stacking models of Triantakonstantis and Karakostas [10], and the support vector regression of Xiao et al. [12], focus strictly on cartographic estimation. None construct a complete verification and crediting pipeline. Similarly, while Bhatia [6] provided AI-driven agricultural decision models and Abiri et al. [2] analyzed economic barriers, neither operationalized verifiable carbon issuance. Krishi-Drishti overcomes these limitations by integrating spectral SOC estimation with automated additionality screening, Four-Pillar verification, and SHA-256 HarvestToken minting aligned with Verra VM0042 and CCTS frameworks [1], [3].
+  \item \emph{Ecological Telemetry Integration:} Standalone bioacoustic systems such as Kershenbaum et al. [16] and Hearon et al. [17] operate strictly as biodiversity monitoring tools. Krishi-Drishti incorporates bioacoustic monitoring as an integrated microservice feeding directly into the carbon project registry to corroborate co-benefit claims.
 \end{enumerate}
 
 \section{Conclusion}
@@ -266,64 +270,80 @@ This research demonstrates that coupling cloud-native geospatial microservices w
 The authors thank the European Space Agency Copernicus Programme, Google Earth Engine, and Google DeepMind for computational infrastructure and API support. We also extend sincere gratitude to participating farming communities across Karnataka and Maharashtra for field sampling cooperation and usability testing.
 
 \begin{thebibliography}{17}
-\bibitem{bhatia2025}
-M.~Bhatia, ``Artificial intelligence for sustainable agriculture in developing nations,'' \emph{IEEE Trans. Comput. Soc. Syst.}, 2025.
-\bibitem{thilakarathne2024}
-N.~Thilakarathne et~al., ``Cloud-assisted predictive analytics for precision agriculture,'' \emph{IEEE Access}, vol.~12, pp.~11023--11035, 2024.
-\bibitem{gokul2024}
-K.~Gokul et~al., ``India's carbon credit trading scheme: agricultural integration,'' \emph{Nat. Clim. Policy}, vol.~8, no.~2, pp.~145--162, 2024.
+\bibitem{gokul2026}
+S.~Gokul, P.~Nongkynrih, L.~Rabha, R.~Rai, and B.~D.~Shukla, ``Carbon credit mechanisms for sustainable agriculture and opportunities in North East India,'' \emph{Discover Sustainability}, vol.~7, p.~857, 2026.
+
 \bibitem{abiri2023}
-N.~Abiri et~al., ``Digital agriculture and smallholder economic resilience,'' \emph{World Dev. Perspect.}, vol.~31, p.~100512, 2023.
-\bibitem{nawaz2024}
-A.~Nawaz and M.~Babar, ``Edge-AI and IoT architectures for low-resource farming,'' \emph{Comput. Electron. Agric.}, vol.~218, p.~108670, 2024.
-\bibitem{vaudour2022}
-E.~Vaudour et~al., ``Temporal mosaicking of Sentinel-2 bare soil observations for organic carbon mapping,'' \emph{Remote Sens. Environ.}, vol.~272, p.~112953, 2022.
-\bibitem{iftikhar2024}
-S.~Iftikhar et~al., ``Deep transfer learning for multi-crop pathology classification,'' \emph{Comput. Electron. Agric.}, vol.~219, p.~108789, 2024.
-\bibitem{hasan2024}
-M.~Hasan et~al., ``Lightweight convolutional networks for edge agricultural diagnostics,'' \emph{IEEE Trans. AgriFood Electron.}, vol.~2, no.~1, pp.~45--56, 2024.
-\bibitem{askale2024}
-D.~Askale et~al., ``Mobile deployment of deep neural networks for foliar diagnostics,'' \emph{Smart Agric. Technol.}, vol.~7, p.~100392, 2024.
-\bibitem{khaddi2024}
-Z.~Khaddi et~al., ``Machine learning and geospatial methods for soil organic carbon: a review,'' \emph{Geoderma Reg.}, vol.~36, p.~e00754, 2024.
-\bibitem{xiao2024}
-C.~Xiao et~al., ``Hyperspectral and multispectral estimation of topsoil carbon constituents,'' \emph{ISPRS J. Photogramm. Remote Sens.}, vol.~208, pp.~112--128, 2024.
-\bibitem{iswarya2024}
-P.~Iswarya and K.~Tamizhazhagan, ``Quantile regression forests for satellite-derived soil carbon,'' \emph{Environ. Monit. Assess.}, vol.~196, no.~4, p.~342, 2024.
+R.~Abiri \emph{et al.}, ``Application of digital technologies for ensuring agricultural productivity,'' \emph{Heliyon}, vol.~9, no.~12, p.~e22601, 2023.
+
 \bibitem{hamrick2023}
-K.~Hamrick, ``State of voluntary carbon markets 2023,'' \emph{Ecosystem Marketplace}, Tech. Rep., 2023.
+K.~Hamrick, ``State of Voluntary Carbon Markets 2023,'' Forest Trends, Ecosystem Marketplace, Washington, DC, 2023.
+
+\bibitem{vaudour2022}
+E.~Vaudour \emph{et al.}, ``Satellite Imagery to Map Topsoil Organic Carbon Content over Cultivated Areas: An Overview,'' \emph{Remote Sensing}, vol.~14, no.~12, p.~2917, 2022.
+
+\bibitem{khaddi2026}
+E.~Khaddi \emph{et al.}, ``Shaping smarter prediction: A literature review of GIS, remote sensing and ML applications in digital SOC mapping,'' \emph{Turkish Journal of Remote Sensing}, vol.~8, no.~2, p.~1808033, 2026.
+
+\bibitem{bhatia2025}
+A.~Bhatia, ``An AI-Powered Agricultural Decision Support System for Smallholder Farmers in India,'' \emph{Smart Agricultural Technology}, SSRN-6944006, 2025.
+
+\bibitem{thilakarathne2022}
+N.~N.~Thilakarathne, N.~Basnayake, T.~Withanage, D.~Weliwatta, H.~Jayakody, and A.~Wickramasinghe, ``A Cloud Enabled Crop Recommendation Platform for Machine Learning-Driven Precision Farming,'' \emph{Sensors}, vol.~22, no.~16, p.~6299, 2022.
+
+\bibitem{nawaz2025}
+M.~Nawaz and M.~I.~K.~Babar, ``IoT and AI for smart agriculture in resource-constrained environments,'' \emph{Discover Internet of Things}, vol.~5, no.~1, p.~24, 2025.
+
+\bibitem{saha2025}
+G.~Saha \emph{et al.}, ``Smart IoT-driven precision agriculture: Land mapping, crop prediction, and irrigation system,'' \emph{PLOS ONE}, vol.~20, no.~3, p.~e0319268, 2025.
+
 \bibitem{triantakonstantis2025}
-D.~Triantakonstantis and A.~Karakostas, ``Soil organic carbon monitoring via stacked ensembles,'' \emph{Remote Sens.}, vol.~17, no.~2, p.~312, 2025.
+D.~Triantakonstantis and A.~Karakostas, ``Soil Organic Carbon Monitoring and Modelling via Machine Learning Methods Using Soil and Remote Sensing Data,'' \emph{Agriculture}, vol.~15, no.~8, p.~910, 2025.
+
+\bibitem{iswarya2026}
+R.~Iswarya and V.~Tamizhazhagan, ``Satellite-Derived Prediction of Soil Organic Carbon Under Bare-Soil Conditions Using Sentinel-2 Spectral Indices and Quantile Regression Forests,'' \emph{International Journal of AI and Machine Learning}, vol.~6, no.~6s, p.~76, 2026.
+
+\bibitem{xiao2024}
+X.~Xiao \emph{et al.}, ``Environmental variables improve the accuracy of remote sensing estimation of soil organic carbon content,'' \emph{Scientific Reports}, vol.~14, no.~1, p.~18964, 2024.
+
+\bibitem{iftikhar2024}
+M.~Iftikhar \emph{et al.}, ``Plant disease management: a fine-tuned enhanced CNN approach with mobile app integration,'' \emph{Artificial Intelligence Review}, vol.~57, no.~7, p.~167, 2024.
+
+\bibitem{hasan2023}
+M.~M.~Hasan \emph{et al.}, ``Enhancing Rice Crop Management: Disease Classification Using CNNs and Mobile Application Integration,'' \emph{Agriculture}, vol.~13, no.~8, p.~1549, 2023.
+
+\bibitem{askale2025}
+G.~T.~Askale \emph{et al.}, ``Mobile based deep CNN model for maize leaf disease detection and classification,'' \emph{Plant Methods}, vol.~21, no.~1, p.~72, 2025.
+
 \bibitem{kershenbaum2024}
-A.~Kershenbaum et~al., ``Bioacoustic monitoring for biodiversity and pest management,'' \emph{Ecol. Inform.}, vol.~80, p.~102498, 2024.
-\bibitem{hearon2023}
-P.~Hearon et~al., ``Acoustic indices for ecological monitoring in agricultural landscapes,'' \emph{Bioacoustics}, vol.~32, no.~4, pp.~421--438, 2023.
-\bibitem{saha2024}
-A.~Saha et~al., ``Integrated multi-sensor IoT and machine learning for smart farming,'' \emph{IEEE Internet Things J.}, vol.~11, no.~8, pp.~14210--14223, 2024.
+A.~Kershenbaum \emph{et al.}, ``Automatic detection for bioacoustic research: a practical guide from and for biologists and computer scientists,'' \emph{Biological Reviews}, doi: 10.1111/brv.13155, 2024.
+
+\bibitem{hearon2025}
+L.~E.~Hearon \emph{et al.}, ``buzzdetect: an open-source deep learning tool for automated bioacoustic pollinator monitoring,'' \emph{Journal of Insect Science}, vol.~25, no.~6, p.~ieaf104, 2025.
 \end{thebibliography}
 
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig_author1.jpg}}]{Rama Krishna K.}
+\begin{IEEEbiographynophoto}{Rama Krishna K.}
 (Member, IAENG) received his Ph.D. degree in Computer Science and Engineering. He is currently a Professor in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, India. His research focuses on precision agricultural systems and distributed environmental informatics.
-\end{IEEEbiography}
+\end{IEEEbiographynophoto}
 
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig_author2.jpg}}]{Sheethal Aji Mani}
+\begin{IEEEbiographynophoto}{Sheethal Aji Mani}
 received her M.Tech. degree in Computer Science. She is an Associate Professor with the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, Bangalore. Her research encompasses machine learning ensembles and applied agricultural computing.
-\end{IEEEbiography}
+\end{IEEEbiographynophoto}
 
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig_author3.jpg}}]{Bhagesh Biradar}
+\begin{IEEEbiographynophoto}{Bhagesh Biradar}
 (Member, IAENG) is an undergraduate researcher in Data Science at Impact College of Engineering and Applied Sciences, VTU. His research interests include distributed architectures, mobile edge computing, and digital carbon verification frameworks.
-\end{IEEEbiography}
+\end{IEEEbiographynophoto}
 
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig_author4.jpg}}]{Manjunath Khot}
+\begin{IEEEbiographynophoto}{Manjunath Khot}
 is an undergraduate student in Data Science at Impact College of Engineering and Applied Sciences. His research focuses on cloud-native application engineering, geospatial analytics, and applied neural networks.
-\end{IEEEbiography}
+\end{IEEEbiographynophoto}
 
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig_author5.jpg}}]{Jayanth R.}
+\begin{IEEEbiographynophoto}{Jayanth R.}
 is an undergraduate researcher in Data Science at Impact College of Engineering and Applied Sciences. His research interests include cryptographic verification protocols, data security, and agricultural software systems.
-\end{IEEEbiography}
+\end{IEEEbiographynophoto}
 
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig_author6.jpg}}]{Pruthviraja S.}
+\begin{IEEEbiographynophoto}{Pruthviraja S.}
 is an undergraduate student in Data Science at Impact College of Engineering and Applied Sciences. His research interests encompass statistical regression modeling, client-side mobile engineering, and sensor data integration.
-\end{IEEEbiography}
+\end{IEEEbiographynophoto}
 
 \end{document}
