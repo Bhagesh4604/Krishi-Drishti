@@ -15,6 +15,7 @@ import {
 // ── CRITICAL screens: bundled eagerly so the first paint is instant ──
 import AuthScreen from './screens/AuthScreen';
 import DashboardScreen from './screens/DashboardScreen';
+import ProfileScreen from './screens/ProfileScreen';
 import SplashScreen from './screens/SplashScreen';
 import BottomNav from './components/BottomNav';
 import LandingScreen from './screens/LandingScreen';
@@ -29,7 +30,6 @@ import { LanguageProvider } from './src/context/LanguageContext';
 const lazy = <T extends React.ComponentType<any>>(factory: () => Promise<{ default: T }>) =>
   React.lazy(factory as unknown as () => Promise<{ default: T }>);
 
-const ProfileScreen = lazy(() => import('./screens/ProfileScreen'));
 const ChatScreen = lazy(() => import('./screens/ChatScreen'));
 const VisionScreen = lazy(() => import('./screens/VisionScreen'));
 const VisionResultScreen = lazy(() => import('./screens/VisionResultScreen'));
@@ -341,6 +341,22 @@ const AppContent: React.FC = () => {
               if (profileErr.response?.status === 401) {
                 localStorage.removeItem('ks_token');
                 setCurrentScreen('auth');
+              } else if (profileErr.response?.status === 404) {
+                // User token valid but DB was reset on Render: auto-create default profile
+                const defaultProfile: UserProfile = {
+                  name: 'Farmer',
+                  district: 'Nagpur',
+                  crops: ['Wheat', 'Cotton'],
+                  farming_type: 'Conventional',
+                  category: 'General',
+                  land_size: 2.5,
+                  language: language,
+                  trust_score: 500
+                };
+                if (location) defaultProfile.location = location;
+                localStorage.setItem('ks_profile_cache', JSON.stringify(defaultProfile));
+                setUser(defaultProfile);
+                setCurrentScreen('home');
               } else {
                 setCurrentScreen('profile');
               }
@@ -845,23 +861,11 @@ const AppContent: React.FC = () => {
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentScreen}
-            initial={{ opacity: 0, x: 30, scale: 0.98 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -30, scale: 0.98 }}
-            transition={{
-              duration: 0.35,
-              ease: [0.25, 0.1, 0.25, 1],
-            }}
-            className="h-full"
-          >
-            <React.Suspense fallback={<ScreenFallback />}>
-              {renderScreen()}
-            </React.Suspense>
-          </motion.div>
-        </AnimatePresence>
+        <React.Suspense fallback={<ScreenFallback />}>
+          <div key={currentScreen} className="w-full min-h-full">
+            {renderScreen()}
+          </div>
+        </React.Suspense>
       </main>
 
       {/* ============ FLOATING ACTION BUTTON WITH EXPANDABLE MENU ============ */}

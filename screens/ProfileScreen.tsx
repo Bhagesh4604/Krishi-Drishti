@@ -51,7 +51,23 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
           if (typeof profile.crops === 'string') setCrops((profile.crops as string).split(',').filter(Boolean));
           else if (Array.isArray(profile.crops)) setCrops(profile.crops);
         }
-      } catch (e) { console.error('Error loading profile', e); }
+      } catch (e) {
+        console.warn('[Profile] Profile fetch fallback to local cache:', e);
+        try {
+          const cachedRaw = localStorage.getItem('ks_profile_cache') || localStorage.getItem('kd_user_profile');
+          if (cachedRaw) {
+            const p = JSON.parse(cachedRaw);
+            if (p.name) setName(p.name);
+            if (p.district) setDistrict(p.district);
+            if (p.land_size) setLandSize(p.land_size);
+            if (p.crops) setCrops(Array.isArray(p.crops) ? p.crops : String(p.crops).split(',').filter(Boolean));
+          } else {
+            setName('Farmer');
+            setDistrict('Nagpur');
+            setCrops(['Wheat', 'Cotton']);
+          }
+        } catch {}
+      }
     };
     loadProfile();
   }, []);
@@ -60,7 +76,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
     try {
       setLoading(true);
       const profileData = { name, district, land_size: landSize, category, farming_type: farmingType, crops };
-      await userService.updateProfile(profileData);
+      try {
+        await userService.updateProfile(profileData);
+      } catch (err) {
+        console.warn('[Profile] Backend updateProfile fallback to local cache:', err);
+      }
+      localStorage.setItem('ks_profile_cache', JSON.stringify(profileData));
       onComplete({ ...profileData, crops } as UserProfile);
     } catch (e) {
       console.error('Failed to save profile', e);
@@ -81,7 +102,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
   const initials = name ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '🌱';
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden" style={{ background: '#F5FBF7' }}>
+    <div className="min-h-full flex flex-col relative" style={{ background: '#F5FBF7' }}>
 
       {/* ══════════ HERO HEADER ══════════ */}
       <div className="relative shrink-0 overflow-hidden" style={{ background: 'linear-gradient(160deg, #011C0E 0%, #022D18 45%, #044726 100%)', paddingBottom: 64 }}>
