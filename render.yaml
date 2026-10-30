@@ -1,70 +1,70 @@
-services:
-  # 1. Main FastAPI Backend
-  - type: web
-    name: krishi-drishti-api
-    env: python
-    region: singapore
-    plan: free
-    buildCommand: "pip install -r backend/requirements.txt"
-    startCommand: "python -m uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-10000}"
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.0
-      - key: PORT
-        value: "10000"
-      - key: PYTHONUNBUFFERED
-        value: "1"
-      - key: APP_ENV
-        value: "production"
-
-      # ── Security ─────────────────────────────────────────────────────────
-      # SECRET_KEY MUST be set in the Render dashboard (Environment → Secret Files
-      # or Environment Variables). A missing or default value will cause the app
-      # to exit at startup when APP_ENV=production.
-      # Generate with: python -c "import secrets; print(secrets.token_hex(32))"
-      - key: SECRET_KEY
-        sync: false   # Set via Render dashboard – never commit the real value
-
-      # Access token lifetime in minutes. Default: 60.
-      - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: "60"
-
-      # ── AI / ML ──────────────────────────────────────────────────────────
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: USE_LOCAL_DISEASE_MODEL
-        value: "true"
-      - key: DISEASE_INFERENCE_TIMEOUT_SECONDS
-        value: "12.0"
-      - key: GEMINI_INFERENCE_TIMEOUT_SECONDS
-        value: "10.0"
-
-      # ── Database ─────────────────────────────────────────────────────────
-      # WARNING: SQLite on Render's ephemeral disk loses all data on each deploy.
-      # For persistent storage, provision a Render PostgreSQL database and set
-      # DATABASE_URL to the internal connection string provided by Render.
-      # Example: DATABASE_URL=postgresql://user:pass@host/dbname
-      - key: DATABASE_URL
-        sync: false   # Set via Render dashboard to a persistent PostgreSQL URL
-
-      # ── CORS ─────────────────────────────────────────────────────────────
-      # Replace with your actual frontend origin(s) – do NOT use "*" in production.
-      # Multiple origins: "https://app.krishidrishti.com,https://admin.krishidrishti.com"
-      - key: CORS_ORIGINS
-        sync: false   # Set via Render dashboard
-
-      # ── Cloudinary (optional – evidence photo upload) ─────────────────────
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false
-
-      # ── Performance ──────────────────────────────────────────────────────
-      - key: MALLOC_ARENA_MAX
-        value: "2"
-      - key: TF_ENABLE_ONEDNN_OPTS
-        value: "0"
-      - key: TF_CPP_MIN_LOG_LEVEL
-        value: "3"
+services:
+  # 1. Main FastAPI Backend
+  - type: web
+    name: krishi-drishti-api
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "python -m uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-10000}"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PORT
+        value: "10000"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: APP_ENV
+        value: "production"
+
+      # ── Security ─────────────────────────────────────────────────────────
+      # SECRET_KEY MUST be set in the Render dashboard (Environment → Secret Files
+      # or Environment Variables). A missing or default value will cause the app
+      # to exit at startup when APP_ENV=production.
+      # Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Access token lifetime in minutes. Default: 60.
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+
+      # ── AI / ML ──────────────────────────────────────────────────────────
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: USE_LOCAL_DISEASE_MODEL
+        value: "true"
+      - key: DISEASE_INFERENCE_TIMEOUT_SECONDS
+        value: "12.0"
+      - key: GEMINI_INFERENCE_TIMEOUT_SECONDS
+        value: "10.0"
+
+      # ── Database ─────────────────────────────────────────────────────────
+      # WARNING: SQLite on Render's ephemeral disk loses all data on each deploy.
+      # For persistent storage, provision a Render PostgreSQL database and set
+      # DATABASE_URL to the internal connection string provided by Render.
+      # Example: DATABASE_URL=postgresql://user:pass@host/dbname
+      - key: DATABASE_URL
+        sync: false   # Set via Render dashboard to a persistent PostgreSQL URL
+
+      # ── CORS ─────────────────────────────────────────────────────────────
+      # Replace with your actual frontend origin(s) – do NOT use "*" in production.
+      # Multiple origins: "https://app.krishidrishti.com,https://admin.krishidrishti.com"
+      - key: CORS_ORIGINS
+        sync: false   # Set via Render dashboard
+
+      # ── Cloudinary (optional – evidence photo upload) ─────────────────────
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # ── Performance ──────────────────────────────────────────────────────
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      - key: TF_ENABLE_ONEDNN_OPTS
+        value: "0"
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "3"
