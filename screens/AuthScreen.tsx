@@ -27,9 +27,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onSkip, currentLang, o
     try {
       setLoading(true);
       await authService.sendOtp(phone);
+      setOtp(['1', '2', '3', '4']);
       alert('OTP Sent! Your demo verification code is 1234');
       setStep('otp');
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+      setTimeout(() => otpRefs.current[3]?.focus(), 100);
     } catch (err: any) {
       console.error('Failed to send OTP:', err);
       const detail = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Could not reach server. Please retry.';
@@ -38,6 +39,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onSkip, currentLang, o
   };
 
   const handleOtpChange = (val: string, idx: number) => {
+    if (val.length === 4 && /^\d{4}$/.test(val)) {
+      setOtp(val.split(''));
+      otpRefs.current[3]?.focus();
+      return;
+    }
     if (val.length > 1) val = val[val.length - 1];
     const next = [...otp];
     next[idx] = val;
@@ -221,9 +227,21 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onSkip, currentLang, o
                   <ChevronLeft size={14} /> Back
                 </button>
 
-                <div className="mb-5">
-                  <h2 className="text-sm font-black text-white mb-1">Verify OTP</h2>
-                  <p className="text-[10px] text-white/40">Sent to <span className="text-emerald-400 font-bold">+91 {phone}</span></p>
+                <div className="mb-5 flex justify-between items-end">
+                  <div>
+                    <h2 className="text-sm font-black text-white mb-1">Verify OTP</h2>
+                    <p className="text-[10px] text-white/40">Sent to <span className="text-emerald-400 font-bold">+91 {phone}</span></p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtp(['1', '2', '3', '4']);
+                      otpRefs.current[3]?.focus();
+                    }}
+                    className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 active:scale-95 transition-all"
+                  >
+                    Use Demo: 1234
+                  </button>
                 </div>
 
                 {/* 4 OTP boxes */}

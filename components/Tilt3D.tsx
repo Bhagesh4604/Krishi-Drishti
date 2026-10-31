@@ -30,6 +30,10 @@ const Tilt3D: React.FC<Tilt3DProps> = ({
   const [glarePos, setGlarePos] = useState({ x: 50, y: 50, o: 0 });
 
   const handleMove = (e: React.PointerEvent) => {
+    // Touch pointer movement fires continuously while a finger scrolls across
+    // a card. Skip the 3D state updates on touch devices to avoid WebView jank.
+    if (e.pointerType !== 'mouse') return;
+
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Screen, UserProfile, Language, VisionMode } from './types';
 import {
   MessageCircle,
@@ -69,9 +69,11 @@ const ScreenFallback: React.FC = () => (
 const App: React.FC = () => {
   return (
     <LanguageProvider>
-      <ErrorBoundary>
-        <AppContent />
-      </ErrorBoundary>
+      <MotionConfig reducedMotion={Capacitor.isNativePlatform() ? 'always' : 'user'}>
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
+      </MotionConfig>
     </LanguageProvider>
   );
 };
@@ -166,10 +168,13 @@ const AppContent: React.FC = () => {
   const [screenData, setScreenData] = useState<any>(null);
   const [navVisible, setNavVisible] = useState(true);
   const lastScrollTop = useRef(0);
+  const mainScrollRef = useRef<HTMLElement | null>(null);
+  const homeScrollTop = useRef(0);
 
   const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
     const currentTop = e.currentTarget.scrollTop;
     const diff = currentTop - lastScrollTop.current;
+    if (currentScreen === 'home') homeScrollTop.current = currentTop;
 
     // Scrolling down -> smoothly tuck away floating navigation & FAB so background content is fully visible
     if (diff > 12 && currentTop > 60) {
@@ -188,6 +193,19 @@ const AppContent: React.FC = () => {
       setNavVisible(true);
     }
   };
+
+  // Each screen shares the same native scroll container. Reset other screens
+  // to the top on navigation, and restore the dashboard's last position when
+  // returning so a previous page's offset cannot cut through its cards.
+  useLayoutEffect(() => {
+    const main = mainScrollRef.current;
+    if (!main) return;
+
+    const nextScrollTop = currentScreen === 'home' ? homeScrollTop.current : 0;
+    main.scrollTop = nextScrollTop;
+    lastScrollTop.current = nextScrollTop;
+    setNavVisible(true);
+  }, [currentScreen]);
 
   // Admin fast-path handled above at state init time
 
@@ -852,6 +870,7 @@ const AppContent: React.FC = () => {
         }}
       >
       <main
+        ref={mainScrollRef}
         onScroll={handleMainScroll}
         className="flex-1 overflow-y-auto mobile-container relative"
         style={{
@@ -862,7 +881,7 @@ const AppContent: React.FC = () => {
         }}
       >
         <React.Suspense fallback={<ScreenFallback />}>
-          <div key={currentScreen} className="w-full min-h-full">
+          <div key={currentScreen} className="w-full h-full min-h-full">
             {renderScreen()}
           </div>
         </React.Suspense>

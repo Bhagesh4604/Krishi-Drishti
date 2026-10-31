@@ -438,7 +438,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
   return (
     <div
-      className="min-h-full pb-12 font-sans text-gray-800 relative w-full max-w-full overflow-x-hidden"
+      className="dashboard-screen min-h-full pb-12 font-sans text-gray-800 relative w-full max-w-full overflow-x-hidden"
       style={{ background: 'linear-gradient(180deg, #f4fbf6 0%, #ffffff 32%, #ffffff 100%)' }}
     >
 
@@ -446,7 +446,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
       {/* Dynamic Animated Background Mesh ΓÇö aurora depth field */}
 
-      <div className="absolute top-0 left-0 w-full h-[620px] z-0 overflow-hidden pointer-events-none">
+      <div className="dashboard-ambient absolute top-0 left-0 w-full h-[620px] z-0 overflow-hidden pointer-events-none">
 
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-300/50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float"></div>
 

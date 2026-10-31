@@ -122,11 +122,41 @@ html.dark-theme-override .no-invert {
   box-shadow: var(--shadow-soft), var(--inner-glow);
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
 }
-.surface-3d:hover {
-  transform: translateY(-5px) scale(1.015);
-  box-shadow: var(--shadow-lift), var(--inner-glow);
-}
-
+.surface-3d:hover {
+  transform: translateY(-5px) scale(1.015);
+  box-shadow: var(--shadow-lift), var(--inner-glow);
+}
+
+/* Touch WebViews can keep :hover active after a tap. Avoid lifting/scaling
+   dashboard cards on Android so adjacent cards do not visually collide. */
+@media (hover: none), (pointer: coarse) {
+  body {
+    background-attachment: scroll;
+  }
+
+  .dashboard-screen .dashboard-ambient {
+    display: none;
+  }
+
+  .dashboard-screen .glass {
+    background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .surface-3d:hover,
+  .surface-3d:active {
+    transform: none;
+    box-shadow: var(--shadow-soft), var(--inner-glow);
+  }
+
+  /* Android WebView can mis-composite translateZ children inside a
+     perspective grid, shrinking the dashboard's right-column cards. */
+  .dashboard-screen .icon-chip-3d {
+    transform: none;
+  }
+}
+
 /* Dark premium 3D surface */
 .surface-dark {
   background: linear-gradient(150deg, #0c2b1c 0%, #06180f 60%, #0a2417 100%);
