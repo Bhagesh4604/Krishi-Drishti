@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { X, Mic, Loader2, Globe, Sparkles, Keyboard } from 'lucide-react';
+import { Globe, Keyboard, Mic, Sparkles, Square, WifiOff, X } from 'lucide-react';
 import { languages } from '../translations';
 import { Language } from '../types';
 
@@ -11,22 +11,36 @@ interface VoiceAssistantModalProps {
     onSwitchToText?: () => void;
 }
 
-const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+const languageCodes: Record<string, string> = {
+    en: 'en-IN', hi: 'hi-IN', kn: 'kn-IN', te: 'te-IN',
+    ta: 'ta-IN', mr: 'mr-IN', gu: 'gu-IN',
+};
+
+const getGeminiApiKey = () => import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+
+const blobToBase64 = async (blob: Blob) => {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    return btoa(binary);
+};
 
 const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClose, language, onSwitchToText }) => {
     const [isActive, setIsActive] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
-    const [transcriptions, setTranscriptions] = useState<{ role: 'user' | 'model', text: string }[]>([]);
+    const [transcriptions, setTranscriptions] = useState<{ role: 'user' | 'model'; text: string }[]>([]);
     const [currentInput, setCurrentInput] = useState('');
     const [selectedLang, setSelectedLang] = useState<Language>(language);
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-    // Visualization State
     const [volume, setVolume] = useState(0);
 
     const isActiveRef = useRef(false);
-    const recognitionRef = useRef<any>(null);
+    const recorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
     const audioContextInRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const animationRef = useRef<number>();
@@ -35,155 +49,96 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
     const speakResponse = (text: string, langCode: string) => {
         if (!window.speechSynthesis) return;
         window.speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Try to map our language codes to browser voice languages
-        const langMap: Record<string, string> = {
-            'en': 'en-IN', 'hi': 'hi-IN', 'kn': 'kn-IN', 'te': 'te-IN', 
-            'ta': 'ta-IN', 'mr': 'mr-IN', 'gu': 'gu-IN'
-        };
-        utterance.lang = langMap[langCode] || 'en-IN';
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        
-        utterance.onstart = () => {
-            // Simulate volume while speaking
-            setVolume(0.8);
-        };
-        
-        utterance.onend = () => {
-            setVolume(0);
-            if (isActiveRef.current && recognitionRef.current) {
-                // Resume listening after speaking
-                try {
-                    recognitionRef.current.start();
-                } catch(e) {}
-            }
-        };
 
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = languageCodes[langCode] || 'en-IN';
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.onstart = () => setVolume(0.7);
+        utterance.onend = () => setVolume(0);
         window.speechSynthesis.speak(utterance);
     };
 
     const processUserInput = async (text: string) => {
         setIsConnecting(true);
         try {
-            const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+            const apiKey = getGeminiApiKey();
+            if (!apiKey) throw new Error('Gemini API key is not configured.');
             const ai = new GoogleGenAI({ apiKey });
             const currentLangLabel = languages.find(l => l.code === selectedLang)?.label || 'English';
 
             setTranscriptions(prev => [...prev, { role: 'user', text }]);
             setCurrentInput('');
-            
+
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: text,
                 config: {
-                    systemInstruction: `You are Krishi Drishti AI, an expert AI Agricultural Scientist. Language: ${currentLangLabel}. Provide concise, practical farming advice in exactly 1 or 2 short sentences. Do not use markdown.`
-                }
+                    systemInstruction: `You are Krishi Drishti AI, an expert AI Agricultural Scientist. Language: ${currentLangLabel}. Provide concise, practical farming advice in exactly 1 or 2 short sentences. Do not use markdown.`,
+                },
             });
 
             const reply = response.text || "I'm sorry, I couldn't process that.";
-            
             setTranscriptions(prev => [...prev, { role: 'model', text: reply }]);
             speakResponse(reply, selectedLang);
-
         } catch (err: any) {
             console.error(err);
-            setErrorMessage("Failed to connect to AI. Check API Key or internet.");
-            setIsActive(false);
-            isActiveRef.current = false;
+            setErrorMessage(err?.message?.includes('API key')
+                ? 'Voice AI is not configured yet. Use text chat for now.'
+                : 'Could not connect to Voice AI. Check your connection and try again.');
         } finally {
             setIsConnecting(false);
         }
     };
 
-    const startSession = async () => {
-        setErrorMessage(null);
+    const releaseAudioResources = () => {
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        animationRef.current = undefined;
+        analyserRef.current = null;
+        mediaStreamRef.current?.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+        if (audioContextInRef.current) {
+            void audioContextInRef.current.close().catch(() => undefined);
+            audioContextInRef.current = null;
+        }
+        setVolume(0);
+    };
+
+    const transcribeRecording = async (audio: Blob) => {
         setIsConnecting(true);
-        
+        setErrorMessage(null);
         try {
-            // Setup visualizer mic
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaStreamRef.current = stream;
-            
-            audioContextInRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const analyser = audioContextInRef.current.createAnalyser();
-            analyser.fftSize = 256;
-            analyserRef.current = analyser;
-
-            const source = audioContextInRef.current.createMediaStreamSource(stream);
-            source.connect(analyser);
-
-            const updateVolume = () => {
-                if (!analyserRef.current) return;
-                const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-                analyserRef.current.getByteFrequencyData(dataArray);
-                const avg = dataArray.reduce((p, c) => p + c, 0) / dataArray.length;
-                const normalizedParams = Math.min(1, avg / 60);
-                
-                // If it's synthesizing speech, override volume for visual effect
-                if (!window.speechSynthesis.speaking) {
-                    setVolume(prev => prev * 0.8 + normalizedParams * 0.2);
-                }
-                
-                animationRef.current = requestAnimationFrame(updateVolume);
-            };
-            updateVolume();
-
-            // Setup Speech Recognition
-            if (SpeechRecognition) {
-                const recognition = new SpeechRecognition();
-                const langMap: Record<string, string> = {
-                    'en': 'en-IN', 'hi': 'hi-IN', 'kn': 'kn-IN', 'te': 'te-IN', 
-                    'ta': 'ta-IN', 'mr': 'mr-IN', 'gu': 'gu-IN'
-                };
-                recognition.lang = langMap[selectedLang] || 'en-IN';
-                recognition.continuous = false;
-                recognition.interimResults = true;
-
-                recognition.onresult = (event: any) => {
-                    const transcript = Array.from(event.results)
-                        .map((result: any) => result[0].transcript)
-                        .join('');
-                    
-                    setCurrentInput(transcript);
-
-                    if (event.results[0].isFinal) {
-                        recognition.stop();
-                        processUserInput(transcript);
-                    }
-                };
-
-                recognition.onerror = (event: any) => {
-                    if (event.error !== 'no-speech' && event.error !== 'aborted') {
-                        console.error('Speech recognition error', event.error);
-                        setErrorMessage(`Microphone error: ${event.error}`);
-                        stopSession();
-                    }
-                };
-
-                recognition.onend = () => {
-                    // Only auto-restart if we are actively listening and NOT currently speaking
-                    if (isActiveRef.current && !window.speechSynthesis.speaking && !isConnecting) {
-                        try { recognition.start(); } catch(e) {}
-                    }
-                };
-
-                recognitionRef.current = recognition;
-                recognition.start();
-                
-                setIsActive(true);
-                isActiveRef.current = true;
-                setIsConnecting(false);
-            } else {
-                setErrorMessage("Voice Recognition is not supported in your browser. Please try Chrome.");
-                setIsConnecting(false);
+            const apiKey = getGeminiApiKey();
+            if (!apiKey) {
+                setErrorMessage('Voice AI is not configured yet. Use text chat for now.');
+                return;
+            }
+            if (audio.size > 18 * 1024 * 1024) {
+                setErrorMessage('That recording is too long. Please record a shorter question.');
+                return;
             }
 
-        } catch (err: any) {
+            const ai = new GoogleGenAI({ apiKey });
+            const audioData = await blobToBase64(audio);
+            const mimeType = audio.type.split(';')[0] || 'audio/webm';
+            const currentLangLabel = languages.find(l => l.code === selectedLang)?.label || 'English';
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: [
+                    { inlineData: { mimeType, data: audioData } },
+                    `Transcribe only the spoken words in this audio. The speaker is using ${currentLangLabel}. Return only the transcription, without labels or commentary. If there is no intelligible speech, return an empty response.`,
+                ],
+            });
+            const transcript = (response.text || '').trim().replace(/^['"“”]+|['"“”]+$/g, '');
+            if (!transcript) {
+                setErrorMessage('I could not hear a clear question. Tap the microphone and try again.');
+                return;
+            }
+            await processUserInput(transcript);
+        } catch (err) {
             console.error(err);
-            setErrorMessage("Microphone Access Denied. Please check browser permissions.");
+            setErrorMessage('Could not process the recording. Check your connection and try again.');
+        } finally {
             setIsConnecting(false);
         }
     };
@@ -192,161 +147,237 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
         setIsActive(false);
         isActiveRef.current = false;
         setIsConnecting(false);
-        
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
+        const recorder = recorderRef.current;
+        recorderRef.current = null;
+        if (recorder && recorder.state !== 'inactive') {
+            recorder.ondataavailable = null;
+            recorder.onstop = null;
+            try { recorder.stop(); } catch { /* already stopped */ }
         }
-        if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-        }
-        if (mediaStreamRef.current) {
-            mediaStreamRef.current.getTracks().forEach(track => track.stop());
-        }
-        if (audioContextInRef.current) {
-            audioContextInRef.current.close();
-        }
-        if (animationRef.current) {
-            cancelAnimationFrame(animationRef.current);
-        }
-        setVolume(0);
+        audioChunksRef.current = [];
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        releaseAudioResources();
         setCurrentInput('');
     };
 
-    useEffect(() => {
-        if (isOpen && !isActive && !isConnecting) {
-            startSession();
-        } else if (!isOpen) {
-            stopSession();
+    const startSession = async () => {
+        if (isActiveRef.current || isConnecting) return;
+        setErrorMessage(null);
+        setCurrentInput('');
+
+        if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+            setErrorMessage('Voice recording is not supported here. Use text chat or open the app in a supported browser.');
+            return;
         }
+
+        setIsConnecting(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            });
+            mediaStreamRef.current = stream;
+
+            const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContextCtor) {
+                audioContextInRef.current = new AudioContextCtor();
+                await audioContextInRef.current.resume();
+                const analyser = audioContextInRef.current.createAnalyser();
+                analyser.fftSize = 256;
+                analyserRef.current = analyser;
+                audioContextInRef.current.createMediaStreamSource(stream).connect(analyser);
+
+                const updateVolume = () => {
+                    if (!analyserRef.current) return;
+                    const data = new Uint8Array(analyserRef.current.frequencyBinCount);
+                    analyserRef.current.getByteFrequencyData(data);
+                    const average = data.reduce((sum, value) => sum + value, 0) / data.length;
+                    setVolume(previous => previous * 0.8 + Math.min(1, average / 60) * 0.2);
+                    animationRef.current = requestAnimationFrame(updateVolume);
+                };
+                updateVolume();
+            }
+
+            const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
+                .find(type => MediaRecorder.isTypeSupported(type));
+            const recorder = mimeType
+                ? new MediaRecorder(stream, { mimeType })
+                : new MediaRecorder(stream);
+            audioChunksRef.current = [];
+            recorder.ondataavailable = event => {
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            };
+            recorder.onstop = () => {
+                const chunks = audioChunksRef.current;
+                audioChunksRef.current = [];
+                const recording = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || 'audio/webm' });
+                releaseAudioResources();
+                recorderRef.current = null;
+                if (recording.size < 1000) {
+                    setIsConnecting(false);
+                    setErrorMessage('I could not hear a clear question. Tap the microphone and try again.');
+                    return;
+                }
+                void transcribeRecording(recording);
+            };
+            recorderRef.current = recorder;
+            recorder.start(250);
+            isActiveRef.current = true;
+            setIsActive(true);
+        } catch (err: any) {
+            console.error(err);
+            releaseAudioResources();
+            setErrorMessage(err?.name === 'NotAllowedError' || err?.name === 'SecurityError'
+                ? 'Microphone permission is blocked. Allow microphone access, then try again.'
+                : err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError'
+                    ? 'No microphone was detected. Check your audio device and try again.'
+                    : 'Could not start the microphone. Check microphone access and try again.');
+        } finally {
+            setIsConnecting(false);
+        }
+    };
+
+    const finishRecording = () => {
+        const recorder = recorderRef.current;
+        if (!recorder || recorder.state === 'inactive') return;
+        isActiveRef.current = false;
+        setIsActive(false);
+        setIsConnecting(true);
+        try { recorder.stop(); } catch { setIsConnecting(false); }
+    };
+
+    useEffect(() => {
+        if (!isOpen) stopSession();
         return () => stopSession();
     }, [isOpen]);
-
-    // Restart session if language changes while active
-    useEffect(() => {
-        if (isActive && isOpen) {
-            stopSession();
-            setTimeout(() => startSession(), 500);
-        }
-    }, [selectedLang]);
 
     if (!isOpen) return null;
 
     return (
         <div
-            className="absolute inset-0 z-[100] flex flex-col text-white animate-in fade-in duration-200 rounded-none sm:rounded-[2.5rem] overflow-hidden"
-            style={{ background: '#05120B' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Krishi Drishti voice assistant"
+            className="absolute inset-0 z-[100] flex min-h-0 flex-col overflow-hidden rounded-none text-white animate-in fade-in duration-200 sm:rounded-[2.5rem]"
+            style={{ background: 'radial-gradient(ellipse at 50% 38%, rgba(0,187,120,0.08), transparent 46%), #05120B' }}
         >
-            {/* Header */}
-            <div className="flex justify-between items-center px-6 pt-12 pb-4 border-b border-white/5">
+            <header className="shrink-0 flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex items-center gap-2">
-                    <Sparkles size={16} className="text-teal-400" />
-                    <span className="text-sm font-bold tracking-widest uppercase text-teal-400">Krishi Drishti AI</span>
+                    <Sparkles size={17} className="text-teal-400" />
+                    <span className="text-sm font-bold tracking-[0.14em] uppercase text-teal-300">Krishi Drishti AI</span>
                 </div>
-
-                <div className="flex gap-4 items-center">
-                    {/* Language Selector */}
+                <div className="flex items-center gap-2">
                     <div className="relative">
                         <button
-                            onClick={() => setShowLangMenu(!showLangMenu)}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold transition-colors"
+                            type="button"
+                            aria-label="Choose voice language"
+                            aria-expanded={showLangMenu}
+                            onClick={() => setShowLangMenu(value => !value)}
+                            className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-semibold transition-colors hover:bg-white/10"
                         >
                             <Globe size={14} />
                             {languages.find(l => l.code === selectedLang)?.native || 'English'}
                         </button>
-
                         {showLangMenu && (
-                            <div className="absolute top-full right-0 mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50">
+                            <div className="absolute right-0 top-full z-50 mt-2 max-h-64 w-52 overflow-y-auto rounded-2xl border border-white/10 bg-[#102017] p-1 shadow-2xl">
                                 {languages.map(lang => (
                                     <button
                                         key={lang.code}
-                                        onClick={() => {
-                                            setSelectedLang(lang.code as Language);
-                                            setShowLangMenu(false);
-                                        }}
-                                        className={`w-full text-left px-4 py-3 text-xs font-bold hover:bg-white/5 transition-colors ${selectedLang === lang.code ? 'text-teal-400' : 'text-gray-400'}`}
+                                        type="button"
+                                        onClick={() => { setSelectedLang(lang.code as Language); setShowLangMenu(false); }}
+                                        className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors hover:bg-white/[0.06] ${selectedLang === lang.code ? 'text-teal-300' : 'text-white/65'}`}
                                     >
-                                        {lang.native} ({lang.label})
+                                        {lang.native} <span className="text-white/40">({lang.label})</span>
                                     </button>
                                 ))}
                             </div>
                         )}
                     </div>
-
-                    <button onClick={onClose} className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
-                        <X size={20} />
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Close voice assistant"
+                        className="rounded-full bg-white/[0.07] p-2.5 transition-colors hover:bg-white/15"
+                    >
+                        <X size={18} />
                     </button>
                 </div>
-            </div>
+            </header>
 
-            {/* Main Visualizer Area */}
-            <div className="flex-1 flex flex-col items-center justify-center relative">
-                {/* Clean Pulsing Visualizer Area */}
-                <div className="w-full h-64 relative flex items-center justify-center pointer-events-none">
+            <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+                <div className="flex w-full items-center justify-center">
                     {errorMessage ? (
-                        <div className="bg-red-500/20 border border-red-500/50 p-4 rounded-xl text-center max-w-[80%] backdrop-blur-md">
-                            <p className="text-red-200 text-sm font-medium">{errorMessage}</p>
+                        <div role="alert" className="w-full max-w-sm rounded-2xl border border-rose-300/20 bg-rose-400/[0.08] p-4 shadow-xl shadow-black/10">
+                            <div className="flex items-start gap-3">
+                                <span className="mt-0.5 rounded-xl bg-rose-300/10 p-2.5 text-rose-200">
+                                    <WifiOff size={17} />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-rose-100">Voice is temporarily unavailable</p>
+                                    <p className="mt-1 text-xs leading-relaxed text-rose-100/70">{errorMessage}</p>
+                                    <button type="button" onClick={startSession} className="mt-3 rounded-xl border border-white/10 bg-white/[0.07] px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-white/10">
+                                        Try again
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     ) : (
-                        <div className="relative flex items-center justify-center">
-                            {/* Outer animated rings when active */}
-                            {isActive && (
-                                <>
-                                    <div className="absolute w-40 h-40 bg-teal-500/20 rounded-full animate-ping" style={{ animationDuration: '2s', transform: `scale(${1 + volume})` }} />
-                                    <div className="absolute w-48 h-48 bg-emerald-500/10 rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '0.5s', transform: `scale(${1 + volume * 1.5})` }} />
-                                    <div className="absolute w-56 h-56 border border-teal-500/20 rounded-full animate-spin-slow" style={{ transform: `rotate(${volume * 360}deg)` }} />
-                                </>
-                            )}
-                            
-                            {/* Core Orb reacting to volume */}
-                            <div className={`w-32 h-32 rounded-full relative flex items-center justify-center transition-all duration-75 ease-out ${isActive ? 'bg-gradient-to-tr from-teal-400 to-emerald-500 shadow-[0_0_40px_rgba(45,212,191,0.6)]' : 'bg-white/5 border-2 border-white/10'}`} style={{ transform: `scale(${isActive ? 1 + volume * 0.4 : 1})` }}>
-                                <div className={`absolute inset-0 rounded-full bg-gradient-to-tr from-teal-300 to-emerald-400 blur-md transition-opacity duration-700 ${isActive ? 'opacity-50' : 'opacity-0'}`} />
-                                <Mic size={40} className={`relative z-10 transition-colors duration-700 ${isActive ? 'text-white drop-shadow-lg' : 'text-white/30'}`} />
+                        <div className="relative flex h-40 w-full items-center justify-center">
+                            {isActive && <>
+                                <div className="absolute h-40 w-40 rounded-full bg-teal-500/15 animate-ping" style={{ animationDuration: '2s', transform: `scale(${1 + volume})` }} />
+                                <div className="absolute h-48 w-48 rounded-full border border-teal-400/15 animate-spin-slow" style={{ transform: `rotate(${volume * 360}deg)` }} />
+                            </>}
+                            <div className={`relative flex h-28 w-28 items-center justify-center rounded-full transition-all duration-100 ${isActive ? 'bg-gradient-to-tr from-teal-400 to-emerald-500 shadow-[0_0_42px_rgba(45,212,191,0.35)]' : 'border border-white/10 bg-white/[0.04]'}`} style={{ transform: `scale(${isActive ? 1 + volume * 0.24 : 1})` }}>
+                                <div className={`absolute inset-0 rounded-full bg-gradient-to-tr from-teal-300 to-emerald-400 blur-md transition-opacity ${isActive ? 'opacity-35' : 'opacity-0'}`} />
+                                <Mic size={34} className={`relative z-10 ${isActive ? 'text-white' : 'text-white/35'}`} />
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Status Text */}
-                <p className="mt-8 text-sm font-bold text-teal-200 uppercase tracking-[0.2em] animate-pulse">
-                    {isConnecting ? 'Thinking...' : (isActive ? 'Listening...' : 'Paused')}
+                <p className="text-center text-xs font-bold uppercase tracking-[0.16em] text-teal-200">
+                    {isConnecting ? 'Processing your question' : isActive ? 'Listening' : errorMessage ? 'Ready when you are' : 'Ask Krishi Drishti'}
+                </p>
+                <p className="max-w-sm text-center text-[11px] leading-relaxed text-white/45">
+                    {isActive ? 'Speak naturally, then tap the microphone to send.' : 'Tap the microphone to speak about crops, weather, or markets.'}
                 </p>
 
-                {/* Transcription Stream */}
-                <div className="mt-8 w-full max-w-lg px-8 space-y-4 text-center h-32 overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#05120B] z-10 pointer-events-none"></div>
-                    {transcriptions.slice(-1).map((t, i) => (
-                        <p key={i} className={`text-lg font-medium leading-relaxed ${t.role === 'model' ? 'text-white' : 'text-gray-400'}`}>
-                            "{t.text}"
-                        </p>
-                    ))}
-                    {currentInput && <p className="text-lg text-gray-400 font-medium">"{currentInput}..."</p>}
-                </div>
-            </div>
-
-            {/* Footer / Controls */}
-            <div className="p-6 pb-10 flex justify-center items-center gap-6">
-                {/* Switch to Text Chat */}
-                <button
-                    onClick={onSwitchToText}
-                    className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all active:scale-95 flex flex-col items-center gap-1"
-                    title="Type to Chat"
-                >
-                    <div className="bg-teal-500/20 p-3 rounded-full border border-teal-500/50">
-                        <Keyboard size={20} className="text-teal-400" />
+                {(transcriptions.length > 0 || currentInput) && (
+                    <div className="w-full max-w-sm space-y-2 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3 text-center">
+                        {transcriptions.slice(-2).map((item, index) => (
+                            <p key={`${item.role}-${index}`} className={`text-sm leading-relaxed ${item.role === 'model' ? 'text-white' : 'text-white/50'}`}>
+                                {item.text}
+                            </p>
+                        ))}
+                        {currentInput && <p className="text-sm text-teal-100/70">{currentInput}</p>}
                     </div>
-                    <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">Type</span>
-                </button>
+                )}
+            </main>
 
-                <button
-                    onClick={isActive ? stopSession : startSession}
-                    className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-90 ${isActive ? 'bg-red-500/20 text-red-400 border-2 border-red-500/50 hover:bg-red-500/30' : 'bg-teal-500/20 text-teal-400 border-2 border-teal-500/50 hover:bg-teal-500/30'}`}
-                >
-                    {isActive ? <X size={32} /> : <Mic size={32} />}
-                </button>
-
-                {/* Placeholder for symmetry */}
-                <div className="w-16"></div>
-            </div>
+            <footer className="shrink-0 px-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3 sm:px-6">
+                <div className="mx-auto flex max-w-sm items-center gap-3 rounded-[26px] border border-white/[0.07] bg-white/[0.035] p-3 shadow-2xl shadow-black/15">
+                    <button
+                        type="button"
+                        onClick={onSwitchToText}
+                        aria-label="Switch to text chat"
+                        className="flex h-14 flex-1 items-center justify-center gap-2.5 rounded-2xl border border-white/[0.06] bg-white/[0.04] px-3 text-white/80 transition-colors hover:bg-white/[0.08] active:scale-[0.98]"
+                    >
+                        <Keyboard size={19} className="text-teal-300" />
+                        <span className="text-sm font-semibold">Type a question</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={isActive ? finishRecording : startSession}
+                        disabled={isConnecting}
+                        aria-label={isActive ? 'Finish recording and send' : 'Start voice recording'}
+                        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all active:scale-95 disabled:cursor-wait disabled:opacity-60 ${isActive ? 'bg-rose-500 text-white shadow-lg shadow-rose-950/30' : 'bg-gradient-to-br from-emerald-400 to-teal-500 text-[#032014] shadow-lg shadow-emerald-950/30'}`}
+                    >
+                        {isConnecting ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : isActive ? <Square size={19} fill="currentColor" /> : <Mic size={22} />}
+                    </button>
+                </div>
+                <p className="mt-2 text-center text-[10px] font-medium text-white/35">
+                    {isConnecting ? 'One moment…' : isActive ? 'Tap the square to send your recording' : 'Your microphone starts only when you tap'}
+                </p>
+            </footer>
         </div>
     );
 };

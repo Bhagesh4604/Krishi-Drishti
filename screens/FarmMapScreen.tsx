@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Screen } from '../types';
 import {
-  ArrowLeft, Search, Layers, MoreVertical,
-  MapPin, Droplets, Thermometer, Wind,
-  Activity, ScanLine, ChevronRight, Plus,
+  Search, Layers, MapPin,
+  Activity, ScanLine, Plus,
   Loader2, X, Satellite, AlertTriangle
 } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
@@ -234,27 +234,69 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
             </button>
           </div>
 
-          {/* Bottom Stats Card */}
-          <div className="absolute bottom-4 left-4 right-4 bg-white p-4 rounded-2xl shadow-lg z-[400]" style={{ border: '1px solid #F0F0F0' }}>
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <h3 className="text-sm font-bold" style={{ color: '#001A11' }}>{selectedPlot?.name || 'Your Field'}</h3>
-                <p className="text-[10px] font-medium" style={{ color: '#616B68' }}>{selectedPlot?.area ? `${selectedPlot.area} ha` : 'N/A'}</p>
-              </div>
-              <button className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 text-gray-500 hover:text-green-600 transition-colors">
-                <MoreVertical size={14} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-y-2 gap-x-6">
-              {stats.map((s, i) => (
-                <div key={i} className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0">
-                  <span className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>{s.label}</span>
-                  <span className="text-xs font-bold" style={{ color: '#001A11' }}>{s.value}</span>
+          {!location && !loading && (
+            <div className="absolute inset-0 z-[350] flex items-center justify-center p-6 text-center">
+              <div className="max-w-xs">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                  <MapPin size={22} />
                 </div>
-              ))}
+                <h3 className="text-sm font-bold text-slate-800">
+                  {selectedPlot ? 'Map preview unavailable' : 'Your map is ready'}
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  {selectedPlot
+                    ? 'Allow location access to see your field on the map.'
+                    : 'Add a field boundary to see your farm and live field insights here.'}
+                </p>
+                {!selectedPlot && (
+                  <button
+                    type="button"
+                    onClick={() => navigateTo('landmark')}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-700"
+                  >
+                    <Plus size={14} /> Add your first field
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Live stats for the currently selected field */}
+          <AnimatePresence mode="wait">
+            {selectedPlot && (
+              <motion.div
+                key={selectedPlot.id}
+                initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                aria-live="polite"
+                className="absolute bottom-4 left-4 right-4 z-[400] rounded-2xl border bg-white/95 p-4 shadow-lg backdrop-blur-sm"
+                style={{ borderColor: '#F0F0F0' }}
+              >
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold" style={{ color: '#001A11' }}>{selectedPlot.name}</h3>
+                    <p className="text-[10px] font-medium" style={{ color: '#616B68' }}>
+                      {selectedPlot.area ? `${selectedPlot.area} ha` : 'Area not set'}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
+                    Selected field
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                  {stats.map(stat => (
+                    <div key={stat.label} className="flex items-center justify-between border-b border-gray-100 py-1 last:border-0">
+                      <span className="text-[10px] font-bold uppercase text-gray-500">{stat.label}</span>
+                      <span className="text-xs font-bold" style={{ color: '#001A11' }}>{stat.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Floating Scan Button inside the map */}
           <button

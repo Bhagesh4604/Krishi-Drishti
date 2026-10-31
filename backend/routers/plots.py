@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, get_current_user_optional
 from ..ml_models.anomaly_detector import detect_anomalies
 from ..models import DiseaseRiskAlert, FarmerOperationLog, Plot, PlotHistory, User
 from ..services.earth_engine import earth_engine_service
@@ -95,8 +95,10 @@ def _plot_ring(plot: Plot) -> List[List[float]]:
 @router.get("/", response_model=List[PlotResponse])
 async def get_my_plots(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
+    if not current_user:
+        return []
     plots = db.query(Plot).filter(Plot.user_id == current_user.id).all()
 
     results: List[PlotResponse] = []

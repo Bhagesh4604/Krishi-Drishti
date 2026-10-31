@@ -174,6 +174,12 @@ api.interceptors.response.use((response) => {
   return response;
 }, (error) => {
   console.error('[API Res Error]', error.response?.status, error.message, error.response?.data);
+  if (error.response?.status === 401) {
+    if (localStorage.getItem('ks_token')) {
+      console.warn('[API Auth] 401 Unauthorized: removing stale token');
+      localStorage.removeItem('ks_token');
+    }
+  }
   return Promise.reject(error);
 });
 
@@ -432,8 +438,15 @@ export const communityService = {
 
 export const plotService = {
   getPlots: async () => {
-    const response = await api.get('/plots/');
-    return response.data;
+    try {
+      const response = await api.get('/plots/');
+      return response.data || [];
+    } catch (e: any) {
+      if (e?.response?.status === 401) {
+        return [];
+      }
+      throw e;
+    }
   },
   createPlot: async (plot: { name: string, coordinates: { lat: number, lng: number }[], area: number, crop_type?: string }) => {
     const response = await api.post('/plots/', plot);
