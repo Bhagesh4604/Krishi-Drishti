@@ -171,8 +171,7 @@ const AppContent: React.FC = () => {
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const homeScrollTop = useRef(0);
 
-  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
-    const currentTop = e.currentTarget.scrollTop;
+  const handleScrollPosition = (currentTop: number) => {
     const diff = currentTop - lastScrollTop.current;
     if (currentScreen === 'home') homeScrollTop.current = currentTop;
 
@@ -193,6 +192,27 @@ const AppContent: React.FC = () => {
       setNavVisible(true);
     }
   };
+
+  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
+    handleScrollPosition(e.currentTarget.scrollTop);
+  };
+
+  // Field and a few feature screens scroll inside their own content pane.
+  // Listen in capture phase so those gestures hide/reveal the shared dock too.
+  useEffect(() => {
+    const main = mainScrollRef.current;
+    if (!main) return;
+
+    const handleNestedScroll = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || target === main || !main.contains(target)) return;
+      if (target.scrollHeight <= target.clientHeight + 1) return;
+      handleScrollPosition(target.scrollTop);
+    };
+
+    main.addEventListener('scroll', handleNestedScroll, true);
+    return () => main.removeEventListener('scroll', handleNestedScroll, true);
+  }, [currentScreen, navVisible, fabMenuOpen]);
 
   // Each screen shares the same native scroll container. Reset other screens
   // to the top on navigation, and restore the dashboard's last position when
@@ -864,7 +884,7 @@ const AppContent: React.FC = () => {
       <div
         className="flex flex-col w-full max-w-md h-[100dvh] sm:h-[94vh] sm:max-h-[920px] relative overflow-hidden rounded-none sm:rounded-[2.5rem]"
         style={{
-          background: '#020B06',
+          background: currentScreen === 'map' ? '#F7F9F8' : showNav ? '#FFFFFF' : '#020B06',
           boxShadow: '0 2px 6px rgba(0,40,20,0.5), 0 16px 40px rgba(0,40,20,0.6), 0 60px 120px -20px rgba(0,0,0,0.8), 0 0 80px rgba(0,255,135,0.08)',
           border: '1px solid rgba(255,255,255,0.06)',
         }}

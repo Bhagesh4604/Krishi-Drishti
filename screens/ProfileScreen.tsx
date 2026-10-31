@@ -370,8 +370,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onComplete, onLogout, t, 
       </div>
 
       {/* ══════════ BOTTOM ACTIONS ══════════ */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 pb-12 pt-4 z-20"
-        style={{ background: 'linear-gradient(0deg, white 80%, transparent)' }}>
+      <div className="shrink-0 border-t border-emerald-50 bg-white px-5 pb-6 pt-4 relative z-20">
 
         <motion.button whileTap={{ scale: 0.97 }}
           onClick={handleSave}

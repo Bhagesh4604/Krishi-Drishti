@@ -21,11 +21,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate, visibl
     <div
       className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-4 pt-8 z-30 pointer-events-none"
       style={{
-        background: visible
-          ? 'linear-gradient(to top, rgba(247,249,248,0.94) 0%, rgba(247,249,248,0.62) 24%, rgba(247,249,248,0) 58%)'
-          : 'transparent',
         paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
-        transition: 'background 180ms ease',
       }}
     >
       {/* ══ Sleek Floating Glass Dock ══ */}
