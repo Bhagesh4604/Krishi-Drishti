@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Screen, UserProfile, Language, VisionMode } from './types';
 import {
   MessageCircle,
@@ -69,11 +69,9 @@ const ScreenFallback: React.FC = () => (
 const App: React.FC = () => {
   return (
     <LanguageProvider>
-      <MotionConfig reducedMotion={Capacitor.isNativePlatform() ? 'always' : 'user'}>
-        <ErrorBoundary>
-          <AppContent />
-        </ErrorBoundary>
-      </MotionConfig>
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
     </LanguageProvider>
   );
 };
@@ -882,7 +880,7 @@ const AppContent: React.FC = () => {
 
       {/* App Frame */}
       <div
-        className="flex flex-col w-full max-w-md h-[100dvh] sm:h-[94vh] sm:max-h-[920px] relative overflow-hidden rounded-none sm:rounded-[2.5rem]"
+        className="flex flex-col w-full max-w-md h-full min-h-screen sm:min-h-0 sm:h-[94vh] sm:max-h-[920px] relative overflow-hidden rounded-none sm:rounded-[2.5rem]"
         style={{
           background: currentScreen === 'map' ? '#F7F9F8' : showNav ? '#FFFFFF' : '#020B06',
           boxShadow: '0 2px 6px rgba(0,40,20,0.5), 0 16px 40px rgba(0,40,20,0.6), 0 60px 120px -20px rgba(0,0,0,0.8), 0 0 80px rgba(0,255,135,0.08)',
@@ -892,7 +890,7 @@ const AppContent: React.FC = () => {
       <main
         ref={mainScrollRef}
         onScroll={handleMainScroll}
-        className="flex-1 overflow-y-auto mobile-container relative"
+        className="flex-1 overflow-y-auto mobile-container relative flex flex-col"
         style={{
           paddingBottom: showNav
             ? 'calc(4.75rem + env(safe-area-inset-bottom, 0px))'
@@ -901,7 +899,7 @@ const AppContent: React.FC = () => {
         }}
       >
         <React.Suspense fallback={<ScreenFallback />}>
-          <div key={currentScreen} className="w-full h-full min-h-full">
+          <div key={currentScreen} className="w-full min-h-full flex-1 flex flex-col">
             {renderScreen()}
           </div>
         </React.Suspense>

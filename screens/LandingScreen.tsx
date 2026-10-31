@@ -178,11 +178,11 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onLogin, onBrowse, onAdmi
     return () => clearInterval(timer);
   }, []);
 
-  const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } } };
-  const rise = { hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } };
+  const stagger = { hidden: { opacity: 1 }, show: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.05 } } };
+  const rise = { hidden: { opacity: 1, y: 0 }, show: { opacity: 1, y: 0, transition: { duration: 0.25 } } };
 
   return (
-    <div className="relative h-full w-full flex flex-col overflow-hidden font-sans"
+    <div className="relative w-full min-h-full flex-1 flex flex-col overflow-y-auto font-sans"
       style={{ background: 'linear-gradient(180deg, #010604 0%, #021208 40%, #031c10 100%)' }}>
       
       <QuantumField />

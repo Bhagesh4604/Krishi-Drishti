@@ -66,11 +66,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onSkip, currentLang, o
     } finally { setLoading(false); }
   };
 
-  const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-  const rise = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } };
+  const stagger = { hidden: { opacity: 1 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
+  const rise = { hidden: { opacity: 1, y: 0 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden"
+    <div className="w-full min-h-full flex-1 flex flex-col relative overflow-y-auto"
       style={{ background: 'linear-gradient(165deg, #020B06 0%, #031208 40%, #041A0E 100%)' }}>
 
       {/* ANIMATED BG */}
@@ -88,7 +88,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, onSkip, currentLang, o
       </div>
 
       {/* HEADER */}
-      <div className="relative z-10 flex justify-between items-center px-5 pt-12 pb-4">
+      <div className="relative z-10 flex justify-between items-center px-5 pt-8 pb-3">
         <button onClick={onSkip}
           className="flex items-center gap-1 text-sm font-bold text-white/50 hover:text-white transition-colors">
           Skip
