@@ -292,6 +292,16 @@
     }
     #queue-content .queue-table { min-width: 1160px; }
     #queue-content .queue-table thead th { position: sticky; top: 0; z-index: 2; }
+    #fields-content { width: 100%; min-width: 0; }
+    #fields-content .table-wrap {
+      max-height: calc(100vh - 260px);
+      min-height: 300px;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    #fields-content .field-monitor-table { min-width: 1100px; }
+    #fields-content .field-monitor-table thead th { position: sticky; top: 0; z-index: 2; }
     .table-wrap:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
     thead th {
       background: rgba(0,180,159,0.06);
@@ -1597,8 +1607,8 @@
       const d = await api('/api/admin/plots?limit=50');
       if (!d.plots.length) { el.innerHTML = '<div class="empty"><div class="icon">🗺️</div>No plots found</div>'; return; }
       el.innerHTML = `
-        <div class="table-wrap">
-          <table>
+        <div class="table-wrap" role="region" aria-label="Field monitor plots table. Scroll horizontally to see all columns and vertically to see more plots." tabindex="0">
+          <table class="field-monitor-table">
             <thead><tr><th>Plot</th><th>Farmer</th><th>District</th><th>Crop</th><th>Health (NDVI)</th><th>Moisture</th><th>Last Scan</th><th>Alerts</th></tr></thead>
             <tbody>${d.plots.map(p => `
               <tr onclick="openPlotDrawer(${p.id})">
