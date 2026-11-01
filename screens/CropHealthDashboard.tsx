@@ -13,7 +13,6 @@
  * • Pest/Disease risk prediction from weather + NDVI correlation
  * • Irrigation scheduling from NDMI readings
  * • Nitrogen status from NDRE (foliar application guide)
- * • Carbon credit eligibility (India CCTS)
  * • AI yield prediction and revenue estimate
  * • Corporate bird's-eye patch analysis
  * • Early detection: satellite sees stress 14-17 days before naked eye
@@ -983,132 +982,33 @@ const FieldMonitorScreen: React.FC<FieldMonitorScreenProps> = ({ navigateTo, scr
                 {/* ══════════════════════════════════════════════════════════ */}
                 {activeTab === 'carbon' && (
                   <motion.div key="carbon" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-4 space-y-4 pb-8">
-
-                    {/* Carbon eligibility hero */}
-                    <div
-                      className="rounded-2xl p-5"
-                      style={{ background: carbon?.eligible ? '#0a1f0a' : '#1a1400', border: `1px solid ${carbon?.eligible ? '#22c55e30' : '#f59e0b20'}` }}
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: carbon?.eligible ? '#4ade80' : '#fbbf24' }}>
-                            Carbon Credit Eligibility
-                          </p>
-                          <h3 className="text-white text-2xl font-black mt-1">
-                            {carbon?.gross_credits?.toFixed(2) || '0.00'}
-                            <span className="text-sm text-gray-500 font-medium ml-1">ACT gross</span>
-                          </h3>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Issuable</p>
-                          <p className="text-emerald-400 text-xl font-black">{carbon?.issuable_credits?.toFixed(2) || '0.00'}</p>
-                          <p className="text-[9px] text-gray-600">after {carbon?.buffer_pool_percentage || 15}% buffer</p>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Eligibility Score</span>
-                          <span className="text-[10px] font-black text-white">{((carbon?.eligibility_score || 0) * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className="h-2 rounded-full overflow-hidden" style={{ background: '#1f2f1f' }}>
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(carbon?.eligibility_score || 0) * 100}%` }}
-                            transition={{ delay: 0.3, duration: 1 }}
-                            className="h-full rounded-full"
-                            style={{ background: carbon?.eligible ? '#22c55e' : '#f59e0b' }}
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-4 pt-3" style={{ borderTop: '1px solid #1f3a1f' }}>
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-[9px] text-gray-600 uppercase tracking-wider">Est. Market Value</p>
-                            <p className="text-emerald-400 font-black text-lg">₹{(carbon?.estimated_value_inr || 0).toLocaleString('en-IN')}</p>
+                    <div className="rounded-2xl p-5" style={{ background: '#0D1A12', border: '1px solid #234536' }}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Satellite field monitoring</p>
+                      <h3 className="text-white text-xl font-black mt-2">Practice evidence signals</h3>
+                      <p className="text-xs leading-relaxed text-gray-400 mt-2">Vegetation and moisture indicators can help monitor a plot. They do not measure net greenhouse-gas removals or determine carbon-credit eligibility.</p>
+                      <div className="grid grid-cols-3 gap-2 mt-4">
+                        {[
+                          { label: 'NDVI', value: analysis?.monitoring?.current_ndvi },
+                          { label: 'NDVI change', value: analysis?.monitoring?.ndvi_change },
+                          { label: 'Moisture', value: analysis?.monitoring?.soil_moisture, suffix: '%' },
+                        ].map(item => (
+                          <div key={item.label} className="rounded-xl p-3 text-center" style={{ background: '#ffffff0a' }}>
+                            <p className="text-[9px] uppercase font-bold text-gray-500">{item.label}</p>
+                            <p className="text-sm font-extrabold text-white mt-1">{item.value == null ? '—' : Number(item.value).toFixed(2)}{item.suffix || ''}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[9px] text-gray-600 uppercase tracking-wider">Carbon Stored in Soil</p>
-                            <p className="text-white font-black text-sm">{carbon?.estimated_soc_tons_per_ha?.toFixed(3)} t/ha</p>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
-
-                    {/* Yield forecast */}
-                    {yieldForecast && (
-                      <div className="rounded-2xl p-4" style={{ background: 'linear-gradient(135deg, #0f0a1a 0%, #1a0f2e 100%)', border: '1px solid #2a1f4a' }}>
-                        <p className="text-[9px] text-violet-400/70 font-bold uppercase tracking-[0.2em]">AI Yield Prediction</p>
-                        <div className="flex items-end gap-3 mt-2 mb-3">
-                          <span className="text-4xl font-black text-white">{yieldForecast.total_estimated_yield_tons?.toFixed(1)}</span>
-                          <div className="mb-1">
-                            <span className="block text-sm text-gray-500">tonnes total</span>
-                            <span className="block text-[10px] text-violet-400">{yieldForecast.predicted_yield_tons_per_ha?.toFixed(2)} t/ha</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="rounded-xl p-3" style={{ background: '#ffffff08' }}>
-                            <p className="text-[9px] text-gray-600 font-bold uppercase">Est. Revenue</p>
-                            <p className="text-emerald-400 font-black text-lg">₹{(yieldForecast.estimated_revenue_inr || 0).toLocaleString('en-IN')}</p>
-                          </div>
-                          <div className="rounded-xl p-3" style={{ background: '#ffffff08' }}>
-                            <p className="text-[9px] text-gray-600 font-bold uppercase">Confidence</p>
-                            <p className="text-violet-400 font-black text-lg">{yieldForecast.confidence_score?.toFixed(0)}%</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SOC details */}
-                    <div className="rounded-2xl p-4 space-y-2" style={{ background: '#0d150d', border: '1px solid #1a2a1a' }}>
-                      <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Soil Carbon Analysis</p>
-                      {[
-                        { label: 'Starting Carbon Level', value: `${carbon?.baseline_soc_tons_per_ha?.toFixed(3)} t/ha`, icon: '🌱' },
-                        { label: 'Current Carbon Level', value: `${carbon?.estimated_soc_tons_per_ha?.toFixed(3)} t/ha`, icon: '🌿' },
-                        { label: 'Net Carbon Growth', value: `${carbon?.incremental_tco2e_per_ha?.toFixed(3)} tCO₂e/ha`, icon: '🌍' },
-                        { label: 'Area', value: `${parseFloat(analysis?.area_hectares || 0).toFixed(2)} ha`, icon: '📐' },
-                      ].map(item => (
-                        <div key={item.label} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid #1a2a1a' }}>
-                          <span className="text-[11px] text-gray-500">{item.icon} {item.label}</span>
-                          <span className="text-xs text-white font-bold">{item.value}</span>
-                        </div>
-                      ))}
+                    <div className="rounded-2xl p-4" style={{ background: '#171B14', border: '1px solid #313A2D' }}>
+                      <p className="text-sm font-bold text-amber-200">Credits are not calculated here</p>
+                      <p className="text-xs leading-relaxed text-gray-400 mt-2">A credible issue requires an applicable active methodology, project validation and registration, a monitored reporting period, independent verification, registry issuance, and a recorded farmer allocation. No market price or payout is assumed.</p>
                     </div>
-
-                    {/* CTAs */}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                       onClick={() => navigateTo('carbon-vault')}
-                      className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black text-sm relative overflow-hidden"
-                      style={{ background: 'linear-gradient(135deg, #15803d, #065f46)', border: '1px solid #22c55e50' }}
-                    >
-                      <Sprout size={18} />
-                      Enroll in Carbon Credit Programme
-                      <ChevronRight size={16} className="absolute right-4" />
+                      className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black text-sm"
+                      style={{ background: 'linear-gradient(135deg, #15803d, #065f46)', border: '1px solid #22c55e50' }}>
+                      <Sprout size={18} /> View programme stages <ChevronRight size={16} />
                     </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                      onClick={() => navigateTo('crop-cycle', { plotId: selectedPlot?.id })}
-                      className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-3 font-black text-sm"
-                      style={{ background: '#0D1A0D', border: '2px solid #22c55e50', color: '#4ade80' }}
-                    >
-                      <Calendar size={16} />
-                      Crop Cycle Logger
-                    </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                      onClick={() => navigateTo('traceability')}
-                      className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-3 font-black text-sm"
-                      style={{ background: '#0D0D0D', border: '2px solid #F59E0B', color: '#F59E0B' }}
-                    >
-                      <Shield size={16} />
-                      Mint Blockchain Harvest Token
-                    </motion.button>
-
-                    <p className="text-[9px] text-gray-700 text-center">
-                      India CCTS (Carbon Credit Trading Scheme) · 80% farmer share
-                    </p>
                   </motion.div>
                 )}
 

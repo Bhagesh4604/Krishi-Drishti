@@ -133,7 +133,7 @@ const CropCycleScreen: React.FC<Props> = ({ navigateTo, screenData }) => {
           <div className="text-center py-12">
             <Sprout size={48} className="mx-auto text-gray-600 mb-4" />
             <h2 className="text-white font-bold text-lg mb-2">No Active Cycle</h2>
-            <p className="text-gray-500 text-sm mb-6">Start a new crop cycle to begin logging events for carbon verification.</p>
+            <p className="text-gray-500 text-sm mb-6">Start a crop cycle to keep a dated record of your field activities.</p>
             <motion.button
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               onClick={startNewCycle}
@@ -266,7 +266,7 @@ const CropCycleScreen: React.FC<Props> = ({ navigateTo, screenData }) => {
 
             <div className="flex items-center gap-2 mb-6 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs">
               <MapPin size={14} className="flex-shrink-0" />
-              <p>Your current GPS location will be captured to verify this event on the blockchain.</p>
+              <p>Your current GPS location will be saved with this event in the app ledger.</p>
             </div>
 
             <motion.button

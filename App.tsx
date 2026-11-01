@@ -131,6 +131,7 @@ const AppContent: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [visionMode, setVisionMode] = useState<VisionMode>('diagnosis');
+  const [visionContext, setVisionContext] = useState({ cropType: '', growthStage: '', symptoms: '' });
 
   // ── Coordinated non-blocking native permission check ──
   // Camera permission is NOT requested here — it is strictly governed by the
@@ -526,6 +527,11 @@ const AppContent: React.FC = () => {
     if (screen === 'vision-result' && data?.image) {
       setCapturedImage(data.image);
       if (data.mode) setVisionMode(data.mode);
+      setVisionContext({
+        cropType: typeof data.cropType === 'string' ? data.cropType : '',
+        growthStage: typeof data.growthStage === 'string' ? data.growthStage : '',
+        symptoms: typeof data.symptoms === 'string' ? data.symptoms : '',
+      });
     }
     if (screen === 'market-detail' && data?.listing) {
       setSelectedListing(data.listing);
@@ -809,7 +815,7 @@ const AppContent: React.FC = () => {
       case 'vision':
         return <VisionScreen navigateTo={navigateTo} t={t} />;
       case 'vision-result':
-        return <VisionResultScreen navigateTo={navigateTo} image={capturedImage} mode={visionMode} language={language} t={t} />;
+        return <VisionResultScreen navigateTo={navigateTo} image={capturedImage} mode={visionMode} language={language} t={t} {...visionContext} />;
       case 'map':
         return <FarmMapScreen navigateTo={navigateTo} />;
       case 'market':

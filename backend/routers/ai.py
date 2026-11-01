@@ -29,19 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 def _use_local_model() -> bool:
-    """Return True when USE_LOCAL_DISEASE_MODEL is 'true' or 'auto' (when model files are present)."""
-    val = os.getenv("USE_LOCAL_DISEASE_MODEL", "auto").strip().lower()
-    if val == "true":
-        return True
-    if val == "false":
-        return False
-    # In 'auto' mode, prefer local universal model if model files exist
-    try:
-        from ..ml_models.local_disease_predictor import is_model_ready
-        ready, _ = is_model_ready()
-        return ready
-    except Exception:
-        return False
+    """Use the local classifier first only when explicitly configured."""
+    return os.getenv("USE_LOCAL_DISEASE_MODEL", "false").strip().lower() == "true"
 
 
 def _get_api_key() -> str:
@@ -547,25 +536,21 @@ def _safe_delayed_fallback(reason: str = "server load") -> dict:
     or displays a white screen during Render server-side delays.
     """
     return {
-        "diagnosis":    "Analysis Delayed",
+        "diagnosis":    "Analysis unavailable",
         "confidence":   0,
+        "confidence_level": "low",
+        "analysis_status": "needs_review",
+        "analysis_method": "unavailable",
+        "crop_identification": None,
+        "image_quality": "unknown",
+        "observed_symptoms": [],
         "summary":      (
             f"Crop image analysis is taking longer than expected under current {reason}. "
             "Please retry with a clear, well-lit crop photo."
         ),
-        "health_score": 50,
-        "remedies":     [
-            {
-                "title": "Camera Focus & Lighting",
-                "desc":  "Ensure clear daylight and steady camera focus directly on the symptomatic leaf area.",
-                "type":  "cultural",
-            },
-            {
-                "title": "Retry Leaf Diagnosis",
-                "desc":  "Tap the scan button again to submit a new scan for immediate processing.",
-                "type":  "cultural",
-            },
-        ],
+        "health_score": None,
+        "remedies": [],
+        "next_steps": ["Take a close, well-lit photo of the affected area and try again."],
     }
 
 
@@ -575,20 +560,21 @@ async def diagnose_crop(
     request: Request,
     file: UploadFile = File(...),
     mode: str = Form("diagnosis"),
+    crop_type: str = Form(""),
+    growth_stage: str = Form(""),
+    symptoms: str = Form(""),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Crop disease diagnosis endpoint.
 
-    Contract Preservation:
-      Returns the EXACT SAME JSON schema whether processed by local model or Gemini:
-        { diagnosis, confidence, summary, health_score, remedies[] }
-      Frontend and Android application remain completely untouched.
+    Returns a crop-aware visual screening response. Numeric local model scores are
+    retained for API compatibility, but are not presented as calibrated probabilities.
+    Gemini Vision is primary unless USE_LOCAL_DISEASE_MODEL=true; the local model is
+    a fallback and low-scoring or crop-mismatched results are explicitly gated.
 
-    Render Deployment Optimization & Connection Stability:
-      - Asynchronous thread-pool inference with strict timeout handling.
-      - Never drops connections or returns raw 500/504 errors.
-      - Dual cascade: Local Model <-> Gemini Vision fallback.
+    Inference runs asynchronously with timeouts. When analysis is unavailable, the
+    endpoint returns an uncertainty response rather than inventing a diagnosis.
     """
     import asyncio
     loop = asyncio.get_event_loop()
@@ -601,8 +587,21 @@ async def diagnose_crop(
         return _safe_delayed_fallback("image decoding")
 
     def _clean(resp: dict) -> dict:
-        resp.pop("_source", None)
+        source = str(resp.pop("_source", ""))
+        resp.setdefault("analysis_method", "Local crop model" if source.startswith("local_") else "AI vision")
+        resp.setdefault("analysis_status", "screening_only")
+        resp.setdefault("confidence_level", "screening")
+        resp.setdefault("health_score", None)
         return resp
+
+    crop_context = (crop_type or "").strip()[:80]
+    stage_context = (growth_stage or "").strip()[:80]
+    symptom_context = (symptoms or "").strip()[:500]
+    local_context = {
+        "crop_type": crop_context,
+        "growth_stage": stage_context,
+        "symptoms": symptom_context,
+    }
 
     # ════════════════════════════════════════════════════════════════════════
     # BRANCH A — Local model is PRIMARY (USE_LOCAL_DISEASE_MODEL=true or auto)
@@ -611,7 +610,7 @@ async def diagnose_crop(
         logger.info("[diagnose] Running local model (mode=%s, timeout=%ss)...", mode, DISEASE_INFERENCE_TIMEOUT)
         try:
             result = await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: _local_predict(image, mode=mode)),
+                loop.run_in_executor(None, lambda: _local_predict(image, mode=mode, **local_context)),
                 timeout=DISEASE_INFERENCE_TIMEOUT,
             )
             source = result.get("_source", "local")
@@ -640,7 +639,7 @@ async def diagnose_crop(
             logger.info("[diagnose] Gemini unconfigured, attempting local model...")
             try:
                 result = await asyncio.wait_for(
-                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode)),
+                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode, **local_context)),
                     timeout=DISEASE_INFERENCE_TIMEOUT,
                 )
                 source = result.get("_source", "local")
@@ -664,19 +663,33 @@ async def diagnose_crop(
         }
         """
     else:
-        prompt = """
-        You are an expert agronomist. Analyze this crop image.
-        Format your response EXACTLY as a JSON object with the following fields:
-        {
-            "diagnosis": "Name of disease or pest (or 'Healthy')",
-            "confidence": 0-100 (integer),
-            "summary": "Brief 1-sentence explanation",
-            "health_score": 0-100 (integer),
-            "remedies": [
-                { "title": "Remedy Name", "desc": "Short description", "type": "organic" },
-                { "title": "Remedy Name", "desc": "Short description", "type": "chemical" }
-            ]
-        }
+        prompt = f"""
+        You are supporting an agricultural field diagnosis. Analyze the attached photo and farmer notes.
+        Farmer-reported crop: {crop_context or 'not provided'}.
+        Growth stage: {stage_context or 'not provided'}.
+        Farmer-reported symptoms: {symptom_context or 'not provided'}.
+
+        Treat farmer notes as context, not proof. Describe only visual evidence visible in the image.
+        First assess whether the image clearly shows a crop and a diagnostic symptom. If it is blurry,
+        too distant, poorly lit, not a plant, or the visible evidence does not distinguish likely causes,
+        say that no diagnosis can be confirmed. Never invent a disease, pest, symptom, or crop.
+        Return only valid JSON with this schema:
+        {{
+          "crop_identification": "crop name or null",
+          "image_quality": "good|fair|poor",
+          "observed_symptoms": ["visible signs only"],
+          "diagnosis": "likely disease/pest name, Healthy, or Unable to confirm",
+          "confidence_level": "low|moderate|high",
+          "summary": "brief explanation grounded in visible evidence",
+          "differential_diagnoses": ["plausible alternative or non-disease cause"],
+          "severity": "low|moderate|high|unknown",
+          "remedies": [{{"title":"low-risk action","desc":"practical action; no pesticide dose or chemical prescription","type":"cultural|organic"}}],
+          "next_steps": ["what photo or field observation would help next"]
+        }}
+
+        Do not output a numeric confidence percentage or a crop-health score. This is a screening result,
+        not a confirmed diagnosis. For low certainty or poor image quality, return no remedies and recommend
+        a clearer close-up plus local agronomist/extension review. Do not recommend pesticide mixtures or rates.
         """
 
     try:
@@ -688,10 +701,57 @@ async def diagnose_crop(
         import re
         cleaned = re.sub(r'```json|```', '', response.text).strip()
         analysis = json.loads(cleaned)
-        if "health_score" not in analysis:
-            analysis["health_score"] = 100 if "healthy" in analysis.get("diagnosis", "").lower() else 50
-        if "remedies" not in analysis or not isinstance(analysis["remedies"], list):
+        if mode == "grading":
+            if not isinstance(analysis.get("remedies"), list):
+                analysis["remedies"] = []
+            analysis["analysis_method"] = "Gemini Vision"
+            analysis["analysis_status"] = "screening_only"
+            analysis["confidence_level"] = "screening"
+            return analysis
+
+        level = str(analysis.get("confidence_level", "low")).strip().lower()
+        if level not in {"low", "moderate", "high"}:
+            level = "low"
+        image_quality = str(analysis.get("image_quality", "unknown")).strip().lower()
+        if image_quality not in {"good", "fair", "poor"}:
+            image_quality = "unknown"
+        diagnosis = str(analysis.get("diagnosis") or "Unable to confirm").strip()
+        needs_review = level == "low" or image_quality in {"poor", "unknown"} or diagnosis.lower() in {"unable to confirm", "unknown", "uncertain"}
+        if needs_review:
+            analysis["diagnosis"] = "Unable to confirm from this photo"
+            analysis["summary"] = (
+                "The photo does not provide enough clear evidence to distinguish a crop disease or pest. "
+                "No condition is confirmed from this scan."
+            )
             analysis["remedies"] = []
+            analysis["analysis_status"] = "needs_review"
+            analysis["confidence_level"] = "low"
+            analysis["next_steps"] = [
+                "Take a close, well-lit photo of the affected area and the leaf underside.",
+                "If the symptoms are spreading, show the photos to a local agronomist or extension officer before treatment.",
+            ]
+        else:
+            analysis["analysis_status"] = "screening_only"
+            analysis["confidence_level"] = level
+            remedies = analysis.get("remedies") if isinstance(analysis.get("remedies"), list) else []
+            analysis["remedies"] = [
+                item for item in remedies
+                if isinstance(item, dict)
+                and str(item.get("type", "")).strip().lower() in {"cultural", "organic"}
+            ]
+        analysis["analysis_method"] = "Gemini Vision"
+        analysis["image_quality"] = image_quality
+        analysis["observed_symptoms"] = analysis.get("observed_symptoms") if isinstance(analysis.get("observed_symptoms"), list) else []
+        analysis["differential_diagnoses"] = analysis.get("differential_diagnoses") if isinstance(analysis.get("differential_diagnoses"), list) else []
+        analysis["next_steps"] = analysis.get("next_steps") if isinstance(analysis.get("next_steps"), list) else []
+        analysis["health_score"] = None
+        analysis.pop("confidence", None)
+        if crop_context:
+            analysis["farmer_crop_context"] = crop_context
+        if stage_context:
+            analysis["farmer_growth_stage"] = stage_context
+        if symptom_context:
+            analysis["farmer_symptom_context"] = symptom_context
         return analysis
     except asyncio.TimeoutError:
         logger.warning("[diagnose] Gemini API timed out after %ss", GEMINI_INFERENCE_TIMEOUT)
@@ -699,7 +759,7 @@ async def diagnose_crop(
         if not _use_local_model():
             try:
                 result = await asyncio.wait_for(
-                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode)),
+                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode, **local_context)),
                     timeout=DISEASE_INFERENCE_TIMEOUT,
                 )
                 source = result.get("_source", "local")
@@ -713,7 +773,7 @@ async def diagnose_crop(
         if not _use_local_model():
             try:
                 result = await asyncio.wait_for(
-                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode)),
+                    loop.run_in_executor(None, lambda: _local_predict(image, mode=mode, **local_context)),
                     timeout=DISEASE_INFERENCE_TIMEOUT,
                 )
                 source = result.get("_source", "local")

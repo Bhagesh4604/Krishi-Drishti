@@ -90,9 +90,7 @@ def _persist_history(
                 "ndvi": round(health_score, 3),
                 "moisture": round(moisture, 1),
                 "source": analysis.get("source", "unknown"),
-                "carbon_credits_estimated": round(
-                    analysis.get("carbon", {}).get("gross_credits", 0), 2
-                ),
+                "carbon_screening_only": True,
                 "async": True,
             }),
         )
@@ -105,8 +103,8 @@ def _persist_history(
             CarbonProject.status == "Analyzing"
         ).first()
         if project:
-            gross_credits = analysis.get("carbon", {}).get("gross_credits", 0)
-            project.projected_sequestration = round(float(gross_credits or 0.0), 2)
+            # Satellite outputs are screening signals, not methodology-based credit quantities.
+            project.projected_sequestration = None
             project.status = "Enrolled"
             
         db.commit()

@@ -1,15 +1,15 @@
 """
-Traceability Router — Blockchain Harvest Token API
-===================================================
-Provides end-to-end provenance tracking for harvested crops, meeting
-CBAM and CCTS regulatory requirements.
+Traceability Router — Harvest Provenance API
+============================================
+Stores farmer-submitted harvest and custody records. These records are not
+carbon-credit issuance records or regulatory compliance filings.
 
 Token lifecycle:
   Draft → Minted → Transferred
 
 Hash chain:
   token_hash = sha256(token_id + all field values + previous_hash)
-  This creates a tamper-evident ledger without a live blockchain node.
+  This creates a hash-linked app database record; it is not an external blockchain or independently audited ledger.
 
 Public endpoint (no auth):
   GET /api/trace/verify/{token_id}
@@ -157,7 +157,7 @@ def _build_token_payload(token: HarvestToken) -> str:
         f"{token.yield_kg:.4f}",
         f"{token.area_harvested_acres:.4f}",
         f"{token.carbon_footprint_kg_co2e:.4f}",
-        f"{token.carbon_credits_linked:.4f}",
+        "0.0000",
         str(token.farming_methodology or ""),
         f"{token.ndvi_at_harvest:.4f}" if token.ndvi_at_harvest else "None",
         token.chemical_inputs or "[]",
@@ -180,7 +180,7 @@ def _token_to_summary(token: HarvestToken) -> dict:
         "yield_kg": token.yield_kg,
         "area_harvested_acres": token.area_harvested_acres,
         "carbon_footprint_kg_co2e": round(token.carbon_footprint_kg_co2e, 4),
-        "carbon_credits_linked": round(token.carbon_credits_linked, 2),
+        "carbon_credits_linked": 0.0,  # Credit transfer/retirement is not integrated.
         "farming_methodology": token.farming_methodology,
         "ndvi_at_harvest": token.ndvi_at_harvest,
         "status": token.status,
@@ -335,8 +335,8 @@ async def mint_harvest_token(
 
     Steps:
       1. Validate plot ownership.
-      2. Look up linked CarbonProject (if provided) for verified credit data.
-      3. Compute carbon footprint from yield × emission factor.
+      2. Reject any carbon-project link; harvest provenance and registry credits have separate lifecycles.
+      3. Store a clearly labelled yield-factor footprint estimate.
       4. Build hash chain (fetch last token's hash).
       5. Compute sha256 token hash over all fields.
       6. Generate unique token_id (KD-HTK-YYYY-NNNNN).
@@ -372,27 +372,18 @@ async def mint_harvest_token(
     if plot.health_score < 0.2:
         raise HTTPException(status_code=400, detail="Fraud Prevention: Satellite NDVI score indicates barren land. Cannot mint harvest.")
 
-    # 2. Link carbon project (optional)
-    carbon_project = None
+    # Harvest provenance is separate from registry-issued credits.
+    # Never copy a reusable project balance onto multiple harvest tokens.
+    if req.carbon_project_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Carbon-credit linkage is disabled until registry transfer/retirement is integrated. Harvest records can still be created without linking credits.",
+        )
     carbon_credits = 0.0
     methodology = plot.crop_type or "Mixed"
-    ndvi_at_harvest = plot.health_score  # Best available proxy
+    ndvi_at_harvest = plot.health_score
 
-    if req.carbon_project_id:
-        carbon_project = db.query(CarbonProject).filter(
-            CarbonProject.id == req.carbon_project_id,
-            CarbonProject.user_id == current_user.id,
-        ).first()
-        if carbon_project:
-            carbon_credits = round(carbon_project.available_credits, 2)
-            methodology = carbon_project.methodology
-            ndvi_at_harvest = (
-                db.query(func.avg(Plot.health_score))
-                .filter(Plot.id == req.plot_id)
-                .scalar() or plot.health_score
-            )
-
-    # 3. Carbon footprint: yield × emission factor (kg CO2e)
+    # 3. Illustrative yield-factor footprint only; this is not a measured inventory or a credit quantity.
     ef = EMISSION_FACTORS.get(methodology, EMISSION_FACTORS["Mixed"])
     carbon_footprint = round(req.yield_kg * ef, 4)
 
@@ -424,7 +415,7 @@ async def mint_harvest_token(
         token_id=token_id,
         plot_id=req.plot_id,
         user_id=current_user.id,
-        carbon_project_id=req.carbon_project_id,
+        carbon_project_id=None,
         crop_type=req.crop_type,
         variety=req.variety,
         harvest_date=harvest_dt,
@@ -463,7 +454,7 @@ async def mint_harvest_token(
     log = FarmerOperationLog(
         user_id=current_user.id,
         plot_id=req.plot_id,
-        project_id=req.carbon_project_id,
+        project_id=None,
         operation="harvest_minted",
         detail=json.dumps({
             "token_id": token_id,
@@ -509,7 +500,7 @@ async def transfer_token(
 ):
     """
     Transfer custody of a HarvestToken to a buyer or processor.
-    Creates an immutable TokenTransferLog entry and updates token status.
+    Appends a hash-linked TokenTransferLog entry and updates token status.
     """
     token = db.query(HarvestToken).filter(
         HarvestToken.token_id == token_id,
@@ -612,7 +603,8 @@ async def public_verify_token(
     # Supply the canonical hash payload so the client can re-verify
     summary["hash_payload"] = _build_token_payload(token)
     summary["hash_algorithm"] = "sha256"
-    summary["cbam_eligible"] = token.status == "Minted" or token.status == "Transferred"
-    summary["ccts_eligible"] = token.carbon_credits_linked > 0
+    summary["cbam_eligible"] = False  # Harvest provenance alone cannot establish CBAM compliance.
+    summary["compliance_note"] = "This app record is not a CBAM/CCTS filing or carbon-credit certificate."
+    summary["ccts_eligible"] = False
 
     return summary

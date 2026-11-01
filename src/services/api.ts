@@ -138,6 +138,65 @@ export const getUserLocation = async (): Promise<{ lat: number; lng: number }> =
   return fetchIpLocation();
 };
 
+/** Read a fresh device fix for geofenced evidence; never use a pinned city or IP fallback. */
+export const getEvidenceUploadLocation = async (): Promise<{ lat: number; lng: number }> => {
+  const isNativeApp = typeof (window as any).Capacitor !== 'undefined'
+    && (window as any).Capacitor?.isNativePlatform?.() === true;
+
+  if (isNativeApp) {
+    try {
+      let permission = await Geolocation.checkPermissions();
+      if (permission.location !== 'granted') permission = await Geolocation.requestPermissions();
+      if (permission.location !== 'granted') {
+        throw new Error('Allow precise location access to attach field GPS to this evidence photo.');
+      }
+      try {
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+        return { lat: position.coords.latitude, lng: position.coords.longitude };
+      } catch {
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 12000, maximumAge: 0 });
+        return { lat: position.coords.latitude, lng: position.coords.longitude };
+      }
+    } catch (error: any) {
+      if (error?.message?.includes('Allow precise location')) throw error;
+      throw new Error('Could not read device GPS. Enable location permission and try again while at the registered farm plot.');
+    }
+  }
+
+  if (typeof navigator === 'undefined' || !navigator.geolocation || !window.isSecureContext) {
+    throw new Error('Device GPS is unavailable here. Open the app over HTTPS or on the phone, enable location permission, and try again at the registered plot.');
+  }
+
+  const readBrowserPosition = (options: PositionOptions) => new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+
+  let firstError: GeolocationPositionError | null = null;
+  try {
+    const position = await readBrowserPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    return { lat: position.coords.latitude, lng: position.coords.longitude };
+  } catch (error: any) {
+    firstError = error as GeolocationPositionError;
+    if (firstError.code === firstError.PERMISSION_DENIED) {
+      throw new Error('Location permission was denied. Allow location access for this site or app, then retry.');
+    }
+  }
+
+  // Some phones and desktop browsers cannot produce a fast GPS fix. Retry with
+  // the system's lower-power location provider, but still require a live fix.
+  try {
+    const position = await readBrowserPosition({ enableHighAccuracy: false, timeout: 25000, maximumAge: 0 });
+    return { lat: position.coords.latitude, lng: position.coords.longitude };
+  } catch (error: any) {
+    const finalError = error as GeolocationPositionError;
+    const timedOut = firstError?.code === firstError?.TIMEOUT || finalError.code === finalError.TIMEOUT;
+    const message = timedOut
+      ? 'Your browser could not get a live location. On a phone, enable precise location and retry outdoors at the registered plot. In Android Studio, set a location in the emulator controls first.'
+      : 'Your device could not determine a live location. Check location services and retry at the registered plot.';
+    throw new Error(message);
+  }
+};
+
 const LIVE_BACKEND_URL = 'https://krishi-drishti-api.onrender.com/api';
 const API_BASE_URL = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
 
@@ -318,10 +377,17 @@ export const aiService = {
     );
     return response.data;
   },
-  diagnose: async (imageFile: File, mode: string) => {
+  diagnose: async (
+    imageFile: File,
+    mode: string,
+    context: { cropType?: string; growthStage?: string; symptoms?: string } = {},
+  ) => {
     const formData = new FormData();
     formData.append('file', imageFile);
     formData.append('mode', mode);
+    if (context.cropType?.trim()) formData.append('crop_type', context.cropType.trim());
+    if (context.growthStage?.trim()) formData.append('growth_stage', context.growthStage.trim());
+    if (context.symptoms?.trim()) formData.append('symptoms', context.symptoms.trim());
 
     // Dispatched via Priority Queue with Critical Priority & Exponential Backoff
     // to handle Render cold-start latency without dropping the inference request.
@@ -471,16 +537,6 @@ export const plotService = {
   }
 };
 
-let mockProjects: any[] = [
-  { id: 101, plot_id: 1, plot_name: 'Main Farm Plot', methodology: 'Cover-Crop', aggregator_name: 'Verra Core', status: 'Enrolled', projected_credits: 45.5, available_credits: 0, locked_credits: 0, verified_credits: 0 }
-];
-
-let mockWallet = { balance: 0 };
-let mockAggregators = [
-  { name: 'Verra Core', role: 'Global Standard', settlement_days: 14, fee_percentage: 5, farmer_share_percentage: 95, contact: 'partner@verra.org' },
-  { name: 'Puro Earth', role: 'Biochar Specialist', settlement_days: 7, fee_percentage: 8, farmer_share_percentage: 92, contact: 'onboarding@puro.earth' }
-];
-
 export const carbonService = {
   getProjects: async () => {
     const response = await api.get('/carbon/projects');
@@ -514,26 +570,12 @@ export const carbonService = {
     );
     return { analysis: finalJob.data.result };
   },
-  enrollPlot: async (plotId: number, methodology: string) => {
+  enrollPlot: async (plotId: number, methodology: string, intakeData: Record<string, unknown> = {}) => {
     const response = await resilientDispatcher.execute(
-      () => api.post('/carbon/enroll', { plot_id: plotId, methodology }),
+      () => api.post('/carbon/enroll', { plot_id: plotId, methodology, intake_data: intakeData }),
       { priority: PriorityLevel.HIGH, maxRetries: 3 }
     );
-    const jobId = response.data.gee_job_id;
-    if (!jobId) return response.data;
-
-    await resilientDispatcher.pollUntil(
-      () => api.get(`/jobs/${jobId}`),
-      (res: any) => res.data?.status === 'success',
-      (res: any) => res.data?.status === 'failed' ? (res.data?.error || 'Enrollment processing failed') : false,
-      {
-        priority: PriorityLevel.HIGH,
-        timeoutMs: 180000,
-        initialDelayMs: 2000,
-        maxDelayMs: 15000,
-        backoffFactor: 1.5,
-      }
-    );
+    // Enrollment is complete when the API records it; satellite screening runs independently.
     return response.data;
   },
   unenrollPlot: async (projectId: number) => {
@@ -550,22 +592,27 @@ export const carbonService = {
     const response = await api.post(`/carbon/${projectId}/verify`);
     return response.data;
   },
+  addMonitoringRecord: async (projectId: number, data: { record_date: string; record_type: string; observations: Record<string, unknown>; note?: string }) => {
+    const response = await api.post(`/carbon/projects/${projectId}/monitoring-records`, data);
+    return response.data;
+  },
+  submitMonitoringReport: async (projectId: number, data: { period_start: string; period_end: string; farmer_report_note?: string }) => {
+    const formData = new FormData();
+    formData.append('period_start', data.period_start);
+    formData.append('period_end', data.period_end);
+    formData.append('farmer_report_note', data.farmer_report_note || '');
+    const response = await api.post(`/carbon/projects/${projectId}/submit-monitoring-report`, formData);
+    return response.data;
+  },
+  confirmAllocation: async (projectId: number, accepted: boolean) => {
+    const response = await api.post(`/carbon/projects/${projectId}/allocation/confirm`, { accepted });
+    return response.data;
+  },
   getWallet: async () => {
     const response = await api.get('/carbon/wallet');
     return response.data;
   },
-  getAggregators: async () => {
-    const response = await api.get('/carbon/aggregators');
-    return response.data;
-  },
-  claimPayout: async (projectId: number, claimCredits: number) => {
-    const response = await api.post(`/carbon/projects/${projectId}/claim`, { claim_credits: claimCredits });
-    return response.data;
-  },
-  getMyTokens: async () => {
-    const response = await api.get('/carbon/my-tokens');
-    return response.data;
-  }
+
 };
 
 export const contractService = {
@@ -627,48 +674,23 @@ export const systemService = {
   }
 };
 
-let mockTokens: any[] = [];
-
 export const traceabilityService = {
   getMyTokens: async () => {
-    return [...mockTokens];
+    const response = await api.get('/trace/my-tokens');
+    return response.data;
   },
   mintToken: async (payload: any) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const newToken = {
-      id: `TRC-${Math.floor(Math.random() * 10000)}`,
-      status: 'Minted',
-      ...payload,
-      carbon_footprint_kg_co2e: payload.yield_kg * 0.21,
-      mint_date: new Date().toISOString()
-    };
-    mockTokens.push(newToken);
-    return newToken;
+    const response = await api.post('/trace/mint', payload);
+    return response.data;
   },
   transferToken: async (tokenId: string, payload: { buyer_name: string; buyer_entity: string; notes?: string }) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const token = mockTokens.find(t => t.id === tokenId);
-    if (token) {
-      token.status = 'Transferred';
-      token.buyer = payload.buyer_entity;
-    }
-    return { success: true };
+    const response = await api.post(`/trace/${encodeURIComponent(tokenId)}/transfer`, payload);
+    return response.data;
   },
   verifyToken: async (tokenId: string) => {
-    try {
-      const response = await api.get(`/trace/verify/${tokenId}`);
-      return response.data;
-    } catch (e) {
-      console.warn("Backend verify failed, using mock", e);
-      const token = mockTokens.find(t => t.id === tokenId || t.token_id === tokenId);
-      if (!token) throw new Error("Token not found");
-      return token;
-    }
+    const response = await api.get(`/trace/verify/${encodeURIComponent(tokenId)}`);
+    return response.data;
   },
-  deleteToken: async (tokenId: string) => {
-    mockTokens = mockTokens.filter(t => t.id !== tokenId);
-    return { success: true };
-  }
 };
 
 export const marketplaceService = {

@@ -49,7 +49,7 @@ const defaultCards: CardData[] = [
   {
     id: 'model-inference',
     title: 'ML Model Inference Engine',
-    description: 'Cloudinary and Vision APIs reachable. Carbon additionality models loaded into memory.',
+    description: 'Cloudinary and Vision APIs are reachable. Carbon eligibility still requires a valid programme methodology and independent verification.',
     status: 'verified',
     icon: <Activity className="w-8 h-8 text-orange-500" />,
     latency: '112ms',

@@ -147,7 +147,10 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
     const [mapType, setMapType] = useState<'satellite' | 'street'>('satellite');
     const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
     const [gpsStatus, setGpsStatus] = useState<'acquiring' | 'good' | 'poor' | 'denied'>('acquiring');
+    const [gpsMessage, setGpsMessage] = useState('');
+    const [isLocating, setIsLocating] = useState(false);
     const [initialLocationSet, setInitialLocationSet] = useState(false);
+    const locateRequestInFlight = useRef(false);
 
     // Ownership Details State
     const [showSaveModal, setShowSaveModal] = useState(false);
@@ -156,12 +159,17 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [manualArea, setManualArea] = useState('');
 
-    const { startTracking, stopTracking, getCurrentLocation } = useGeolocation();
+    const { startTracking, stopTracking, getCurrentLocation, error: locationError } = useGeolocation();
 
-    useEffect(() => {
+    const locateCurrentPosition = async () => {
+        if (locateRequestInFlight.current) return;
+        locateRequestInFlight.current = true;
+        setIsLocating(true);
         setGpsStatus('acquiring');
-        
-        getCurrentLocation().then((pos) => {
+        setGpsMessage('');
+
+        try {
+            const pos = await getCurrentLocation();
             if (pos) {
                 setCurrentLocation([pos.coords.latitude, pos.coords.longitude]);
                 setInitialLocationSet(true);
@@ -169,11 +177,32 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                 setGpsStatus(pos.coords.accuracy <= 20 ? 'good' : 'poor');
             } else {
                 setGpsStatus('denied');
+                setGpsMessage('Could not read your location. Check Location access and tap to retry.');
             }
-        });
-        
+        } finally {
+            locateRequestInFlight.current = false;
+            setIsLocating(false);
+        }
+    };
+
+    useEffect(() => {
+        void locateCurrentPosition();
         return () => { stopTracking(); };
     }, []);
+
+    useEffect(() => {
+        if (!locationError) return;
+        const message = locationError.toLowerCase();
+        if (message.includes('secure') || message.includes('https')) {
+            setGpsMessage('Web GPS needs HTTPS or localhost.');
+        } else if (message.includes('permission') || message.includes('denied')) {
+            setGpsMessage('Allow location for this site or app in settings, then tap to retry.');
+        } else if (message.includes('service') || message.includes('enabled')) {
+            setGpsMessage('Turn on device Location, then tap to retry.');
+        } else {
+            setGpsMessage('Location is taking too long. Move outdoors and tap to retry.');
+        }
+    }, [locationError]);
 
     const handleMapClick = (e: any) => {
         if (mode === 'tap') {
@@ -343,20 +372,24 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                             <h2 className="text-base font-black bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent">
                                 Mark Your Land
                             </h2>
-                            <p className="text-[10px] font-semibold flex items-center gap-1.5 mt-0.5">
-                                {gpsStatus === 'acquiring' && (
-                                    <><span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block" /><span className="text-amber-600">Acquiring GPS…</span></>
-                                )}
-                                {gpsStatus === 'good' && (
-                                    <><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /><span className="text-green-600">GPS ±{gpsAccuracy}m — Ready</span></>
-                                )}
-                                {gpsStatus === 'poor' && (
-                                    <><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /><span className="text-amber-600">Weak GPS ±{gpsAccuracy}m — Move outdoors</span></>
-                                )}
-                                {gpsStatus === 'denied' && (
-                                    <><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /><span className="text-red-600">GPS denied — Enable in settings</span></>
-                                )}
-                            </p>
+                            <button
+                                type="button"
+                                onClick={() => void locateCurrentPosition()}
+                                disabled={isLocating}
+                                aria-label="Retry or refresh current location"
+                                className="mt-0.5 flex max-w-full items-center gap-1.5 text-left text-[10px] font-semibold disabled:cursor-wait"
+                            >
+                                <span className={`h-2 w-2 shrink-0 rounded-full ${gpsStatus === 'good' ? 'bg-green-500' : gpsStatus === 'poor' ? 'bg-amber-400' : gpsStatus === 'denied' ? 'bg-red-500' : 'animate-pulse bg-amber-400'}`} />
+                                <span className={`${gpsStatus === 'good' ? 'text-green-700' : gpsStatus === 'denied' ? 'text-red-600' : 'text-amber-700'} truncate`}>
+                                    {gpsStatus === 'acquiring' && 'Finding location...'}
+                                    {gpsStatus === 'good' && `GPS \u00b1${gpsAccuracy}m \u00b7 Refresh`}
+                                    {gpsStatus === 'poor' && `Weak GPS \u00b1${gpsAccuracy}m \u00b7 Retry`}
+                                    {gpsStatus === 'denied' && 'Location unavailable · Retry'}
+                                </span>
+                            </button>
+                            {gpsStatus === 'denied' && gpsMessage && (
+                                <p className="mt-1 max-w-[210px] text-[9px] leading-tight text-gray-500">{gpsMessage}</p>
+                            )}
                         </div>
                     </div>
 
@@ -487,6 +520,18 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                     animate={{ x: 0 }}
                     className="absolute right-4 top-1/2 -translate-y-1/2 z-[400] flex flex-col gap-2"
                 >
+                    <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        whileHover={{ scale: 1.08 }}
+                        onClick={() => void locateCurrentPosition()}
+                        disabled={isLocating}
+                        aria-label="Find my current location"
+                        title="Find my current location"
+                        className={`w-11 h-11 rounded-xl shadow-xl flex items-center justify-center transition-all border border-white/50 disabled:opacity-60 ${gpsStatus === 'good' ? 'bg-emerald-600 text-white' : 'bg-white/95 text-blue-600 hover:bg-blue-50'}`}
+                    >
+                        {isLocating ? <Loader2 size={18} className="animate-spin" /> : <Navigation size={18} />}
+                    </motion.button>
+
                     <motion.button
                         whileTap={{ scale: 0.9 }}
                         whileHover={{ scale: 1.1 }}
@@ -767,7 +812,7 @@ const LandMarkingScreen: React.FC<LandMarkingScreenProps> = ({ navigation }) => 
                                     </motion.div>
                                     <h3 className="text-xl font-black text-white mb-1">Verify Ownership</h3>
                                     <p className="text-xs text-green-50 font-semibold">
-                                        🌿 Claim Carbon Credits & protect your land
+                                        🌿 Register your plot for programme review
                                     </p>
                                 </div>
                             </div>

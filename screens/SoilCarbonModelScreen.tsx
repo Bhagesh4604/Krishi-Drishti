@@ -112,7 +112,7 @@ const SoilCarbonModelScreen = ({ navigateTo }: { navigateTo: (screen: Screen) =>
                     "Implement No-Till farming in the northern quadrant to preserve moisture.",
                     "Plant deep-rooted cover crops (like Alfalfa) during the off-season."
                 ],
-                carbon_credit_potential: `Based on your acreage, adopting these practices could yield up to 45 ACT (Verified Carbon Credits) by next harvest.`
+                carbon_credit_potential: "Satellite soil and vegetation models are planning aids only. Verified carbon quantities require an applicable programme methodology, field data, independent verification, and registry issuance.",
             });
         } catch (error) {
             console.error("Error training SOC model:", error);

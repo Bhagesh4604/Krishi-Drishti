@@ -295,16 +295,51 @@ def _load_model_once() -> tuple:
         return None, None, None, _load_error
 
 
-def _preprocess(image: Image.Image) -> np.ndarray:
-    """Resize, normalise, and expand dims to (1, 224, 224, 3)."""
+def _preprocess(image: Image.Image, scale_to_unit: bool = True) -> np.ndarray:
+    """Resize to model input and apply only the preprocessing this model needs."""
     img = image.convert("RGB").resize(_INPUT_SIZE, Image.LANCZOS)
-    arr = np.array(img, dtype=np.float32) / 255.0
+    arr = np.array(img, dtype=np.float32)
+    if scale_to_unit:
+        arr /= 255.0
     return np.expand_dims(arr, axis=0)
+
+
+def _crop_matches_context(crop_type: str, raw_class: str) -> bool:
+    """Avoid returning a local-model label from a visibly different crop class."""
+    crop = "".join(char.lower() for char in crop_type if char.isalnum())
+    if crop.endswith("s") and len(crop) > 4:
+        crop = crop[:-1]
+    if not crop or crop in {"other", "unknown", "notsure"}:
+        return True
+
+    label = "".join(char.lower() for char in raw_class if char.isalnum())
+    aliases = {
+        "maize": ("maize", "corn"),
+        "corn": ("maize", "corn"),
+        "paddy": ("rice",),
+        "rice": ("rice", "paddy"),
+        "brinjal": ("brinjal", "eggplant", "aubergine"),
+        "eggplant": ("brinjal", "eggplant", "aubergine"),
+        "aubergine": ("brinjal", "eggplant", "aubergine"),
+        "chili": ("chili", "chilli", "pepper"),
+        "chilli": ("chili", "chilli", "pepper"),
+        "capsicum": ("capsicum", "pepper"),
+        "groundnut": ("groundnut", "peanut"),
+        "peanut": ("groundnut", "peanut"),
+    }
+    candidates = aliases.get(crop, (crop,))
+    return any(candidate in label for candidate in candidates)
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
-def predict(image: Image.Image, mode: str = "diagnosis") -> dict:
+def predict(
+    image: Image.Image,
+    mode: str = "diagnosis",
+    crop_type: str = "",
+    growth_stage: str = "",
+    symptoms: str = "",
+) -> dict:
     """
     Run local inference on `image` and return a response dict
     that matches the Gemini /api/ai/diagnose schema exactly.
@@ -327,7 +362,9 @@ def predict(image: Image.Image, mode: str = "diagnosis") -> dict:
         }
 
     try:
-        arr = _preprocess(image)
+        # The older EfficientNet artifacts include an internal Rescaling(1/255)
+        # layer; feeding them [0,1] here would divide the image a second time.
+        arr = _preprocess(image, scale_to_unit=engine not in {"tflite", "legacy_keras"})
 
         with _inference_lock:
             if engine == "tflite":
@@ -337,8 +374,11 @@ def predict(image: Image.Image, mode: str = "diagnosis") -> dict:
             else:
                 preds = model.predict(arr, verbose=0)
 
-        pred_idx = int(np.argmax(preds[0]))
-        confidence = int(round(float(preds[0][pred_idx]) * 100))
+        class_scores = np.asarray(preds[0], dtype=np.float32)
+        if class_scores.size != len(classes) or not np.all(np.isfinite(class_scores)):
+            raise ValueError("The vision model returned invalid class scores.")
+        pred_idx = int(np.argmax(class_scores))
+        confidence = int(round(float(class_scores[pred_idx]) * 100))
         raw_key = classes[pred_idx]
 
         del arr
@@ -388,19 +428,58 @@ def predict(image: Image.Image, mode: str = "diagnosis") -> dict:
                 "_source": f"local_{engine}_grading",
             }
 
-        # Standard Diagnosis Mode
-        health_score = 100 if is_healthy else max(10, 100 - confidence)
+        # Standard Diagnosis Mode. A softmax value is a model score, not a
+        # calibrated disease probability or a crop-health measurement.
+        crop_matches = _crop_matches_context(crop_type, raw_key)
+        low_signal = confidence < 35 or not crop_matches
+        safe_remedies = [
+            remedy for remedy in remedies
+            if str(remedy.get("type", "")).lower() in {"cultural", "organic"}
+        ]
+        if low_signal:
+            diagnosis = "Unable to confirm from this photo"
+            if not crop_matches:
+                summary = (
+                    f"The model's possible match ({clean_name}) does not match the crop you entered "
+                    f"({crop_type.strip()}). No diagnosis is being made. Check the crop selection and "
+                    "capture a close, well-lit image of the affected area."
+                )
+            else:
+                summary = (
+                    f"The model's top visual match was {clean_name}, but its score is too weak to use "
+                    "as a diagnosis. Capture a close, well-lit image of the affected leaf and its underside."
+                )
+            safe_remedies = []
+        else:
+            diagnosis = clean_name
+            summary = (
+                f"Possible visual match: {clean_name}. This is an AI screening result; confirm symptoms "
+                "in the field before choosing a treatment."
+            )
+
         logger.info(
             "[LocalDiseasePredictor] Prediction (%s): %s (conf=%d%%, latency=%.1fms)",
-            engine, clean_name, confidence, latency_ms
+            engine, diagnosis, confidence, latency_ms
         )
 
         return {
-            "diagnosis": clean_name,
+            "diagnosis": diagnosis,
             "confidence": confidence,
+            "model_score": confidence,
+            "confidence_level": "low" if low_signal else "screening",
+            "analysis_status": "needs_review" if low_signal else "screening_only",
+            "analysis_method": "Local crop vision model",
+            "crop_identification": crop_type.strip() or None,
+            "farmer_growth_stage": growth_stage.strip() or None,
+            "farmer_symptom_context": symptoms.strip() or None,
+            "image_quality": "unknown",
+            "observed_symptoms": [],
             "summary": summary,
-            "health_score": health_score,
-            "remedies": remedies,
+            "health_score": None,
+            "remedies": safe_remedies,
+            "next_steps": [
+                "Take a close-up in daylight, include the whole plant and the leaf underside, and ask a local agronomist to confirm before treatment."
+            ],
             "_source": f"local_{engine}",
         }
 

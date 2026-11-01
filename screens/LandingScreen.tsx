@@ -169,7 +169,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onLogin, onBrowse, onAdmi
   const FEATURES = [
     { id: 'ai', icon: BrainCircuit, title: 'AI Disease Doctor', desc: 'Instant diagnosis with Gemini Vision model. 98% accuracy on 40+ crops.', color: '#c77dff', bg: 'rgba(199,125,255,0.1)' },
     { id: 'sat', icon: Satellite, title: 'Satellite Analytics', desc: 'Real-time NDVI & NDMI moisture mapping powered by Google Earth Engine.', color: '#00d4ff', bg: 'rgba(0,212,255,0.1)' },
-    { id: 'carb', icon: Leaf, title: 'Carbon Credits', desc: 'Earn verified carbon credits for sustainable farming. CBAM compliant.', color: '#00ff87', bg: 'rgba(0,255,135,0.1)' },
+    { id: 'carb', icon: Leaf, title: 'Carbon Credits', desc: 'Track evidence for carbon programmes; credits require independent verification and registry issuance.', color: '#00ff87', bg: 'rgba(0,255,135,0.1)' },
     { id: 'mkt', icon: TrendingUp, title: 'Live Marketplace', desc: 'Predictive pricing and direct-to-buyer smart contracts.', color: '#ffd93d', bg: 'rgba(255,217,61,0.1)' },
   ];
 
@@ -266,7 +266,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onLogin, onBrowse, onAdmi
               </span>
             </h1>
             <p className="text-[15px] text-white/60 font-medium leading-relaxed max-w-sm mx-auto">
-              Empowering farmers with AI diagnostics, satellite crop monitoring, and automated carbon credit generation.
+              Empowering farmers with AI diagnostics, satellite crop monitoring, and auditable programme evidence.
             </p>
           </motion.div>
 
@@ -279,7 +279,8 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onLogin, onBrowse, onAdmi
               <StatNumber value={98} suffix="%" label="AI Accuracy" />
             </div>
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl py-4 flex flex-col items-center justify-center">
-              <StatNumber value={2400} prefix="₹" label="Avg Credits" />
+              <p className="text-xl font-black text-white">Not live</p>
+              <p className="text-[9px] font-bold text-white/45 uppercase tracking-wider mt-1">Registry credit feed</p>
             </div>
           </motion.div>
 

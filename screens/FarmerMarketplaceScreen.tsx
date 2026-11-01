@@ -110,7 +110,7 @@ const FarmerMarketplaceScreen: React.FC<Props> = ({ navigateTo, t }) => {
                   <p className="text-sm font-black text-gray-900">{new Date(token.harvest_date).toLocaleDateString()}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-2 text-center border border-gray-100">
-                  <p className="text-[9px] text-gray-500 font-bold uppercase">Carbon Footprint</p>
+                  <p className="text-[9px] text-gray-500 font-bold uppercase">Estimated footprint</p>
                   <p className="text-sm font-black text-gray-900 text-emerald-600">{token.carbon_footprint_kg_co2e.toFixed(0)} kg CO₂e</p>
                 </div>
               </div>
@@ -225,7 +225,7 @@ const FarmerMarketplaceScreen: React.FC<Props> = ({ navigateTo, t }) => {
                       <p className="text-sm font-black text-emerald-900">{selectedToken.farming_methodology || 'Mixed'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-emerald-600 font-bold uppercase">Carbon Footprint</p>
+                      <p className="text-[10px] text-emerald-600 font-bold uppercase">Estimated footprint</p>
                       <p className="text-sm font-black text-emerald-900">{selectedToken.carbon_footprint_kg_co2e.toFixed(1)} kg CO₂e</p>
                     </div>
                     {selectedToken.ndvi_at_harvest && (

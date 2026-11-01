@@ -197,16 +197,16 @@ class CarbonProject(Base):
     start_date = Column(DateTime, default=datetime.utcnow)
     
     # MRV Data
-    baseline_emission = Column(Float, default=0.0) # Historical baseline
-    projected_sequestration = Column(Float, default=0.0)
+    baseline_emission = Column(Float, nullable=True, default=None) # Set only from a registered methodology baseline
+    projected_sequestration = Column(Float, nullable=True, default=None) # Ex-ante estimate is not calculated here
     verified_credits = Column(Float, default=0.0)
     
     # Realistic Constraints (Industry Standards)
-    verification_cost_usd = Column(Float, default=3000.0) # Physical soil sampling + lab test
-    buffer_pool_percentage = Column(Float, default=15.0) # 10-20% locked as insurance
-    vesting_end_date = Column(DateTime, nullable=True) # 5 years from start
-    requires_soil_sample = Column(Boolean, default=True) # Hybrid verification required
-    additionality_score = Column(Float, default=0.0) # 0-1, rejection if practice is common (>0.5 = common)
+    verification_cost_usd = Column(Float, nullable=True, default=None) # Determined by programme/project terms
+    buffer_pool_percentage = Column(Float, nullable=True, default=None) # Determined by the applicable registry rules
+    vesting_end_date = Column(DateTime, nullable=True)
+    requires_soil_sample = Column(Boolean, nullable=True, default=None) # Depends on the selected methodology/quantification route
+    additionality_score = Column(Float, nullable=True, default=None) # Established under the applicable methodology
     available_credits = Column(Float, default=0.0) # After buffer pool deduction
     locked_credits = Column(Float, default=0.0) # Buffer pool amount
 
@@ -217,19 +217,19 @@ class CarbonProject(Base):
 
     @property
     def aggregator_name(self) -> str:
-        return "Krishi Drishti Aggregator"
+        return "No external aggregator configured"
 
     @property
     def government_scheme(self) -> str:
-        return "CCTS"
+        return "No external partner or registry linked"
 
     @property
-    def platform_fee_percentage(self) -> float:
-        return 20.0
+    def platform_fee_percentage(self) -> None:
+        return None
 
     @property
-    def farmer_share_percentage(self) -> float:
-        return round(100.0 - self.platform_fee_percentage, 1)
+    def farmer_share_percentage(self) -> None:
+        return None
 
     plot = relationship("Plot", back_populates="carbon_projects")
     evidence = relationship("CarbonEvidence", back_populates="project")

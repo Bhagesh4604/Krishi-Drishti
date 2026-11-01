@@ -80,6 +80,8 @@ import {
 
   Mic,
 
+  X,
+
 } from 'lucide-react';
 
 import { weatherService } from '../src/services/api';
@@ -114,11 +116,67 @@ interface DashboardScreenProps {
 
 
 
+const cropImageByName: Record<string, string> = {
+  wheat: 'https://images.unsplash.com/photo-1501430654243-c934cec2e1c0?w=600&q=75',
+  rice: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&q=75',
+  paddy: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&q=75',
+  cotton: '/assets/crops/cotton.jpg',
+  tomato: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=75',
+  potato: 'https://media.istockphoto.com/id/2192677464/photo/close-up-of-farmer-holding-potato-at-farm.webp?a=1&b=1&s=612x612&w=0&k=20&c=8XxVnwxQv6xz_vtjxYG9VPqQoBv2mSg-s5FJqpRtT2w=',
+  corn: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=600&q=75',
+  maize: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=600&q=75',
+  soybean: '/assets/crops/soybean.jpg',
+  soya: '/assets/crops/soybean.jpg',
+  sugarcane: '/assets/crops/sugarcane.jpg',
+  'sugar cane': '/assets/crops/sugarcane.jpg',
+  onion: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600&q=75',
+  grapes: 'https://images.unsplash.com/photo-1537640538965-1756fb179c26?w=600&q=75',
+  olive: 'https://images.unsplash.com/photo-1471180625745-944903837c22?w=600&q=75',
+};
+
+const cropEmojiByName: Record<string, string> = {
+  wheat: '🌾', rice: '🌾', paddy: '🌾', cotton: '☁️', tomato: '🍅', potato: '🥔',
+  corn: '🌽', maize: '🌽', soybean: '🫘', soya: '🫘', sugarcane: '🎋', 'sugar cane': '🎋',
+  onion: '🧅', grapes: '🍇', olive: '🫒',
+};
+
+const cropNameKey = (crop: string) => crop.trim().toLocaleLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+
+const CropThumbnail: React.FC<{ crop: string }> = ({ crop }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+  const key = cropNameKey(crop);
+  const image = cropImageByName[key];
+
+  if (!image || imageFailed) {
+    return (
+      <div
+        className="flex h-full w-full items-center justify-center"
+        style={{ background: 'linear-gradient(145deg, #ecfdf5, #d1fae5)' }}
+        aria-label={`${crop} crop illustration`}
+      >
+        <span className="text-3xl" aria-hidden="true">{cropEmojiByName[key] || '🌱'}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={image}
+      alt={`${crop} crop`}
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+      loading="lazy"
+      onError={() => setImageFailed(true)}
+    />
+  );
+};
+
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, onLangChange, currentLang, weather, locationName }) => {
 
   const [showWeatherModal, setShowWeatherModal] = useState(false);
 
   const [showLangMenu, setShowLangMenu] = useState(false);
+
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const [userPlots, setUserPlots] = useState<any[]>(() => {
 
@@ -354,35 +412,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
 
 
-  const getCropImage = (crop: string) => {
-
-    const map: any = {
-
-      'Wheat': 'https://images.unsplash.com/photo-1501430654243-c934cec2e1c0?w=1000&q=80',
-
-      'Corn': 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=1000&q=80',
-
-      'Grapes': 'https://images.unsplash.com/photo-1537640538965-1756fb179c26?w=1000&q=80',
-
-      'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=1000&q=80',
-
-      'Olive': 'https://images.unsplash.com/photo-1471180625745-944903837c22?w=1000&q=80',
-
-      'Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=1000&q=80',
-
-    };
-
-    return map[crop] || map['Wheat'];
-
-  };
-
-
-
   const fieldImages = [
 
     'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800',
-
-    'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800',
 
     'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800',
 
@@ -548,7 +580,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
             className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
 
-            onClick={() => setShowLangMenu(!showLangMenu)}
+            aria-expanded={showLangMenu}
+
+            onClick={() => {
+              setShowNotifications(false);
+              setShowLangMenu(!showLangMenu);
+            }}
 
           >
 
@@ -682,13 +719,89 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
             className="p-3 bg-white rounded-full shadow-lg shadow-orange-100/50 relative hover:bg-orange-50 transition-colors"
 
+            aria-label="Open notifications"
+
+            aria-expanded={showNotifications}
+
+            onClick={() => {
+              setShowLangMenu(false);
+              setShowNotifications(value => !value);
+            }}
+
           >
 
-            <div className="w-2 h-2 bg-black rounded-full absolute top-3 right-3 border border-white pointer-events-none" />
-
-            <Bell size={20} className="text-gray-900" fill="black" />
+            <Bell size={20} className={showNotifications ? 'text-emerald-700' : 'text-gray-900'} />
 
           </motion.button>
+
+          <AnimatePresence>
+            {showNotifications && (
+              <>
+                <motion.button
+                  type="button"
+                  aria-label="Close notifications"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[60] cursor-default"
+                  onClick={() => setShowNotifications(false)}
+                />
+                <motion.div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Notifications"
+                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                  transition={{ duration: 0.16 }}
+                  className="absolute right-0 top-full z-[70] mt-3 rounded-3xl border border-emerald-100 bg-white p-4 shadow-2xl shadow-emerald-950/15"
+                  style={{ width: 'min(19rem, calc(100vw - 2.5rem))' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                      <Bell size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-sm font-extrabold text-gray-900">Notifications</h2>
+                      <p className="text-[11px] text-gray-500">Farm updates and alerts</p>
+                    </div>
+                    <button type="button" aria-label="Close notifications" onClick={() => setShowNotifications(false)} className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 px-4 py-5 text-center">
+                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white text-emerald-600 shadow-sm">
+                      <Sprout size={21} />
+                    </div>
+                    <p className="mt-3 text-sm font-bold text-gray-800">You’re all caught up</p>
+                    <p className="mx-auto mt-1 max-w-[15rem] text-[11px] leading-relaxed text-gray-500">
+                      There are no new farm alerts right now. Check your market or field tools for the latest updates.
+                    </p>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setShowNotifications(false); navigateTo('market'); }}
+                      className="rounded-xl border border-gray-100 px-3 py-2.5 text-left text-[11px] font-bold text-gray-700 transition hover:border-emerald-200 hover:bg-emerald-50"
+                    >
+                      <span className="block text-emerald-700">Live market</span>
+                      <span className="mt-0.5 block font-medium text-gray-500">Check crop prices</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowNotifications(false); navigateTo('landmark'); }}
+                      className="rounded-xl border border-gray-100 px-3 py-2.5 text-left text-[11px] font-bold text-gray-700 transition hover:border-emerald-200 hover:bg-emerald-50"
+                    >
+                      <span className="block text-emerald-700">My fields</span>
+                      <span className="mt-0.5 block font-medium text-gray-500">Manage boundaries</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
         </div>
 
@@ -934,7 +1047,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
             <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#78716c', lineHeight: 1.6 }}>
 
-              Mint a harvest token after every crop cycle. Buyers scan a QR to verify your crop's carbon footprint, chemical inputs &amp; origin — CBAM compliant.
+              Create a harvest traceability record with crop origin and declared inputs. The record is not a carbon credit or CBAM compliance certificate.
 
             </p>
 
@@ -1390,17 +1503,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
                   <div className="absolute top-1 left-2 w-5 h-3 rounded-full bg-white/50 blur-[3px] z-20 pointer-events-none"></div>
 
-                  <img
-
-                    src={getCropImage(crop)}
-
-                    alt={crop}
-
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-
-                    loading="lazy"
-
-                  />
+                  <CropThumbnail crop={crop} />
 
                 </div>
 
@@ -1426,21 +1529,25 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
       <div className="mt-6 px-5 pb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
 
-          <h2 className="text-base font-bold" style={{ color: '#001A11' }}>My Fields</h2>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold" style={{ color: '#001A11' }}>My Fields</h2>
+              {userPlots.length > 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{userPlots.length}</span>}
+            </div>
+            <p className="mt-0.5 text-[11px] text-gray-500">Your land, all in one place</p>
+          </div>
 
           <button
 
             onClick={() => navigateTo('landmark')}
 
-            className="flex items-center gap-1 text-xs font-semibold"
-
-            style={{ color: '#00BB78' }}
+            className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95"
 
           >
 
-            <Plus size={13} strokeWidth={2.5} /> Add
+            <Plus size={14} strokeWidth={2.5} /> Add field
 
           </button>
 
@@ -1502,51 +1609,64 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
             {userPlots.map((plot) => (
 
-              <Tilt3D key={plot.id} maxTilt={6} className="rounded-2xl">
+              <Tilt3D key={plot.id} maxTilt={4} className="rounded-[1.5rem]">
 
-                <motion.div variants={itemVariants} className="surface-3d rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                <motion.div variants={itemVariants} className="surface-3d overflow-hidden rounded-[1.5rem] border border-emerald-100/80 bg-white shadow-[0_12px_28px_-18px_rgba(6,78,59,0.42)]">
 
                   {/* Field image */}
 
-                  <div className="relative h-36 w-full bg-gray-100">
+                  <div className="relative h-40 w-full overflow-hidden bg-emerald-900 sm:h-44">
 
                     <motion.img
 
-                      animate={{ scale: [1, 1.08, 1] }}
-
-                      transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-
-                      src={getFieldImage(plot.id)}
+                      src={plot.image_url || getFieldImage(plot.id)}
 
                       alt={plot.name}
 
-                      className="w-full h-full object-cover absolute inset-0"
+                      loading="lazy"
+
+                      onError={(event) => {
+                        const imageElement = event.currentTarget;
+                        if (imageElement.dataset.fallbackApplied === 'true') {
+                          imageElement.style.opacity = '0';
+                          return;
+                        }
+                        imageElement.dataset.fallbackApplied = 'true';
+                        imageElement.src = getFieldImage(plot.id);
+                      }}
+
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-105"
 
                     />
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-black/10" />
 
-                    <div className="absolute bottom-3 left-4 right-4 flex justify-between items-end">
+                    <div className="absolute left-3.5 top-3.5 flex max-w-[70%] items-center gap-1.5 rounded-full border border-white/25 bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-md">
+                      <MapPin size={11} className="shrink-0 text-emerald-200" />
+                      <span className="truncate">{plot.crop_type || 'Farm plot'}</span>
+                    </div>
 
-                      <div>
+                    <div className="absolute bottom-3.5 left-4 right-4 flex items-end justify-between gap-3">
 
-                        <h3 className="text-sm font-bold text-white drop-shadow-md">{plot.name}</h3>
+                      <div className="min-w-0">
 
-                        <div className="flex items-center gap-1 mt-0.5">
+                        <h3 className="truncate text-base font-extrabold tracking-tight text-white drop-shadow-md">{plot.name}</h3>
 
-                          <MapPin size={10} style={{ color: '#A5FFA7' }} />
+                        <div className="mt-1 flex items-center gap-1.5">
 
-                          <span className="text-[10px] text-gray-300">{plotLocationNames[plot.id] || 'Locating…'}</span>
+                          <MapPin size={11} className="shrink-0 text-emerald-200" />
+
+                          <span className="truncate text-[11px] text-white/85">{plotLocationNames[plot.id] || 'Locating…'}</span>
 
                         </div>
 
                       </div>
 
-                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/25" style={{ background: 'rgba(0,187,120,0.35)', backdropFilter: 'blur(8px)', boxShadow: '0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)' }}>
+                      <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/35 bg-emerald-700/85 px-3 py-1.5 shadow-lg backdrop-blur-md">
 
-                        <Leaf size={11} style={{ color: '#A5FFA7' }} />
+                        <Leaf size={12} className="text-emerald-100" />
 
-                        <span className="text-xs font-bold text-white">{Number(plot.area).toFixed(2)} ha</span>
+                        <span className="text-xs font-bold text-white">{Number(plot.area || 0).toFixed(2)} ha</span>
 
                       </div>
 
@@ -1558,33 +1678,33 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigateTo, user, t, 
 
                   {/* Action row */}
 
-                  <div className="grid grid-cols-3">
+                  <div className="grid grid-cols-3 bg-white px-2 py-2">
 
                     {[
 
-                      { icon: <MapPin size={15} />, label: 'Map', action: () => navigateTo('map') },
+                      { icon: <MapPin size={15} />, label: 'Open map', action: () => navigateTo('map') },
 
-                      { icon: <BarChart2 size={15} />, label: 'Satellite', action: () => navigateTo('field-monitor', { plotId: plot.id }) },
+                      { icon: <BarChart2 size={15} />, label: 'Field health', action: () => navigateTo('field-monitor', { plotId: plot.id }) },
 
-                      { icon: <TrendingUp size={15} />, label: 'Yield', action: () => navigateTo('forecast') },
+                      { icon: <TrendingUp size={15} />, label: 'Yield outlook', action: () => navigateTo('forecast') },
 
                     ].map((btn, i) => (
 
                       <button
 
-                        key={i}
+                        key={btn.label}
 
                         onClick={btn.action}
 
-                        className="flex flex-col items-center gap-1.5 py-3 hover:bg-emerald-50/70 transition-colors"
+                        className="group flex min-w-0 flex-col items-center gap-1.5 rounded-xl py-2.5 transition-colors hover:bg-emerald-50 active:scale-95"
 
                         style={{ borderRight: i < 2 ? '1px solid #EDF5EF' : 'none', color: '#00BB78' }}
 
                       >
 
-                        {btn.icon}
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 transition-colors group-hover:bg-emerald-100">{btn.icon}</span>
 
-                        <span className="text-[10px] font-semibold" style={{ color: '#616B68' }}>{btn.label}</span>
+                        <span className="max-w-full truncate px-1 text-[9px] font-bold text-gray-600">{btn.label}</span>
 
                       </button>
 

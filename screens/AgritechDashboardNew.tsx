@@ -46,7 +46,6 @@ const distBarData = [
 
 const activities = [
   { id: 1, user: "Ramesh Patil", action: "Detected Late Blight on Tomato", time: "2m ago", status: "alert", icon: Microscope },
-  { id: 2, user: "Sunita Sharma", action: "Carbon Credit Verified +Rs 2,400", time: "5m ago", status: "success", icon: Leaf },
   { id: 3, user: "Arjun Singh", action: "AI Chat - 47 messages today", time: "12m ago", status: "info", icon: Bot },
   { id: 4, user: "Priya Desai", action: "Marketplace Bid Rs 18,500/qtl", time: "20m ago", status: "success", icon: TrendingUp },
   { id: 5, user: "Vikram Rao", action: "New Registration from Gulbarga", time: "35m ago", status: "info", icon: Users },
@@ -619,7 +618,7 @@ export default function AgritechDashboardNew({ t }: { t?: any }) {
             <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 { label: "Diagnoses Today", value: 2847, icon: Microscope, color: "#00ff87" },
-                { label: "Carbon Credits", value: 4821, icon: Leaf, color: "#c77dff", suffix: " tCO2" },
+                { label: "Carbon credits (registry feed)", value: null, icon: Leaf, color: "#c77dff", suffix: "" },
                 { label: "Market Trades", value: 194, icon: TrendingUp, color: "#ffd93d" },
                 { label: "AI Responses", value: 12450, icon: Bot, color: "#00d4ff" },
               ].map((s, i) => (
@@ -633,7 +632,7 @@ export default function AgritechDashboardNew({ t }: { t?: any }) {
                   <div>
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">{s.label}</p>
                     <p className="text-xl font-black text-white tabular-nums">
-                      <AnimatedCounter end={s.value} suffix={s.suffix} />
+                      {s.value == null ? "Not connected" : <AnimatedCounter end={s.value} suffix={s.suffix} />}
                     </p>
                   </div>
                 </motion.div>

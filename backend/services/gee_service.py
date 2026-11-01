@@ -8,7 +8,6 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 import ee
 from dotenv import load_dotenv
 
-from ..ml_models.soil_carbon_estimator import estimate_soc
 from ..ml_models.yield_predictor import predict_yield, get_crop_yield_benchmark, _CROP_REGISTRY
 
 ROOT_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
@@ -16,7 +15,6 @@ load_dotenv(ROOT_ENV_PATH)
 
 ACRES_TO_HECTARES = 0.404686
 SQM_PER_HECTARE = 10000.0
-DEFAULT_BUFFER_POOL_PERCENTAGE = 15.0
 SIMULATED_IMAGE_URL = (
     "https://images.unsplash.com/photo-1500382017468-9049fed747ef"
     "?w=1200&q=80&auto=format&fit=crop"
@@ -322,40 +320,8 @@ class EarthEngineService:
         return timeline
 
     def _methodology_profile(self, methodology: str) -> Dict[str, Any]:
-        normalized = (methodology or "Cover-Crop").strip()
-        profiles = {
-            "Cover-Crop": {
-                "multiplier": 1.15,
-                "verification_cost_usd": 1800.0,
-                "requires_soil_sample": True,
-                "requirements": [
-                    "Geotagged sowing photo",
-                    "Seed purchase receipt or seed source proof",
-                    "Field photo showing live cover within 30-45 days",
-                ],
-            },
-            "No-Till": {
-                "multiplier": 1.3,
-                "verification_cost_usd": 2200.0,
-                "requires_soil_sample": True,
-                "requirements": [
-                    "Residue cover photo before sowing",
-                    "Zero-till or minimum-till equipment proof",
-                    "Geotagged field photo after seeding into residue",
-                ],
-            },
-            "Agroforestry": {
-                "multiplier": 1.75,
-                "verification_cost_usd": 2600.0,
-                "requires_soil_sample": False,
-                "requirements": [
-                    "Geotagged tree-row or sapling photos",
-                    "Sapling purchase or nursery receipt",
-                    "Survival-count evidence after establishment",
-                ],
-            },
-        }
-        return profiles.get(normalized, profiles["Cover-Crop"]) | {"name": normalized}
+        # Methodology rules and quantification belong to the programme, not this satellite screen.
+        return {"name": (methodology or "Unselected practice").strip()}
 
     def _build_response(
         self,
@@ -388,85 +354,14 @@ class EarthEngineService:
         profile = self._methodology_profile(methodology)
         effective_area_hectares = round(area_hectares or (declared_area or 0.0), 2)
 
-        # ── Timeline-aware Carbon Calculation (Verra/Gold Standard aligned) ──────
-        # Use the PEAK vegetation health from the 6-month timeline for credit issuance.
-        # Real registries award credits based on the best growth achieved during the
-        # project period, not just the current end-of-season snapshot.
-        # This way a crop that grew beautifully and is now senescing still earns credits.
-        peak_ndvi = current_ndvi
-        peak_evi = current_evi
-        avg_moisture = moisture
-        if timeline:
-            ndvi_vals = [t.get("ndvi") for t in timeline if t.get("ndvi") is not None]
-            evi_vals  = [t.get("evi")  for t in timeline if t.get("evi")  is not None]
-            moist_vals = [t.get("soil_moisture") for t in timeline if t.get("soil_moisture") is not None]
-            if ndvi_vals:
-                peak_ndvi = max(peak_ndvi, max(ndvi_vals))   # best vegetation achieved
-            if evi_vals:
-                peak_evi = max(peak_evi, max(evi_vals))
-            if moist_vals:
-                avg_moisture = sum(moist_vals) / len(moist_vals)  # seasonal avg moisture
-
-        credit_ndvi = peak_ndvi     # the value used for carbon calculation
-        credit_evi  = peak_evi
-        credit_moisture = max(avg_moisture, moisture)   # whichever is more favourable
-
-        current_soc  = estimate_soc(credit_ndvi,  credit_evi,  credit_moisture,              days_enrolled)
-        baseline_soc = estimate_soc(baseline_ndvi, baseline_evi, max(moisture * 0.95, 5.0), max(days_enrolled * 0.1, 30.0))
-
-        # ndvi_change for eligibility still uses today vs baseline (reflects trend)
         ndvi_change = current_ndvi - baseline_ndvi
-        # carbon gain uses peak vs baseline (rewards the best growth achieved)
-        peak_ndvi_change = peak_ndvi - baseline_ndvi
-
-        incremental_carbon_tons_per_ha = max(current_soc - baseline_soc, 0.0)
-        incremental_tco2e_per_ha = incremental_carbon_tons_per_ha * 3.67
-
-        # ── Full IPCC/Verra Equation: ER_y = BE_y - PE_y - LE_y ─────────────────
-        # Previously only gross = ΔC × 3.67 × area (missing PE and LE terms)
-
-        # BE (Baseline Emissions) = carbon the land WOULD have lost without intervention
-        be_gross = incremental_tco2e_per_ha * effective_area_hectares * profile["multiplier"]
-
-        # PE (Project Emissions): energy/fuel used in the conservation practice itself
-        # Source: IPCC 2006 Guidelines Vol.4, Tier 1 default emission factors
-        # Diesel EF: 2.68 kgCO₂e/litre (IPCC Table 3.2.1)
-        _PE_DIESEL_L_PER_HA = {
-            "Cover-Crop":      8.0,   # sowing pass + incorporation: ~8 L/ha/yr
-            "No-Till":         3.0,   # seeder only, no tillage pass: ~3 L/ha/yr
-            "Agroforestry":    5.0,   # planting + maintenance: ~5 L/ha/yr
-            "Reduced-Tillage": 6.0,   # one shallow pass: ~6 L/ha/yr
-            "Composting":      4.0,   # transport + spreading: ~4 L/ha/yr
-        }
-        pe_diesel_l = _PE_DIESEL_L_PER_HA.get(methodology, 6.0)
-        pe_tco2e = (pe_diesel_l * 2.68 / 1000.0) * effective_area_hectares   # tonnes CO₂e/yr
-
-        # LE (Leakage): activity-shifting risk — farmer might compensate on other plots
-        # VM0042 Section 9: conservative smallholder leakage factor = 10% of gross
-        # (Full DSGE model not applicable at individual-farm scale)
-        leakage_factor = 0.10
-        le_tco2e = be_gross * leakage_factor
-
-        # Net Emission Reductions — the standard-compliant issuable quantity before buffer
-        net_er = max(be_gross - pe_tco2e - le_tco2e, 0.0)
-
-        # Buffer pool deduction (Verra permanence buffer: 15%)
-        # Applied AFTER PE/LE deduction per VM0042 §13.4
-        gross_credits = net_er
-        buffer_pool_credits = gross_credits * (DEFAULT_BUFFER_POOL_PERCENTAGE / 100.0)
-        issuable_credits = max(gross_credits - buffer_pool_credits, 0.0)
-
-
-
-        vegetation_strength = _clamp(current_ndvi / 0.8, 0.0, 1.0)
-        gain_score = _clamp((ndvi_change + 0.02) / 0.16, 0.0, 1.0)
-        moisture_score = 1.0 - _clamp(abs(moisture - 35.0) / 30.0, 0.0, 1.0)
-        area_score = _clamp(effective_area_hectares / 2.5, 0.25, 1.0)
-        eligibility_score = round(
-            (gain_score * 0.45) + (vegetation_strength * 0.25) + (moisture_score * 0.15) + (area_score * 0.15),
-            2,
-        )
-
+        risk_flags: List[str] = []
+        if moisture < 22:
+            risk_flags.append("Low moisture signal; confirm conditions with a field measurement.")
+        elif moisture > 55:
+            risk_flags.append("High moisture signal; confirm conditions with a field observation.")
+        if current_ndvi < 0.35:
+            risk_flags.append("Vegetation index is low; check current field conditions.")
         # ── Yield Estimation (single source of truth — yield_predictor module) ──
         # Prices: GoI MSP / APMC Modal 2023-24
         _CROP_PRICES_INR_PER_TON = {
@@ -496,44 +391,12 @@ class EarthEngineService:
         total_yield = round(yield_per_ha * effective_area_hectares, 2)
         revenue = round(total_yield * matched_price)
 
-        # Eligibility: a farm qualifies if it peaked above thresholds during the season,
-        # OR if the current reading passes. This prevents penalising end-of-season decline.
-        eligible = bool(
-            (peak_ndvi_change >= 0.03 or ndvi_change >= 0.03) and
-            (peak_ndvi >= 0.35 or current_ndvi >= 0.35) and
-            gross_credits >= 0.05   # lowered floor — small farms earn proportionally less
-        )
-
-        eligibility_reasons: List[str] = []
-        risk_flags: List[str] = []
-
-        if peak_ndvi_change >= 0.03:
-            eligibility_reasons.append("Vegetation grew strongly during the season (peak gain qualifies).")
-        elif ndvi_change >= 0.03:
-            eligibility_reasons.append("Vegetation is improving versus the same season last year.")
-        else:
-            eligibility_reasons.append("Vegetation gain is still weak and may need another monitoring cycle.")
-
-        if moisture < 22:
-            risk_flags.append("Low soil moisture may limit sequestration gains.")
-        elif moisture > 55:
-            risk_flags.append("High soil moisture can complicate field verification and residue survival.")
-        else:
-            eligibility_reasons.append("Soil moisture is within a workable range for carbon-practice monitoring.")
-
-        if current_ndvi < 0.35:
-            risk_flags.append("Current vegetation cover is too low for a strong credit claim.")
-
-        if effective_area_hectares < 0.2:
-            risk_flags.append("Very small field size reduces project economics.")
-
         confidence = 0.86 if status == "earth_engine" else 0.58
-
         if timeline and len(timeline) >= 2:
             first_ndvi = timeline[0].get("ndvi")
             last_ndvi = timeline[-1].get("ndvi")
             if first_ndvi is not None and last_ndvi is not None and last_ndvi < first_ndvi - 0.08:
-                risk_flags.append("Recent time-series shows a short-term vegetation decline.")
+                risk_flags.append("Recent time series shows a vegetation decline; confirm with field observations.")
 
         return {
             "status": status,
@@ -583,29 +446,13 @@ class EarthEngineService:
             },
             "timeline": timeline,
             "carbon": {
-                "eligible": eligible,
-                "eligibility_score": eligibility_score,
-                "eligibility_reasons": eligibility_reasons,
-                "estimated_soc_tons_per_ha": round(current_soc, 3),
-                "baseline_soc_tons_per_ha": round(baseline_soc, 2),
-                "incremental_carbon_tons_per_ha": round(incremental_carbon_tons_per_ha, 2),
-                "incremental_tco2e_per_ha": round(incremental_tco2e_per_ha, 2),
-                # ── Full ER = BE - PE - LE breakdown (IPCC/Verra compliant) ─────
-                "be_gross_credits": round(be_gross, 2),        # Baseline benefit before deductions
-                "pe_tco2e": round(pe_tco2e, 2),               # Project Emissions deduction
-                "le_tco2e": round(le_tco2e, 2),               # Leakage deduction (10% VM0042)
-                "net_er_credits": round(net_er, 2),            # Net ER after PE+LE
-                "gross_credits": round(gross_credits, 2),      # = net_er (for API compat)
-                "buffer_pool_percentage": DEFAULT_BUFFER_POOL_PERCENTAGE,
-                "buffer_pool_credits": round(buffer_pool_credits, 2),
-                "issuable_credits": round(issuable_credits, 2),
-                "estimated_value_inr": round(issuable_credits * 1200, 2),
-                "confidence": confidence,
-                "verification_cost_usd": profile["verification_cost_usd"],
-                "requires_soil_sample": profile["requires_soil_sample"],
-                "verification_requirements": profile["requirements"],
-                # ── Accounting equation annotation ───────────────────────────────
-                "accounting_equation": f"ER = {round(be_gross,3)} (BE) - {round(pe_tco2e,4)} (PE) - {round(le_tco2e,4)} (LE) = {round(net_er,3)} tCO₂e",
+                "screening_only": True,
+                "eligible": None,
+                "eligibility_score": None,
+                "eligibility_reasons": [
+                    "Satellite indicators are not an approved carbon quantification or eligibility determination."
+                ],
+                "issuance_status": "not_assessed",
             },
 
             "yield_prediction": {

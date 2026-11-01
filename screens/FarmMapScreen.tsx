@@ -362,13 +362,11 @@ const FarmMapScreen: React.FC<FarmMapScreenProps> = ({ navigateTo }) => {
                 <p className="text-xs font-bold mt-1" style={{ color: '#616B68' }}>Total: {Number(analysisResult.total_estimated_yield_tons || 0).toFixed(2)} Tons | Rev: ₹{Number(analysisResult.estimated_revenue_inr || 0).toLocaleString()}</p>
               </div>
 
-              {/* Carbon Signal */}
-              <div className="p-4 rounded-2xl" style={{ background: '#E8FBF3', border: '1px solid #A5FFA7' }}>
-                <p className="text-[10px] uppercase font-black mb-1" style={{ color: '#00BB78' }}>Carbon Signal</p>
-                <h4 className="text-2xl font-black" style={{ color: '#001A11' }}>{analysisResult.estimated_carbon_credits?.toFixed?.(2) ?? '0.00'} <span className="text-sm font-semibold" style={{ color: '#00BB78' }}>ACT</span></h4>
-                <p className="text-xs font-bold mt-1" style={{ color: '#00BB78' }}>
-                  Issuable: {analysisResult.issuable_carbon_credits?.toFixed?.(2) ?? '0.00'} | Area: {analysisResult.area_hectares?.toFixed?.(2) ?? '0.00'} ha
-                </p>
+              {/* Remote-sensing indicators are monitoring evidence only. */}
+              <div className="p-4 rounded-2xl" style={{ background: '#F0FAF5', border: '1px solid #C8EBDD' }}>
+                <p className="text-[10px] uppercase font-black mb-1" style={{ color: '#087A55' }}>Satellite field screening</p>
+                <h4 className="text-lg font-black" style={{ color: '#07352A' }}>NDVI {analysisResult.ndvi?.toFixed?.(2) ?? analysisResult.health_score?.toFixed?.(2) ?? '—'}</h4>
+                <p className="text-xs mt-1" style={{ color: '#52645C' }}>Vegetation indicators do not quantify verified tCO₂e or issue credits. Area: {analysisResult.area_hectares?.toFixed?.(2) ?? '0.00'} ha.</p>
               </div>
 
               {/* Alerts */}

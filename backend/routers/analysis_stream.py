@@ -106,9 +106,8 @@ def _run_gee_blocking(
             "predicted_yield_tons_per_ha": yp.get("predicted_yield_tons_per_ha", 0.0),
             "total_estimated_yield_tons": yp.get("total_estimated_yield_tons", 0.0),
             "estimated_revenue_inr": yp.get("estimated_revenue_inr", 0.0),
-            # Carbon
-            "estimated_carbon_credits": carbon.get("gross_credits", 0.0),
-            "issuable_carbon_credits": carbon.get("issuable_credits", 0.0),
+            # Satellite screening is not a methodology calculation or an issuance decision.
+            "carbon_screening_only": True,
             "area_hectares": analysis.get("area_hectares", 0.0),
             # Alerts
             "alerts": alerts,

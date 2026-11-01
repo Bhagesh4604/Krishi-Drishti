@@ -183,13 +183,13 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
         <Section title="02 — ENVIRONMENTAL FOOTPRINT">
           {/* Big number */}
           <div className="border-l-2 border-amber-400 pl-4 py-2 mb-4">
-            <Lbl s="TOTAL CARBON FOOTPRINT" />
+            <Lbl s="ESTIMATED FOOTPRINT · NOT VERIFIED" />
             <p className={`${mono()} text-amber-400 text-3xl font-bold leading-none`}>
               {(token.carbon_footprint_kg_co2e || 0).toFixed(2)}
               <span className="text-zinc-600 text-sm font-normal ml-2">kg CO₂e</span>
             </p>
             <p className={`${mono()} text-zinc-700 text-[10px] mt-1`}>
-              = {((token.carbon_footprint_kg_co2e || 0) / Math.max(token.yield_kg || 1, 1)).toFixed(2)} kg CO₂e per kg yield
+              = {((token.carbon_footprint_kg_co2e || 0) / Math.max(token.yield_kg || 1, 1)).toFixed(2)} estimated kg CO₂e per kg yield
             </p>
           </div>
 
@@ -200,11 +200,11 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
           {token.farming_methodology && (
             <div className="mt-3 border-l border-zinc-800 pl-3">
               <p className="text-zinc-500 text-[11px] leading-relaxed">
-                {token.farming_methodology === 'No-Till' && 'No-till farming preserves soil structure and sequesters carbon by eliminating plow-induced CO₂ release.'}
-                {token.farming_methodology === 'Cover-Crop' && 'Cover cropping builds soil organic matter, sequesters atmospheric CO₂, and reduces synthetic fertiliser demand.'}
-                {token.farming_methodology === 'Agroforestry' && 'Integrated tree cultivation provides permanent carbon sinks with concurrent agricultural production.'}
-                {token.farming_methodology === 'Conventional' && 'Conventional inputs fully declared for regulatory transparency under CBAM Article 7.'}
-                {token.farming_methodology === 'Mixed' && 'Mixed methodology combining multiple sustainable practices for balanced outcomes.'}
+                {token.farming_methodology === 'No-Till' && 'No-till practice was declared for this harvest record; this does not quantify or verify carbon removals.'}
+                {token.farming_methodology === 'Cover-Crop' && 'Cover-crop practice was declared for this harvest record; this does not quantify or verify carbon removals.'}
+                {token.farming_methodology === 'Agroforestry' && 'Agroforestry was declared for this harvest record; this does not quantify or verify carbon removals.'}
+                {token.farming_methodology === 'Conventional' && 'Conventional practice declared by the farmer; this is not a CBAM filing.'}
+                {token.farming_methodology === 'Mixed' && 'Mixed crop/practice information was declared; no crediting methodology is implied.'}
               </p>
             </div>
           )}
@@ -287,7 +287,7 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
               
               <div className="border border-zinc-800 p-3">
                 <p className="text-zinc-500 text-[10px] leading-relaxed">
-                  These geotagged media events verify the continuous growth cycle. The combined Merkle root of all event hashes is bundled into the final Harvest Token hash.
+                  These farmer-submitted events are hash-linked for record consistency. Their content and media have not been independently verified.
                 </p>
               </div>
             </div>
@@ -313,7 +313,7 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
             )}
             {!token.previous_hash && (
               <div className="border-l-2 border-amber-400 pl-3 py-1">
-                <p className={`${mono()} text-amber-400 text-[10px]`}>◆ GENESIS BLOCK — no prior hash in chain</p>
+                <p className={`${mono()} text-amber-400 text-[10px]`}>◆ FIRST RECORD — no prior hash in chain</p>
               </div>
             )}
             <div>
@@ -322,7 +322,7 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
             </div>
             <div className="border border-zinc-800 p-3">
               <p className="text-zinc-600 text-[10px] leading-relaxed">
-                Each token hash is computed as <span className={`${mono()} text-amber-400`}>sha256(token_id | all_fields | previous_hash)</span>. The previous hash linkage makes retroactive tampering computationally infeasible without regenerating the entire subsequent chain.
+                Each token hash is computed as <span className={`${mono()} text-amber-400`}>sha256(token_id | all_fields | previous_hash)</span>. This can reveal mismatches against the stored hash, but the app database is not externally anchored and this is not an independent audit.
               </p>
             </div>
           </div>
@@ -340,14 +340,14 @@ const TraceabilityVerifyScreen: React.FC<Props> = ({ navigateTo, tokenId }) => {
             <div className="text-right">
               {integrityStatus === 'ok' && (
                 <span className={`${mono()} border-2 border-amber-400 text-amber-400 px-2 py-1 text-[8px] font-bold tracking-widest rotate-[-2deg] inline-block`}>
-                  VERIFIED ◆
+                  HASH MATCH ◆
                 </span>
               )}
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-zinc-900">
             <p className="text-zinc-800 text-[9px] leading-relaxed">
-              This provenance certificate is valid for regulatory compliance under EU Carbon Border Adjustment Mechanism (CBAM Regulation 2023/956) and India Carbon Credit Trading Scheme (CCTS 2023). Record ID: {token.token_id}.
+              This is a harvest provenance record only. It is not a verified emissions report, CBAM compliance filing, CCTS record, or carbon-credit retirement certificate. Record ID: {token.token_id}.
             </p>
           </div>
         </div>

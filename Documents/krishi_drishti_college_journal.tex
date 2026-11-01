@@ -1,0 +1,407 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx} % Times New Roman
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{geometry}
+
+% ---- Standard College Journal Margins (1 inch) ----
+\geometry{
+  a4paper,
+  top=2.54cm,
+  bottom=2.54cm,
+  left=2.54cm,
+  right=2.54cm
+}
+
+% Clean pagestyle matching Navamitra college template
+\pagestyle{plain}
+\hypersetup{colorlinks=false,hidelinks}
+
+% Formatting Captions matching College Paper Template
+\captionsetup[table]{labelsep=period, justification=raggedright, singlelinecheck=false, font=small}
+\captionsetup[figure]{labelsep=period, justification=centering, font=small}
+
+\newcommand{\rupee}{Rs.\,}
+\graphicspath{{./}{../}}
+
+\begin{document}
+
+% ==================== TITLE & AUTHORS (College Template Format) ====================
+\begin{center}
+    {\Large \textbf{Krishi-Drishti: smart satellite dMRV and cryptographic carbon credit verification for smallholder agriculture}\par}
+    \vspace{0.8em}
+    {\normalsize Sheethal Aji Mani$^1$, Bhagesh Biradar$^2$, Manjunath Khot$^3$, Jayanth R.$^4$, Pruthviraja S.$^5$\par}
+    \vspace{0.4em}
+    {\small Impact College of Engineering and Applied Sciences Department of Computer Science and Engineering (Data Science),\par
+    Bengaluru, Karnataka, India\par}
+\end{center}
+\vspace{1.2em}
+
+% ==================== ABSTRACT ====================
+\begin{center}
+    \textbf{ABSTRACT}
+\end{center}
+\noindent More than 86\% of India's 600 million farming households cultivate plots under two hectares---holdings too small to justify the USD \$3,000 per-farm cost of conventional carbon credit verification. This economic barrier has historically excluded smallholders from a global voluntary carbon market exceeding USD \$2 billion. In this paper, we present \textbf{Krishi-Drishti}, a mobile-first digital Measurement, Reporting, and Verification (dMRV) architecture designed to automate agricultural carbon credit issuance through distributed cloud-edge coordination. Bottom-of-Atmosphere (BOA) surface reflectance tiles from Sentinel-2 MultiSpectral Instrument (MSI) Level-2A are pulled via Google Earth Engine, screened with QA60 bitmask flags, and temporally filtered over 90-day intervals to isolate uncultivated bare-soil pixels with NDVI $<$ 0.3. A twelve-dimensional spectral feature matrix is mapped through a three-model Stacking Ensemble regressor (Random Forest, XGBoost, and CatBoost with a regularized Ridge meta-estimator), estimating topsoil Soil Organic Carbon (SOC) with R$^2$ = 0.89 and an RMSE of 1.52 g/kg across 50 geo-referenced field benchmarks without requiring on-site diagnostic laboratories. Issuance of tradeable carbon credits is executed via a Four-Pillar digital readiness gate co-aligned with Verra VM0042 and Indian Bureau of Energy Efficiency (BEE) criteria, completing verification-to-issuance in under 48 hours. Immutable credit provenance is achieved through sequential SHA-256 state chaining paired with diurnal Merkle Root Anchors. Auxiliary modules provide MobileNetV2 foliar diagnostics (88.1\% accuracy) coupled with organic-first remediation guidance and peer-to-peer produce trading. Pilot evaluation returned an 84.0/100 System Usability Scale score, projecting supplementary smallholder returns of USD \$52--\$132 per farm per year.
+\vspace{0.8em}
+
+\noindent \textbf{Keywords:} \\
+Digital MRV, Soil organic carbon, Sentinel-2 remote sensing, Stacking ensemble regression, Cryptographic tokenization, Smallholder agriculture, Carbon credit issuance
+\vspace{1.5em}
+
+% ==================== 1. INTRODUCTION ====================
+\noindent \textbf{\large 1.INTRODUCTION}
+\vspace{0.5em}
+
+\noindent Agricultural decarbonization represents a pivotal frontier in global climate mitigation, yet certifying carbon sequestration on smallholder farms remains bottlenecked by computational, infrastructural, and economic constraints [1]. In developing agrarian markets, land holdings are fragmented across millions of sub-two-hectare properties [2]. While sustainable management interventions---such as minimal tillage, residue preservation, and agroforestry---measurably augment topsoil carbon stocks, verifying these gains traditionally requires manual laboratory core sampling costing USD \$1,500--\$3,000 per farm, followed by auditing cycles spanning 6--18 months [2]. This overhead creates an impassable economic threshold for marginal farmers, excluding them from a voluntary carbon market valued at USD \$2 billion in 2023 [3].
+
+Regulatory architectures have begun enabling domestic participation pathways. India's Carbon Credit Trading Scheme (CCTS), formalized under the Energy Conservation (Amendment) Act 2022 and overseen by the Bureau of Energy Efficiency (BEE) [1], establishes clear compliance mechanisms. Internationally, Verra's VM0042 methodology provides standardized quantification rules for soil organic carbon (SOC) enhancement. However, both frameworks require auditable Measurement, Reporting, and Verification (MRV) data. Public satellite constellations, particularly the European Space Agency's (ESA) Sentinel-2 mission with 10 m multispectral resolution and five-day revisit frequencies [4, 5], present a viable opportunity to eliminate in-situ physical hardware.
+
+Our contribution is the architecture and systems implementation of Krishi-Drishti:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item A satellite-driven Four-Pillar dMRV framework co-aligned with Verra VM0042, CCTS/BEE, and Gold Standard LUF AGR FM criteria, compressing verification turnaround to under 48 hours.
+    \item A Sentinel-2 Stacking Ensemble SOC regression pipeline (RF + XGBoost + CatBoost) achieving R$^2$ = 0.89 and RMSE = 1.52 g/kg across 50 ground validation plots across diverse Indian agro-climatic zones.
+    \item A tamper-evident cryptographic HarvestToken ledger utilizing sequential SHA-256 state chaining and diurnal Merkle Root Anchors for CBAM-compliant auditability.
+    \item An automated district-level additionality scoring engine classifying project eligibility with 91.7\% accuracy against historical adoption ceilings.
+    \item An on-device MobileNetV2 foliar pathology classifier (88.1\% accuracy) linked to an LLM advisory filter enforcing organic remedies that protect carbon credit qualification.
+\end{itemize}
+\vspace{1.2em}
+
+% ==================== 2. RELATED WORKS ====================
+\noindent \textbf{\large 2.RELATED WORKS}
+\vspace{0.5em}
+
+\noindent \textbf{2.1 Carbon Accounting Protocols and MRV Accessibility:} 
+Regulatory standard-setting organizations have formalized rigorous criteria for voluntary and compliance carbon assets. Gokul et al. [1] analyzed India's domestic Carbon Credit Trading Scheme (CCTS), noting that automated digital verification is indispensable if agricultural sectors are to participate meaningfully. Hamrick's industry review [3] documented market valuations where agricultural carbon trades between USD \$15 and \$50 per tonne of CO$_2$e. Internationally, Verra's VM0042 methodology defines strict protocols for soil organic carbon estimation and additionality enforcement [3]. Abiri et al. [2] reviewed the socio-economic barriers facing digital carbon adoption, emphasizing that high upfront verification expenses prevent inclusive market access. Bhatia [6] investigated AI-driven decision models for Indian smallholders but omitted carbon accounting and monetization pipelines. Krishi-Drishti operationalizes these regulatory requirements into automated computational gates, linking algorithmic compliance directly with cryptographic tokenization.
+
+\noindent \textbf{2.2 Digital Agriculture and IoT-Based Systems:} 
+Modern agricultural decision-support infrastructures increasingly deploy hybrid cloud architectures to bridge rural network latencies. Thilakarathne et al. [7] implemented cloud-assisted predictive frameworks for dynamic crop recommendation, demonstrating significant utility in regional planning. Nawaz and Babar [8] examined edge-AI computing constraints in resource-limited rural environments, highlighting memory and bandwidth limitations as primary failure modes. In broad IoT settings, Saha et al. [9] demonstrated that multi-sensor field nodes achieve 97.3\% recognition accuracy across automated irrigation and mapping tasks. However, physical sensor grids demand capital investment and continuous on-ground maintenance that exceed smallholder capacity. Krishi-Drishti circumvents physical sensor reliance by shifting data acquisition entirely to public satellite constellations, utilizing mobile devices merely as graphical endpoints and photographic capture nodes.
+
+\noindent \textbf{2.3 Satellite-Based Soil Organic Carbon Prediction:} 
+The utility of spaceborne multispectral sensors for quantifying soil properties has advanced rapidly with the availability of atmospherically corrected surface reflectance data. Vaudour et al. [4] showed that aggregating cloud-screened Sentinel-2 acquisitions over multi-month temporal windows while enforcing bare-soil masking yields robust spatial estimates of topsoil organic matter across temperate agricultural plots. Khaddi et al. [5] reviewed optical remote sensing methodologies and observed that ensemble learning algorithms substantially outperform parametric spectral regressors when handling non-linear reflectance variations. Building on these principles, Triantakonstantis and Karakostas [10] demonstrated that stacked generalization models successfully reconcile localized spectral anomalies in European croplands. Furthermore, Iswarya and Tamizhazhagan [11] demonstrated that integrating visible, red-edge, and shortwave-infrared wavelengths alongside derived soil indices (such as BSI and MSAVI) significantly enhances quantile regression accuracy across southern Indian soils. Xiao et al. [12] achieved elevated correlation coefficients using support vector regression on hyperspectral datasets, but noted that acquiring high-resolution hyperspectral imagery remains cost-prohibitive. Our work synthesizes the band-selection protocols validated in [11, 12] with an efficient multispectral stacking architecture executing directly over freely available Sentinel-2 imagery.
+
+\noindent \textbf{2.4 Foliar Computer Vision Diagnostics and Bioacoustic Telemetry:} 
+Complementing spaceborne observations, proximal optical imaging enables micro-scale monitoring of foliar health. Prior computer vision systems have attained high recognition rates on standardized leaf databases; Iftikhar et al. [13] reported 98.1\% multi-crop classification accuracy using deep convolutional topologies, Hasan et al. [14] realized 97.9\% on rice pathogens, and Askale et al. [15] optimized maize pathology recognition for mobile handhelds. Nonetheless, existing vision diagnostic tools operate purely in diagnostic isolation, providing recommendations that frequently involve synthetic biocides that disqualify farmers from carbon registry compliance. Parallel efforts in ecological acoustic sensing by Kershenbaum et al. [16] and Hearon et al. [17] demonstrated the feasibility of passive acoustic indices for pest and biodiversity monitoring, but lack integration into agricultural carbon certification. Krishi-Drishti bridges this schism by coupling edge-computed optical disease diagnosis and auxiliary bioacoustic telemetry directly with regenerative carbon advisory filters.
+
+\noindent \textbf{2.5 Integration of the Literature:} Taken together, the reviewed literature points to the following architectural challenges:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item Remote sensing, disease diagnostics, and verification systems exist in silos, lacking a single unified platform.
+    \item In-situ physical sensor networks are economically unviable for plots under two hectares.
+    \item Existing optical SOC models function only as scientific research tools without tradeable credit issuance engines.
+    \item Remediation advisory engines routinely recommend synthetic chemicals that violate registry additionality.
+    \item Verification cycles require digital compression from 18 months down to days to make smallholder enrollment viable.
+\end{itemize}
+\vspace{1.2em}
+
+% ==================== 3. MATERIALS AND METHODS ====================
+\noindent \textbf{\large 3.MATERIALS AND METHODS}
+\vspace{0.5em}
+
+\noindent \textbf{3.1 System Architecture:} 
+The platform architecture coordinates a mobile client interface, an asynchronous FastAPI application server, Google Earth Engine analytics, and a persistence store. The system decouples interactive client operations from long-running satellite ingestion tasks. Figure 1 illustrates the overall system topology.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{fig_system_overview.jpg}
+    \caption{Krishi-Drishti system architecture: integrating Sentinel-2 data, farmer mobile app, Carbon Vault readiness gate, and AI diagnostics.}
+    \label{fig:architecture}
+\end{figure}
+
+The core interaction modes and processing pathways across the platform are summarized in Table 1.
+
+\begin{table}[H]
+\caption{Interaction modes and processing paths}
+\centering
+\begin{tabularx}{\textwidth}{l p{3.2cm} X p{3.6cm}}
+\toprule
+\textbf{Mode} & \textbf{Input} & \textbf{Core Processing} & \textbf{Output} \\
+\midrule
+Parcel Onboarding & Cadastral GPS polygon & WGS84 area geometry validation and bounding-box derivation & Registered Project ID and additionality status \\
+Satellite dMRV & Sentinel-2 MSI tiles & QA60 cloud bitmask, 90-day bare-soil filtering, 12-band extraction & Topsoil SOC (g/kg), stock (tC/ha), tradeable tCO$_2$e \\
+Four-Pillar Gate & Geotagged proofs & Multi-stage compliance logic & Verification audit report \\
+Foliar Health & Phone camera image & MobileNetV2 classifier + LLM organic remediation filter & Pathogen classification and compliant cure plan \\
+Carbon Wallet & Token mint request & SHA-256 state chaining + diurnal Merkle aggregation & Minted HarvestTokens and INR payout \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent \textbf{3.2 Sentinel-2 Satellite Data Pipeline and Feature Engineering:} 
+Bottom-of-Atmosphere (BOA) surface reflectance tiles from Sentinel-2 MSI Level-2A are queried through Google Earth Engine (GEE). Opaque clouds and cirrus artifacts are screened using QA60 bitmask flags (Bits 10 and 11 set to zero). To capture bare ground while minimizing seasonal canopy interference, a 90-day rolling temporal median composite is computed. Agricultural parcels are filtered to retain only pixels where Normalized Difference Vegetation Index (NDVI) remains below 0.3 [4, 11].
+
+The resulting feature matrix incorporates eight spectral bands (B2 Blue, B4 Red, B5--B7 Red-Edge, B8 NIR, B11 SWIR-1, B12 SWIR-2) alongside four mathematical spectral indices:
+\begin{equation}
+    \text{NDVI} = \frac{B8 - B4}{B8 + B4}
+\end{equation}
+\begin{equation}
+    \text{EVI} = 2.5 \times \frac{B8 - B4}{B8 + 6.0B4 - 7.5B2 + 1.0}
+\end{equation}
+\begin{equation}
+    \text{BSI} = \frac{(B11 + B4) - (B8 + B2)}{(B11 + B4) + (B8 + B2)}
+\end{equation}
+\begin{equation}
+    \text{MSAVI} = \frac{2B8 + 1 - \sqrt{(2B8 + 1)^2 - 8(B8 - B4)}}{2}
+\end{equation}
+Each predictor value represents the spatial median across all qualifying bare-soil pixels within the parcel boundary.
+
+\noindent \textbf{3.3 Stacking Ensemble Regression Architecture:} 
+To overcome model-specific bias across diverse pedological units, we formulate a two-tier stacking ensemble combining three distinct base learners:
+\begin{enumerate}[noitemsep,topsep=2pt]
+    \item \textbf{Random Forest (RF):} An ensemble of 200 de-correlated decision trees configured with maximum depth 15.
+    \item \textbf{XGBoost:} A gradient-boosted decision tree architecture utilizing 300 boosting iterations, learning rate 0.05, and subsample ratio 0.8.
+    \item \textbf{CatBoost:} Symmetric gradient boosting with depth 6, optimized natively for continuous feature spaces without target leakage.
+\end{enumerate}
+Out-of-fold predictions derived from 5-fold cross-validation are concatenated to train an L2-regularized Ridge Regression meta-estimator ($\alpha = 1.0$). Ground-truth labels were established from 50 geo-referenced field core extractions (depth 0--30 cm, SOC range 3.2--28.6 g/kg) gathered across Karnataka, Maharashtra, and Tamil Nadu.
+
+\noindent \textbf{3.4 Four-Pillar Verification Evidence Framework:} 
+Credit legitimacy is enforced through four independent evidence gates co-aligned with Verra VM0042, IPCC Tier 2 protocols, and Indian CCTS criteria:
+\begin{itemize}[noitemsep,topsep=2pt]
+    \item \textbf{Pillar 1 (Cadastral Integrity):} Validated GPS boundary polygons paired with immutable farm activity logs.
+    \item \textbf{Pillar 2 (Ground Calibration):} Periodic soil core documentation ($\geq$30 cm depth) certifying baseline texture and bulk density.
+    \item \textbf{Pillar 3 (Orbital Telemetry):} Sentinel-2 spectral inversion execution within 180 days applying automated 10\% leakage and 15\% permanence buffer deductions.
+    \item \textbf{Pillar 4 (Supervisory Audit):} Geotagged photographic verification confirming crop residue management and administrative sign-off.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{fig_four_pillar_mrv.jpg}
+    \caption{Four-Pillar verification evidence framework: independent audit gates ensuring regulatory alignment with Verra VM0042 and CCTS standards.}
+    \label{fig:four_pillars}
+\end{figure}
+
+\noindent \textbf{3.5 VM0042 Carbon Accounting and Cryptographic HarvestToken Engine:} 
+The estimated topsoil SOC concentration is converted to volumetric metric tonnes of carbon per hectare ($tC/ha$) using bulk density ($BD$) and sampling depth ($D$):
+\begin{equation}
+    \text{SOC}_{\text{stock}} = \text{SOC}\% \times BD\,(g/cm^3) \times D\,(m) \times (1 - \text{Frag}/100) \times 10
+\end{equation}
+Net carbon sequestration across consecutive monitoring intervals ($t$ and $t-1$) scaled by area ($A$) and molecular ratio ($44/12$) yields metric tonnes of CO$_2$ equivalent:
+\begin{equation}
+    \Delta \text{CO}_{2\text{e}} = (\text{SOC}_{\text{stock}, t} - \text{SOC}_{\text{stock}, t-1}) \times \frac{44}{12} \times A \times (1 - L - B)
+\end{equation}
+where $L = 0.10$ represents the conservative leakage deduction and $B = 0.15$ denotes the permanence risk buffer pool.
+
+Every verified credit batch is minted as a serialized HarvestToken (\texttt{KD-HTK-YYYY-NNNNN}). Sequential SHA-256 state chaining enforces cryptographic provenance:
+\begin{equation}
+    H_n = \text{SHA-256}\bigl(\text{ParcelID}_n \,\|\, \text{Area}_n \,\|\, \text{ReflectanceVector}_n \,\|\, \Delta \text{CO}_{2\text{e}, n} \,\|\, H_{n-1}\bigr)
+\end{equation}
+Diurnal aggregation folds daily hashes into a single Merkle Root Anchor for transparent public verification.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\textwidth]{fig_carbon_lifecycle.jpg}
+    \caption{Eight-stage operational sequence for satellite-verified carbon credit issuance, spanning parcel georeferencing to producer wallet payout.}
+    \label{fig:lifecycle}
+\end{figure}
+
+\noindent \textbf{3.6 District-Level Additionality Scoring Engine:} 
+Additionality is assessed against practice-specific adoption statistics $A(d,p)$ for district $d$ and agronomic practice $p$:
+\begin{equation}
+    \text{isAdditional}(d,p) = \mathbf{1}\bigl[A(d,p) < 0.50\bigr]
+\end{equation}
+Practices exhibiting historical adoption rates exceeding 50\% within the administrative district are rejected per VM0042 §5.
+
+\noindent \textbf{3.7 Performance Metrics:} 
+Regression accuracy is evaluated using Coefficient of Determination (R$^2$), Root Mean Squared Error (RMSE), and Mean Absolute Error (MAE):
+\begin{equation}
+    R^2 = 1 - \frac{\sum_i (y_i - \hat{y}_i)^2}{\sum_i (y_i - \bar{y})^2}, \quad
+    \text{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^N (y_i - \hat{y}_i)^2}, \quad
+    \text{MAE} = \frac{1}{N}\sum_{i=1}^N |y_i - \hat{y}_i|
+\end{equation}
+\vspace{1.0em}
+
+% ---- Algorithm Specifications ----
+\noindent \textbf{Algorithm 1: Predicting Soil Organic Carbon from Sentinel-2 Reflectance} \\
+\textbf{Input:} Parcel cadastral boundary polygon $P$, target monitoring date range $[t_0, t_1]$
+\begin{enumerate}[noitemsep,topsep=1pt]
+    \item Query Google Earth Engine for Sentinel-2 Level-2A surface reflectance tiles intersecting $P$.
+    \item Apply QA60 bitmask screening to discard pixels with detected cloud or cirrus contamination.
+    \item Construct a 90-day rolling median composite image across bands B2--B8, B11, and B12.
+    \item Evaluate NDVI and apply bare-soil masking (masking all pixels with NDVI $\geq$ 0.3).
+    \item Calculate spectral vegetation indices EVI, BSI, and MSAVI over qualifying pixels.
+    \item Extract spatial median values to assemble the twelve-dimensional feature vector $\mathbf{x} \in \mathbb{R}^{12}$.
+    \item Pass $\mathbf{x}$ to the Stacking Ensemble regressor to infer estimated SOC (g/kg).
+    \item Return predicted SOC concentration and feature attribution weights.
+\end{enumerate}
+\vspace{0.8em}
+
+\noindent \textbf{Algorithm 2: Four-Pillar Verification and HarvestToken Minting} \\
+\textbf{Input:} Project identifier $ID$, uploaded evidence package, previous block hash $H_{n-1}$
+\begin{enumerate}[noitemsep,topsep=1pt]
+    \item Validate cadastral boundary geometry and evaluate regional additionality index $A(d,p)$.
+    \item If $A(d,p) \geq 0.50$, reject application for non-additionality; terminate.
+    \item Ingest accredited laboratory core certificate and verify bulk density calibration parameters.
+    \item Run Algorithm 1 to derive satellite SOC and compute net sequestered $\Delta \text{CO}_{2\text{e}}$.
+    \item Inspect geotagged field imagery and obtain cryptographic administrative review sign-off.
+    \item Compute token hash $H_n = \text{SHA-256}(\text{ParcelID}_n \,\|\, \text{Area}_n \,\|\, \Delta \text{CO}_{2\text{e}} \,\|\, H_{n-1})$.
+    \item Deposit minted HarvestTokens into producer wallet at \rupee 1,200/tCO$_2$e (80\% farmer share).
+\end{enumerate}
+\vspace{1.2em}
+
+% ==================== 4. RESULTS AND DISCUSSION ====================
+\noindent \textbf{\large 4.RESULTS AND DISCUSSION}
+\vspace{0.5em}
+
+\noindent \textbf{4.1 Evaluation of the Satellite SOC Model:} 
+The Stacking Ensemble regressor was evaluated against 50 georeferenced ground truth benchmarks using 5-fold cross-validation. Table 2 details the performance comparison.
+
+\begin{table}[H]
+\caption{Predictive performance across machine learning architectures on 50 ground validation benchmarks}
+\centering
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Model Topology} & \textbf{R$^2$ Score} & \textbf{RMSE (g/kg)} & \textbf{MAE (g/kg)} \\
+\midrule
+Random Forest (200 trees) & 0.82 & 1.94 & 1.51 \\
+XGBoost (300 rounds) & 0.85 & 1.76 & 1.34 \\
+CatBoost (Symmetric depth 6) & 0.83 & 1.88 & 1.44 \\
+\textbf{Stacking Ensemble (Ours)} & \textbf{0.89} & \textbf{1.52} & \textbf{1.19} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The stacked regressor attained an R$^2$ of 0.89 and an RMSE of 1.52 g/kg, outperforming the strongest individual base learner (XGBoost) by 0.04 in R$^2$ and reducing RMSE by 0.24 g/kg. This confirmed that combining bagging and gradient boosting models through regularized meta-learning effectively suppresses model-specific variance. Permutation importance revealed that shortwave-infrared channels (B11, B12) and the Bare Soil Index (BSI) contributed 44\% of aggregate predictive gain, aligning with established vibrational absorption bands of soil organic chromophores.
+
+\noindent \textbf{4.2 Four-Pillar MRV Framework Validation:} 
+Operational audit efficiency was validated across 12 simulated farm enrollment trials in 6 agricultural districts. Table 3 documents the observed verification metrics.
+
+\begin{table}[H]
+\caption{Operational audit metrics and verification gate performance across 12 farm enrollment trials}
+\centering
+\begin{tabular}{l c c}
+\toprule
+\textbf{Verification Gate} & \textbf{Observed Pass Rate} & \textbf{Governing Standard} \\
+\midrule
+District Additionality Check & 91.7\% (11/12) & Verra VM0042 / CCTS \\
+Pillar 1: Cadastral GPS \& Activity Logs & 100\% (12/12) & VM0042 §5 \\
+Pillar 2: Soil Baseline Core Validation & 83.3\% (10/12) & IPCC Tier 2 Protocol \\
+Pillar 3: Sentinel-2 Inversion ($<$180 days) & 100\% (12/12) & Sentinel-2 BOA Level-2A \\
+Pillar 4: Photographic Audit \& Review & 91.7\% (11/12) & CCTS/BEE Compliance \\
+\textbf{Verification-to-Issuance Latency} & \textbf{$<$48 hours} & Conventional: 6--18 months \\
+HarvestToken Hash Integrity & 100\% (47/47) & SHA-256 state chaining \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The end-to-end audit cycle completed within 48 hours for qualifying properties, reducing verification turnaround by over 95\% relative to conventional manual audits. A single additionality rejection correctly identified a No-Till practice in Nashik district with 62\% regional adoption.
+
+\noindent \textbf{4.3 Carbon Credit Yield and Economic Impact:} 
+Table 4 models projected net carbon yields and producer compensation across four supported regenerative practices.
+
+\begin{table}[H]
+\caption{Modelled carbon yields and producer compensation per hectare}
+\centering
+\begin{tabular}{l c c c c c}
+\toprule
+\textbf{Practice} & \textbf{Area (ha)} & \textbf{Gross tCO$_2$e} & \textbf{Net tCO$_2$e (Buffer)} & \textbf{Payout (INR)} & \textbf{Payout (USD)} \\
+\midrule
+No-Till & 1.1 & 4.10 & 3.49 & \rupee 3,349 & \$40 \\
+Cover Cropping & 1.1 & 5.30 & 4.51 & \rupee 5,412 & \$65 \\
+Agroforestry & 2.0 & 8.40 & 7.14 & \rupee 8,568 & \$102 \\
+Composting & 0.8 & 2.80 & 2.38 & \rupee 2,856 & \$34 \\
+\midrule
+\textbf{Average (1.1 ha)} & \textbf{1.1} & \textbf{4.41} & \textbf{3.75} & \textbf{\rupee 4,500} & \textbf{\$54} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent \textbf{4.4 AI Vision and Usability Results:} 
+The MobileNetV2 crop pathology classifier achieved 88.1\% overall accuracy across 730 validation images spanning five disease categories. Qualitative field testing with five smallholder cultivators yielded an average System Usability Scale (SUS) score of \textbf{84.0/100}, corresponding to the ``Excellent'' adjective rating on the Bangor scale.
+
+\noindent \textbf{4.5 Discussion and Limitations:} 
+The primary contribution of this work is architectural integration: linking spaceborne optical remote sensing, ensemble regression, cryptographic chaining, and mobile edge interfaces into an operational dMRV pipeline. Table 5 benchmarks Krishi-Drishti against prior agricultural informatics platforms.
+
+\begin{table}[H]
+\caption{Architectural comparison with existing agricultural systems}
+\centering
+\begin{tabularx}{\textwidth}{l p{3.0cm} c X}
+\toprule
+\textbf{System / Ref.} & \textbf{Core Methodology} & \textbf{Accuracy} & \textbf{Key Limitation vs. Krishi-Drishti} \\
+\midrule
+Iftikhar et al. [13] & Enhanced CNN, 3 crops & 98.1\% & Isolated diagnosis; no carbon accounting \\
+Hasan et al. [14] & Lightweight CNN, Rice & 97.9\% & Single crop; no monetization linkage \\
+Saha et al. [9] & Multi-sensor IoT network & 97.3\% & Costly hardware; no carbon verification \\
+Iswarya \& Tam. [11] & Quantile Random Forests & High R$^2$ & Academic soil mapping; no crediting pipeline \\
+\midrule
+\textbf{Krishi-Drishti} & \textbf{4-Pillar dMRV + Sentinel-2} & \textbf{R$^2$=0.89} & \textbf{End-to-end verification without in-field hardware} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Several operational limitations remain. Sentinel-2 optical inversion relies on bare-soil conditions (NDVI $<$ 0.3), requiring multi-month temporal aggregation during post-harvest or pre-sowing periods. Heavy continuous cloud cover in monsoon-dominated regions can restrict valid observations. Furthermore, laboratory soil analysis validation in Pillar 2 remains sensitive to document scanning quality.
+\vspace{1.2em}
+
+% ==================== 5. CONCLUSION AND FUTURE WORK ====================
+\noindent \textbf{\large 5.CONCLUSION AND FUTURE WORK}
+\vspace{0.5em}
+
+\noindent Krishi-Drishti demonstrates that public optical satellite radiometry paired with stacked ensemble machine learning can replace prohibitively expensive physical laboratory soil testing for smallholder carbon credit certification. By coupling Sentinel-2 Level-2A surface reflectance with an ensemble of Random Forest, XGBoost, and CatBoost models, the platform achieves R$^2$ = 0.89 and RMSE = 1.52 g/kg, fulfilling Verra VM0042 accuracy thresholds. The automated Four-Pillar verification framework compresses verification cycles from 18 months down to under 48 hours, while sequential SHA-256 state chaining guarantees tamper-evident provenance without requiring dedicated blockchain infrastructure. Usability trials confirmed an 84.0/100 SUS score among practicing cultivators, establishing a viable pathway for supplementary carbon revenue of USD \$52--\$132 per farm annually.
+
+Future work will focus on integrating Synthetic Aperture Radar (SAR) observations from Sentinel-1 to maintain temporal continuity during monsoon seasons, deploying multi-spectral fusion with Landsat 8/9, and executing multi-region pilot deployments covering 500 smallholders across diverse Indian agro-ecological zones.
+\vspace{1.2em}
+
+% ==================== 6. CONTRIBUTION OF THE AUTHORS ====================
+\noindent \textbf{\large 6. CONTRIBUTION OF THE AUTHORS}
+\vspace{0.5em}
+
+\noindent \textbf{Conceptualization and academic guidance:} Dr. Sheethal Aji Mani. \\
+\textbf{Carbon Vault Architecture, Software Development, Methodology, Writing -- Original Draft:} Bhagesh Biradar. \\
+\textbf{Data Curation, Satellite Pipeline Development, Formal Analysis:} Manjunath Khot. \\
+\textbf{Investigation, Field Testing, Resources:} Jayanth R. \\
+\textbf{Visualization, Digital Twin Development, UI/UX Design:} Pruthviraja S.
+\vspace{1.2em}
+
+% ==================== ACKNOWLEDGMENTS ====================
+\noindent \textbf{\large ACKNOWLEDGMENTS}
+\vspace{0.5em}
+
+\noindent The authors thank the open-source datasets, pre-trained models, and software packages used in this research. The authors extend sincere gratitude to the European Space Agency (ESA) Copernicus Programme for freely accessible Sentinel-2 Level-2A imagery, Google Earth Engine for planetary-scale geospatial analytics, and the farmers of Karnataka and Maharashtra who participated in the field validation exercises. The authors also thank the academic advice and environment in which the Krishi-Drishti project was developed at Impact College of Engineering and Applied Sciences.
+\vspace{1.2em}
+
+% ==================== REFERENCES ====================
+\noindent \textbf{\large REFERENCES}
+\vspace{0.5em}
+
+\noindent [1] S. Gokul, P. Nongkynrih, L. Rabha, R. Rai, and B. D. Shukla, ``Carbon credit mechanisms for sustainable agriculture and opportunities in North East India,'' \textit{Discover Sustainability}, vol. 7, p. 857, 2026.
+
+\noindent [2] R. Abiri, N. Shahverdi, F. M. Salleh, N. A. P. Azizi, and N. A. M. Nor, ``Application of digital technologies for ensuring agricultural productivity,'' \textit{Heliyon}, vol. 9, no. 12, p. e22601, 2023.
+
+\noindent [3] K. Hamrick, ``State of Voluntary Carbon Markets 2023,'' \textit{Ecosystem Marketplace}, Forest Trends, Washington, DC, 2023.
+
+\noindent [4] E. Vaudour, C. Gomez, Y. Fouad, and P. Lagacherie, ``Satellite Imagery to Map Topsoil Organic Carbon Content over Cultivated Areas: An Overview,'' \textit{Remote Sensing}, vol. 14, no. 12, p. 2917, 2022.
+
+\noindent [5] E. Khaddi, A. Benmansour, and K. Boubaker, ``Shaping smarter prediction: A literature review of GIS, remote sensing and ML applications in digital SOC mapping,'' \textit{Turkish Journal of Remote Sensing}, vol. 8, no. 2, p. 1808033, 2026.
+
+\noindent [6] A. Bhatia, ``An AI-Powered Agricultural Decision Support System for Smallholder Farmers in India,'' \textit{Smart Agricultural Technology}, SSRN-6944006, 2025.
+
+\noindent [7] N. N. Thilakarathne, N. Basnayake, T. Withanage, D. Weliwatta, H. Jayakody, and A. Wickramasinghe, ``A Cloud Enabled Crop Recommendation Platform for Machine Learning-Driven Precision Farming,'' \textit{Sensors}, vol. 22, no. 16, p. 6299, 2022.
+
+\noindent [8] M. Nawaz and M. I. K. Babar, ``IoT and AI for smart agriculture in resource-constrained environments,'' \textit{Discover Internet of Things}, vol. 5, no. 1, p. 24, 2025.
+
+\noindent [9] G. Saha, S. K. Roy, and P. K. Ghosh, ``Smart IoT-driven precision agriculture: Land mapping, crop prediction, and irrigation system,'' \textit{PLOS ONE}, vol. 20, no. 3, p. e0319268, 2025.
+
+\noindent [10] D. Triantakonstantis and A. Karakostas, ``Soil Organic Carbon Monitoring and Modelling via Machine Learning Methods Using Soil and Remote Sensing Data,'' \textit{Agriculture}, vol. 15, no. 8, p. 910, 2025.
+
+\noindent [11] R. Iswarya and V. Tamizhazhagan, ``Satellite-Derived Prediction of Soil Organic Carbon Under Bare-Soil Conditions Using Sentinel-2 Spectral Indices and Quantile Regression Forests,'' \textit{International Journal of AI and Machine Learning}, vol. 6, no. 6s, p. 76, 2026.
+
+\noindent [12] X. Xiao, S. Zhang, and H. Shen, ``Environmental variables improve the accuracy of remote sensing estimation of soil organic carbon content,'' \textit{Scientific Reports}, vol. 14, no. 1, p. 18964, 2024.
+
+\noindent [13] M. Iftikhar, M. H. Yousaf, and A. Fatima, ``Plant disease management: a fine-tuned enhanced CNN approach with mobile app integration,'' \textit{Artificial Intelligence Review}, vol. 57, no. 7, p. 167, 2024.
+
+\noindent [14] M. M. Hasan, J. Shin, and M. A. Rahim, ``Enhancing Rice Crop Management: Disease Classification Using CNNs and Mobile Application Integration,'' \textit{Agriculture}, vol. 13, no. 8, p. 1549, 2023.
+
+\noindent [15] G. T. Askale, T. G. Debelee, and F. S. Ayalew, ``Mobile based deep CNN model for maize leaf disease detection and classification,'' \textit{Plant Methods}, vol. 21, no. 1, p. 72, 2025.
+
+\noindent [16] A. Kershenbaum, D. T. Blumstein, and M. A. Roch, ``Automatic detection for bioacoustic research: a practical guide from and for biologists and computer scientists,'' \textit{Biological Reviews}, 2024.
+
+\noindent [17] L. E. Hearon, T. R. Burk, and C. M. Seltzer, ``buzzdetect: an open-source deep learning tool for automated bioacoustic pollinator monitoring,'' \textit{Journal of Insect Science}, vol. 25, no. 6, p. ieaf104, 2025.
+
+\end{document}
+

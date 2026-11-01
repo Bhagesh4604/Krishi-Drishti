@@ -8,7 +8,7 @@ import {
   Camera, AlertCircle, Link2
 } from 'lucide-react';
 import { Screen, HarvestToken, ChemicalInput } from '../types';
-import { traceabilityService, plotService, carbonService, getUserLocation } from '../src/services/api';
+import { traceabilityService, plotService, getUserLocation } from '../src/services/api';
 
 interface Props {
   navigateTo: (screen: Screen, data?: any) => void;
@@ -19,7 +19,7 @@ const INTRO_KEY = 'kd_trace_intro_seen_v2';
 
 const CYCLE_STEPS = [
   { num: '01', title: 'Harvest', sub: 'After harvest, open Krishi Ledger and tap Mint.', icon: '🌾' },
-  { num: '02', title: 'Mint Token', sub: 'The system creates a unique blockchain record.', icon: '🔗' },
+  { num: '02', title: 'Mint Token', sub: 'The system records a hash-linked entry in the app ledger.', icon: '🔗' },
   { num: '03', title: 'QR Code', sub: 'Your token gets a scannable provenance certificate.', icon: '▣' },
   { num: '04', title: 'Buyer Verifies', sub: 'Buyers scan the QR and instantly see your full record.', icon: '✓' },
 ];
@@ -92,7 +92,7 @@ const QRPanel: React.FC<{ token: HarvestToken; onClose: () => void }> = ({ token
                  <p className="text-xs font-bold mt-0.5" style={{ color: '#001A11' }}>{token.crop_type}</p>
               </div>
               <div className="p-3 rounded-xl" style={{ background: '#E8FBF3' }}>
-                 <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>CO₂e</p>
+                 <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Est. CO₂e</p>
                  <p className="text-xs font-bold mt-0.5" style={{ color: '#00BB78' }}>{(token.carbon_footprint_kg_co2e || 0).toFixed(1)}kg</p>
               </div>
            </div>
@@ -137,7 +137,7 @@ const TransferPanel: React.FC<{ token: HarvestToken; onClose: () => void; onSucc
 
         <div className="p-3 mb-5 rounded-xl flex gap-3 items-start" style={{ background: '#FFF8EB' }}>
            <AlertCircle size={15} style={{ color: '#D97706', marginTop: 2 }} />
-           <p className="text-xs leading-relaxed" style={{ color: '#92400E' }}>This action permanently transfers custody. An immutable log entry will be created.</p>
+           <p className="text-xs leading-relaxed" style={{ color: '#92400E' }}>This records a custody change in the app ledger. It does not transfer carbon credits.</p>
         </div>
 
         <div className="space-y-4 mb-6">
@@ -166,10 +166,9 @@ const TransferPanel: React.FC<{ token: HarvestToken; onClose: () => void; onSucc
   );
 };
 
-const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () => void; onSuccess: () => void }> = ({ plots, carbonProjects, onClose, onSuccess }) => {
+const MintWizard: React.FC<{ plots: any[]; onClose: () => void; onSuccess: () => void }> = ({ plots, onClose, onSuccess }) => {
   const [step, setStep] = useState(0);
   const [plotId, setPlotId] = useState<number | null>(null);
-  const [projectId, setProjectId] = useState<number | null>(null);
   const [cropType, setCropType] = useState('');
   const [variety, setVariety] = useState('');
   const [harvestDate, setHarvestDate] = useState(new Date().toISOString().split('T')[0]);
@@ -178,10 +177,6 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
   const [inputs, setInputs] = useState<ChemicalInput[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const selectedProject = carbonProjects.find(p => p.id === projectId);
-  const methodology = selectedProject?.methodology || 'Mixed';
-  const ef: Record<string, number> = { 'No-Till': 0.18, 'Cover-Crop': 0.21, 'Agroforestry': 0.14, 'Mixed': 0.28, 'Conventional': 0.35 };
-  const co2 = parseFloat(yieldKg || '0') * (ef[methodology] || 0.28);
   const selectedPlot = plots.find(p => p.id === plotId);
 
   const steps = ['Field', 'Harvest', 'Inputs', 'Review'];
@@ -203,7 +198,7 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
         area_harvested_acres: parseFloat(areaAcres),
         chemical_inputs: inputs.filter(i => i.name.trim()),
         geo_lat: (loc as any).lat, geo_lng: (loc as any).lng,
-        carbon_project_id: projectId || undefined,
+
       });
       onSuccess(); onClose();
     } catch (e: any) { alert(e?.response?.data?.detail || 'Minting failed'); }
@@ -246,7 +241,7 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
                              style={{ borderColor: plotId === p.id ? '#00BB78' : '#F0F0F0', boxShadow: plotId === p.id ? '0 0 0 4px rgba(0,187,120,0.1)' : 'none' }}>
                              <div>
                                 <p className="text-sm font-bold" style={{ color: '#001A11' }}>{p.name}</p>
-                                <p className="text-[11px] font-medium mt-0.5" style={{ color: '#616B68' }}>{p.area} ha · {p.crop_type || 'Mixed'}</p>
+                                <p className="text-[11px] font-medium mt-0.5" style={{ color: '#616B68' }}>{p.area} acres · {p.crop_type || 'Mixed'}</p>
                              </div>
                              {plotId === p.id && <CheckCircle2 size={18} style={{ color: '#00BB78' }} />}
                           </button>
@@ -255,22 +250,8 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
                  </div>
               </div>
 
-              <div>
-                 <label className="text-xs font-bold uppercase tracking-wider block mb-3" style={{ color: '#616B68' }}>Link Carbon Project (Optional)</label>
-                 <div className="space-y-2">
-                    <button onClick={() => setProjectId(null)} className="w-full text-left p-4 rounded-2xl bg-white border transition-all" style={{ borderColor: !projectId ? '#00BB78' : '#F0F0F0' }}>
-                       <p className="text-sm font-bold" style={{ color: '#001A11' }}>None</p>
-                    </button>
-                    {carbonProjects.filter(p => p.status === 'Verified' || p.status === 'Issued').map(p => (
-                       <button key={p.id} onClick={() => setProjectId(p.id)} className="w-full text-left p-4 rounded-2xl bg-white border transition-all flex justify-between items-center" style={{ borderColor: projectId === p.id ? '#00BB78' : '#F0F0F0' }}>
-                          <div>
-                             <p className="text-sm font-bold" style={{ color: '#001A11' }}>{p.plot_name}</p>
-                             <p className="text-[11px] font-medium mt-0.5" style={{ color: '#616B68' }}>{p.methodology}</p>
-                          </div>
-                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-700">{(p.available_credits || 0).toFixed(2)} ACT</span>
-                       </button>
-                    ))}
-                 </div>
+              <div className="rounded-2xl p-4 text-xs leading-relaxed" style={{ background: '#FFF8EB', color: '#815400' }}>
+                 The CO₂e figure is a rough yield-factor estimate, not a measured emissions inventory or offset. Carbon-credit balances are not attached to harvest records.
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -304,7 +285,7 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
               {parseFloat(yieldKg) > 0 && (
                  <div className="p-4 rounded-2xl bg-white border border-green-100 flex items-center justify-between shadow-sm">
                     <div>
-                       <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Computed CO₂e</p>
+                       <p className="text-[10px] uppercase font-black" style={{ color: '#616B68' }}>Estimated footprint · kg CO₂e</p>
                        <p className="text-2xl font-black mt-1" style={{ color: '#00BB78' }}>{(co2 || 0).toFixed(1)} <span className="text-sm font-medium">kg</span></p>
                     </div>
                     <div className="text-right">
@@ -359,7 +340,7 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
                     ['Plot', selectedPlot?.name],
                     ['Crop', `${cropType} ${variety}`],
                     ['Yield', `${yieldKg} kg`],
-                    ['Carbon Footprint', `${(co2 || 0).toFixed(2)} kg CO₂e`],
+                    ['Estimated footprint', `${(co2 || 0).toFixed(2)} kg CO₂e`],
                     ['Chemical Inputs', inputs.length > 0 ? `${inputs.length} items` : 'None (Organic)'],
                  ].map(([k, v], i) => (
                     <div key={i} className="flex justify-between text-sm">
@@ -371,7 +352,7 @@ const MintWizard: React.FC<{ plots: any[]; carbonProjects: any[]; onClose: () =>
 
               <div className="p-4 rounded-2xl flex gap-3 items-start" style={{ background: '#FFF8EB' }}>
                  <AlertCircle size={16} style={{ color: '#D97706', marginTop: 2 }} />
-                 <p className="text-xs leading-relaxed" style={{ color: '#92400E' }}>By minting, you declare all information accurate. An immutable blockchain entry will be created.</p>
+                 <p className="text-xs leading-relaxed" style={{ color: '#92400E' }}>By minting, you declare all information accurate. A hash-linked record will be saved in the app ledger. This is harvest provenance, not carbon-credit issuance.</p>
               </div>
             </motion.div>
           )}
@@ -397,7 +378,6 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
   const [activeTab, setActiveTab] = useState<'ledger' | 'chain'>('ledger');
   const [tokens, setTokens] = useState<HarvestToken[]>([]);
   const [plots, setPlots] = useState<any[]>([]);
-  const [carbonProjects, setCarbonProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMint, setShowMint] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -408,8 +388,8 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
   const load = async () => {
     setLoading(true);
     try {
-      const [t, p, c] = await Promise.all([traceabilityService.getMyTokens(), plotService.getPlots(), carbonService.getProjects()]);
-      setTokens(t); setPlots(p); setCarbonProjects(c);
+      const [t, p] = await Promise.all([traceabilityService.getMyTokens(), plotService.getPlots()]);
+      setTokens(t); setPlots(p);
     } catch (e) {} finally { setLoading(false); }
   };
 
@@ -457,7 +437,7 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
                <p className="text-sm font-bold text-white">{tokens.length}</p>
             </div>
             <div>
-               <p className="text-[10px]" style={{ color: '#616B68' }}>Total CO₂e</p>
+               <p className="text-[10px]" style={{ color: '#616B68' }}>Estimated footprint</p>
                <p className="text-sm font-bold text-white">{(totalCO2 || 0).toFixed(0)} kg</p>
             </div>
          </div>
@@ -485,7 +465,7 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
            <div className="py-12 flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4 text-2xl">🌱</div>
               <h3 className="text-base font-bold" style={{ color: '#001A11' }}>Ledger Empty</h3>
-              <p className="text-sm font-medium mt-1 mb-6 px-4" style={{ color: '#616B68' }}>Mint your first harvest token to begin CBAM compliant tracking.</p>
+              <p className="text-sm font-medium mt-1 mb-6 px-4" style={{ color: '#616B68' }}>Create a harvest provenance record. It is not a carbon-credit or regulatory-compliance certificate.</p>
               <button onClick={() => setShowMint(true)} className="py-3 px-6 rounded-xl text-white text-sm font-bold shadow-md" style={{ background: '#00BB78' }}>
                  Mint First Token
               </button>
@@ -510,12 +490,12 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
                              <p className="text-xs font-black mt-0.5" style={{ color: '#001A11' }}>{token.yield_kg.toLocaleString()} kg</p>
                           </div>
                           <div className="p-2.5 rounded-xl bg-gray-50">
-                             <p className="text-[9px] uppercase font-black" style={{ color: '#616B68' }}>CO₂e</p>
+                             <p className="text-[9px] uppercase font-black" style={{ color: '#616B68' }}>Est. CO₂e</p>
                              <p className="text-xs font-black mt-0.5" style={{ color: '#001A11' }}>{(token.carbon_footprint_kg_co2e || 0).toFixed(1)} kg</p>
                           </div>
                           <div className="p-2.5 rounded-xl bg-gray-50">
                              <p className="text-[9px] uppercase font-black" style={{ color: '#616B68' }}>Credits</p>
-                             <p className="text-xs font-black mt-0.5" style={{ color: '#00BB78' }}>{Number(token.carbon_credits_linked || 0).toFixed(2)} ACT</p>
+                             <p className="text-xs font-black mt-0.5" style={{ color: '#00BB78' }}>0.00 credits linked</p>
                           </div>
                        </div>
                     </div>
@@ -554,7 +534,7 @@ const TraceabilityScreen: React.FC<Props> = ({ navigateTo, preSelectedProjectId 
 
       <AnimatePresence>
          {showIntro && <CycleIntro onDone={() => setShowIntro(false)} />}
-         {showMint && <MintWizard plots={plots} carbonProjects={carbonProjects} onClose={() => setShowMint(false)} onSuccess={load} />}
+         {showMint && <MintWizard plots={plots} onClose={() => setShowMint(false)} onSuccess={load} />}
          {showQR && selectedToken && <QRPanel token={selectedToken} onClose={() => setShowQR(false)} />}
          {showTransfer && selectedToken && <TransferPanel token={selectedToken} onClose={() => setShowTransfer(false)} onSuccess={load} />}
       </AnimatePresence>

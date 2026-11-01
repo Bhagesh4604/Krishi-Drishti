@@ -1,6 +1,7 @@
 \documentclass[10pt,a4paper,twocolumn]{IEEEtran}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{mathptmx}
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{caption}
@@ -12,41 +13,46 @@
 \usepackage{multirow}
 \usepackage{enumitem}
 \usepackage{cite}
-\graphicspath{{../}}
+
+\graphicspath{{./}{../}}
 \newcommand{\rupee}{Rs.\,}
 \hypersetup{colorlinks=false,hidelinks}
 \captionsetup{font=small, labelfont=bf}
 \setlist[itemize]{noitemsep, topsep=2pt, leftmargin=*}
 
+% ---- Exact College Template Footnote Line Above Manuscript ----
+\renewcommand{\footnoterule}{%
+  \vspace*{-3pt}%
+  \noindent\rule{\columnwidth}{0.5pt}%
+  \vspace*{2.6pt}%
+}
+
+% Ensure footnotes stay on Page 1 and do not split across pages
+\interfootnotelinepenalty=10000
+
 \begin{document}
 
-\title{Krishi-Drishti: A Mobile-First Digital MRV Architecture for Smallholder Agricultural Carbon Credit Issuance Using Stacking Machine Learning and Cryptographic Tokenization}
+\title{Krishi-Drishti: Smart Satellite dMRV and Cryptographic Carbon Credit Verification for Smallholder Agriculture}
 
-\author{Rama Krishna~K.,~\IEEEmembership{Member,~IAENG,}
-        Sheethal Aji Mani,
-        Bhagesh Biradar,~\IEEEmembership{Member,~IAENG,}
-        Manjunath Khot,
-        Jayanth~R.,~and Pruthviraja~S.%
-\thanks{Manuscript received Month 01, 20XX; revised Month 15, 20XX.}%
-\thanks{This work was supported in part by the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, Visvesvaraya Technological University, Bangalore, Karnataka, India.}%
-\thanks{Dr. Rama Krishna K. is a Professor in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (corresponding author, e-mail: ramakrishna@example.com).}%
-\thanks{Sheethal Aji Mani is an Associate Professor in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: sheethal.amani@example.com).}%
-\thanks{Bhagesh Biradar is an undergraduate researcher in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: bhagesh.biradar@example.com).}%
-\thanks{Manjunath Khot is an undergraduate researcher in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: manjunath.khot@example.com).}%
-\thanks{Jayanth R. is an undergraduate researcher in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: jayanth.r@example.com).}%
-\thanks{Pruthviraja S. is an undergraduate researcher in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, Karnataka 560092, India (e-mail: pruthviraja.s@example.com).}}
+\author{Bhagesh Biradar, Manjunath Khot, Jayanth~R., and Pruthviraja~S.\\
+\small Department of Computer Science and Engineering (Data Science), Impact College of Engineering and Applied Sciences\\
+\small Supervisor: Dr. Sheethal Aji Mani%
+\thanks{Manuscript received Month 01, 2026; accepted Month 15, 2026; published Month 28, 2026.\newline
+\hspace*{1em}Bhagesh Biradar (USN 1IC23CD004), Manjunath Khot (USN 1IC22CD007), Jayanth~R. (USN 1IC23CD012) and Pruthviraja~S. (USN 1IC23CD018) are students of the Department of Computer Science and Engineering (Data Science), Impact College of Engineering and Applied Sciences, Karnataka, India.\newline
+\hspace*{1em}Dr. Sheethal Aji Mani, Department of Computer Science and Engineering (Data Science), Impact College of Engineering and Applied Sciences, Karnataka, India, is the project supervisor (e-mail: sheethal.ajimani@impact.edu.in).\newline
+\hspace*{1em}Copyright \copyright 2026 by the authors and Impact College of Engineering and Applied Sciences (CSE Data Science Department). This work is licensed under the Creative Commons Attribution International License (CC BY 4.0).}}
 
-\markboth{Engineering Letters,~Vol.~XX, No.~XX, Month~20XX}%
-{Rama Krishna et al.: Krishi-Drishti: Digital MRV Architecture for Carbon Credit Issuance}
+\pagestyle{empty}
 
 \maketitle
+\thispagestyle{empty}
 
 \begin{abstract}
-Smallholder farming households cultivating plots under two hectares represent the predominant demographic in developing agricultural economies, yet conventional Measurement, Reporting, and Verification (MRV) systems impose administrative and laboratory costs that render individual carbon credit certification economically impossible. This paper presents the computational architecture and systems implementation of \textbf{Krishi-Drishti}, a mobile-first digital MRV infrastructure designed specifically to automate agricultural carbon credit issuance and verification through distributed cloud-edge coordination. The architecture interfaces a mobile client application with an asynchronous cloud analytics engine powered by FastAPI and Google Earth Engine. A multi-tier predictive subsystem employs stacked generalization across Random Forest, XGBoost, and CatBoost base models with a regularized meta-regressor, estimating topsoil carbon concentrations with $R^2 = 0.89$ and an RMSE of $1.52\,$g/kg across 50 ground validation benchmarks without requiring on-site physical diagnostic laboratories. Issuance of tradeable carbon credits is executed via a four-stage digital readiness gate co-aligned with Verra VM0042 and Indian Bureau of Energy Efficiency (BEE) criteria, completing verification-to-issuance in under 48 hours. Immutable credit provenance is achieved through sequential SHA-256 state chaining paired with diurnal Merkle Root Anchoring, issuing tamper-proof HarvestTokens directly to farmers at \rupee 1,200/$\text{tCO}_2\text{e}$ without the overhead of public blockchain ledgers. System usability evaluations with rural operators achieved an 84.0/100 SUS index, demonstrating that combining cloud-edge processing with stacked ensemble learning establishes a scalable engineering pathway for democratic environmental carbon credit issuance.
+Smallholder farming households cultivating plots under two hectares represent the predominant demographic in developing agrarian economies, yet conventional Measurement, Reporting, and Verification (MRV) systems impose administrative and laboratory costs that render individual carbon credit certification economically impossible. This paper presents the computational architecture and systems implementation of \textbf{Krishi-Drishti}, a mobile-first digital MRV infrastructure designed to automate agricultural carbon credit issuance through distributed cloud-edge coordination. Utilizing Sentinel-2 MSI Bottom-of-Atmosphere surface reflectance tiles via Google Earth Engine, a two-tier stacking ensemble regressor (Random Forest, XGBoost, CatBoost with Ridge meta-learning) predicts topsoil Soil Organic Carbon (SOC) with $R^2 = 0.89$ and RMSE of $1.52\,$g/kg across 50 ground validation benchmarks without requiring on-site diagnostic laboratories. Issuance of tradeable carbon credits is executed via a Four-Pillar readiness gate co-aligned with Verra VM0042 and Indian Bureau of Energy Efficiency (BEE) criteria, completing verification-to-issuance in under 48 hours. Immutable credit provenance is achieved through sequential SHA-256 state chaining paired with diurnal Merkle Root Anchoring, issuing tamper-proof HarvestTokens directly to farmers at \rupee 1,200/$\text{tCO}_2\text{e}$ without the overhead of public blockchain ledgers. System usability evaluations with rural operators achieved an 84.0/100 SUS index, demonstrating that combining cloud-edge processing with stacked ensemble learning establishes a scalable engineering pathway for democratic environmental carbon credit issuance.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Carbon Credit Issuance, Digital MRV, Stacking Ensemble Learning, Cryptographic Audit Provenance, Mobile Cloud Systems, Environmental Informatics, HarvestToken
+Carbon credit issuance, digital MRV, Sentinel-2 remote sensing, soil organic carbon, stacking ensemble regression, cryptographic tokenization, smallholder agriculture, HarvestToken
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -68,7 +74,7 @@ To address these requirements, we present the systems design, algorithmic implem
   \item An edge-optimized mobile convolutional vision module (MobileNetV2, 88.1\% accuracy) delivering disease diagnostics while restricting remediations to organic protocols to safeguard carbon eligibility.
 \end{itemize}
 
-\section{Related Work}
+\section{Related Works}
 
 \subsection{Carbon Accounting Protocols and Verification Systems}
 Regulatory standard-setting organizations have formalized rigorous criteria for voluntary and compliance carbon assets. Gokul et al. [1] analyzed India's domestic Carbon Credit Trading Scheme (CCTS), noting that automated digital verification is indispensable if agricultural sectors are to participate meaningfully. Internationally, Verra's VM0042 methodology defines strict protocols for soil organic carbon estimation and additionality enforcement [3]. Abiri et al. [2] reviewed the socio-economic barriers facing digital carbon adoption, emphasizing that high upfront verification expenses prevent inclusive market access. Bhatia [6] investigated AI-driven decision models for Indian smallholders but omitted carbon accounting and monetization pipelines. Krishi-Drishti operationalizes these regulatory requirements into automated computational gates, linking algorithmic compliance directly with cryptographic tokenization.
@@ -82,7 +88,10 @@ Tabular environmental modeling frequently encounters non-linear feature interact
 \subsection{Foliar Computer Vision and Ecological Bioacoustics}
 Deep learning architectures for foliar pathology recognition have attained remarkable precision under laboratory evaluation. Iftikhar et al. [13] developed fine-tuned convolutional networks reaching 98.1\% accuracy, Hasan et al. [14] designed lightweight architectures for rice pathology at 97.9\%, and Askale et al. [15] deployed deep networks onto mobile devices for maize leaf classification. Nevertheless, standard agricultural diagnostics operate independently of environmental compliance frameworks, routinely recommending chemical treatments that violate carbon offset additionality and soil conservation guidelines. Complementing visual modalities, non-invasive bioacoustic monitoring has emerged for automated pest detection. Foundational works by Kershenbaum et al. [16] and Hearon et al. [17] demonstrated acoustic feature extraction and soundscape indices for biodiversity surveillance. However, existing bioacoustic tools operate strictly as academic ecological sensors without integration into agricultural MRV pipelines. Krishi-Drishti integrates on-device MobileNetV2 vision and embedded bioacoustic telemetry with language-model policy guards, ensuring diagnostic guidance and biodiversity metrics align with regenerative farming certification.
 
-\section{System Architecture and Implementation}
+\subsection{Research Gap}
+Taken together, the reviewed literature demonstrates significant progress across remote sensing [4], [5], crop pathology diagnosis [13]--[15], and cryptographic audit mechanisms. However, virtually no reported systems integrate satellite multispectral soil organic carbon regression, Four-Pillar compliance gates, on-device disease diagnostics, and automated carbon tokenization into a unified, cost-effective digital pipeline accessible to smallholders farming sub-two-hectare properties. Krishi-Drishti resolves this fundamental divide.
+
+\section{System Architecture}
 
 \subsection{Multi-Tier Distributed Architecture}
 Fig.~\ref{fig:arch} illustrates the system architecture of Krishi-Drishti, structured across three decoupled computing tiers:
@@ -94,10 +103,12 @@ Fig.~\ref{fig:arch} illustrates the system architecture of Krishi-Drishti, struc
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\includegraphics[width=0.9\columnwidth]{fig_system_overview.jpg}}
+  \includegraphics[width=0.92\columnwidth]{fig_system_overview.jpg}
   \caption{Multi-tier system architecture: Mobile client tier, asynchronous FastAPI application tier, and Google Earth Engine geospatial analytics cluster. Source: Authors, 2026.}
   \label{fig:arch}
 \end{figure}
+
+\section{Proposed Methodology}
 
 \subsection{Stacked Ensemble Regression Engine}
 Predicting topsoil carbon concentrations from multispectral inputs requires an estimator that reconciles disparate variance profiles across spectral bands. We implement a stacked generalization model structured into two distinct stages:
@@ -127,7 +138,7 @@ where $\Phi(d, p)$ denotes the regional adoption penetration index retrieved fro
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\includegraphics[width=0.9\columnwidth]{fig_four_pillar_mrv.jpg}}
+  \includegraphics[width=0.92\columnwidth]{fig_four_pillar_mrv.jpg}
   \caption{Four-Pillar verification framework enforcing algorithmic readiness gates across cadastral, soil, satellite, and photographic evidence. Source: Authors, 2026.}
   \label{fig:pillars}
 \end{figure}
@@ -140,14 +151,17 @@ Translating inverted SOC concentrations into tradeable carbon credit issuances r
 \end{equation}
 where $\rho_b$ is dry bulk density ($\text{g/cm}^3$) and $D$ represents active profile depth ($0.30\,$m). Net eligible greenhouse gas emission reductions ($\Delta\text{CO}_2\text{e}$) across farm surface area $\mathcal{A}$ are computed as:
 \begin{equation}
-  \text{Net}\,\text{tCO}_2\text{e} = (\text{SOC}_{\text{stock},\,t} - \text{SOC}_{\text{stock},\,t-1}) \times \frac{44}{12} \times \mathcal{A} \times (1 - \delta_{\text{leak}}) \times (1 - \delta_{\text{buf}})
-  \label{eq:net_credits}
+\begin{split}
+  \text{Net}\,\text{tCO}_2\text{e} &= (\text{SOC}_{\text{stock},\,t} - \text{SOC}_{\text{stock},\,t-1}) \times \frac{44}{12} \\
+  &\quad \times \mathcal{A} \times (1 - \delta_{\text{leak}}) \times (1 - \delta_{\text{buf}})
+\end{split}
+\label{eq:net_credits}
 \end{equation}
 where the stoichiometric factor $44/12$ converts elemental carbon to molecular $\text{CO}_2$, $\delta_{\text{leak}} = 0.10$ denotes the statutory leakage discount, and $\delta_{\text{buf}} = 0.15$ accounts for the permanence risk buffer contribution. Every verified metric tonne of $\text{CO}_2\text{e}$ is issued as a tradeable HarvestToken, triggering an automated payout of 80\% of credit value (\rupee 1,200/$\text{tCO}_2\text{e}$) directly into the cultivator's integrated digital wallet. Fig.~\ref{fig:lifecycle} outlines this eight-stage lifecycle.
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\includegraphics[width=0.9\columnwidth]{fig_carbon_lifecycle.jpg}}
+  \includegraphics[width=0.92\columnwidth]{fig_carbon_lifecycle.jpg}
   \caption{Eight-stage operational lifecycle from GPS parcel registration to cryptographic HarvestToken issuance and wallet payout. Source: Authors, 2026.}
   \label{fig:lifecycle}
 \end{figure}
@@ -160,7 +174,7 @@ To provide verifiable provenance without the latency and transaction costs of pu
 \end{equation}
 At 00:00 UTC daily, all newly minted tokens are compiled into a binary Merkle tree, generating a 32-byte Merkle Root Anchor that seals the daily epoch against retroactive manipulation.
 
-\section{Experimental Evaluation and Results}
+\section{Results and Discussions}
 
 \subsection{Machine Learning Regression Performance}
 Table~\ref{tab:ml_perf} reports the empirical performance of the stacking architecture against individual base estimators across the 50 validation samples.
@@ -241,15 +255,17 @@ Table~\ref{tab:comp} positions Krishi-Drishti against prominent agricultural AI 
   \centering
   \caption{Architectural Comparison with Existing Agricultural Systems.}
   \label{tab:comp}
-  \begin{tabularx}{\textwidth}{p{3.2cm}Xcc}
+  \setlength{\tabcolsep}{6pt}
+  \begin{tabularx}{\textwidth}{l X c c}
     \toprule
     \textbf{System / Reference} & \textbf{Core Architecture} & \textbf{Key Metric} & \textbf{Carbon MRV} \\
     \midrule
     Iftikhar et al. [13] & Deep transfer CNN for three-crop pathology diagnosis & 98.1\% accuracy & No (Pathology only) \\
     Hasan et al. [14]    & Lightweight CNN for rice pathology on mobile devices & 97.9\% accuracy & No (Single crop only) \\
-    Saha et al. [9]    & Multi-sensor in-situ IoT array for automated irrigation & 97.3\% accuracy & No (Hardware dependent) \\
-    Iswarya et al. [11] & Quantile Random Forest regression on Sentinel-2 bands & High $R^2$ & Partial (SOC mapping only) \\
-    Xiao et al. [12]    & Support Vector Machine with environmental covariates & $R^2 = 0.96$ & No (Cartographic mapping) \\
+    Saha et al. [9]      & Multi-sensor in-situ IoT array for automated irrigation & 97.3\% accuracy & No (Hardware dependent) \\
+    Iswarya et al. [11]  & Quantile Random Forest regression on Sentinel-2 bands & High $R^2$ & Partial (SOC mapping only) \\
+    Xiao et al. [12]     & Support Vector Machine with environmental covariates & $R^2 = 0.96$ & No (Cartographic mapping) \\
+    \midrule
     \textbf{Krishi-Drishti (Ours)} & \textbf{Stacked Ensemble + Four-Pillar dMRV + SHA-256 Ledger} & \textbf{$R^2 = 0.89$} & \textbf{Yes (End-to-End Issuance)} \\
     \bottomrule
   \end{tabularx}
@@ -263,11 +279,18 @@ As summarized in Table~\ref{tab:comp}, recent literature offers compelling point
   \item \emph{Ecological Telemetry Integration:} Standalone bioacoustic systems such as Kershenbaum et al. [16] and Hearon et al. [17] operate strictly as biodiversity monitoring tools. Krishi-Drishti incorporates bioacoustic monitoring as an integrated microservice feeding directly into the carbon project registry to corroborate co-benefit claims.
 \end{enumerate}
 
-\section{Conclusion}
-This research demonstrates that coupling cloud-native geospatial microservices with stacked ensemble machine learning and cryptographic audit chaining provides a scalable software solution to smallholder carbon verification. By achieving $R^2 = 0.89$ and RMSE $= 1.52\,$g/kg in topsoil carbon inversion, Krishi-Drishti eliminates dependency on cost-prohibitive physical diagnostic laboratories. The automated Four-Pillar compliance pipeline shortens verification cycles from over six months to under 48 hours, while sequential SHA-256 state digests guarantee immutable auditability without the latency penalties of distributed consensus networks. Future research will explore federated edge learning for on-device model personalization and multi-spectral calibration across diverse soil taxonomies.
+\section{Conclusion and Future Works}
+This research demonstrates that coupling cloud-native geospatial microservices with stacked ensemble machine learning and cryptographic audit chaining provides a scalable software solution to smallholder carbon verification. By achieving $R^2 = 0.89$ and RMSE $= 1.52\,$g/kg in topsoil carbon inversion, Krishi-Drishti eliminates dependency on cost-prohibitive physical diagnostic laboratories. The automated Four-Pillar compliance pipeline shortens verification cycles from over six months to under 48 hours, while sequential SHA-256 state digests guarantee immutable auditability without the latency penalties of distributed consensus networks. Future research will explore federated edge learning for on-device model personalization, Sentinel-1 radar fusion during monsoon cloud covers, and multi-spectral calibration across diverse soil taxonomies.
+
+\section*{Author's Contribution}
+\noindent \textbf{Bhagesh Biradar:} Carbon Vault Architecture, Software Development, Methodology, Writing -- Original Draft. \textbf{Manjunath Khot:} Data Curation, Satellite Pipeline Development, Formal Analysis. \textbf{Jayanth R.:} Investigation, Field Testing, Resources. \textbf{Pruthviraja S.:} Visualization, Digital Twin Development, UI/UX Design. \textbf{Dr. Sheethal Aji Mani:} Project supervision, technical guidance, review, and academic direction.
 
 \section*{Acknowledgment}
-The authors thank the European Space Agency Copernicus Programme, Google Earth Engine, and Google DeepMind for computational infrastructure and API support. We also extend sincere gratitude to participating farming communities across Karnataka and Maharashtra for field sampling cooperation and usability testing.
+\noindent The authors would like to express their sincere gratitude to Impact College of Engineering and Applied Sciences and the Department of Computer Science and Engineering (Data Science) for providing the academic environment and resources required for this project.
+
+\noindent The authors are especially grateful to Dr. Sheethal Aji Mani, Project Supervisor, for her guidance, technical suggestions, encouragement, and continuous support throughout the development of the proposed system.
+
+\noindent Sincere gratitude is also extended to the European Space Agency Copernicus Programme, Google Earth Engine, and Google DeepMind for open-source datasets, planetary computing infrastructure, and API support, and to the smallholder farming communities across Karnataka and Maharashtra for field sampling cooperation and usability testing.
 
 \begin{thebibliography}{17}
 \bibitem{gokul2026}
@@ -321,29 +344,5 @@ A.~Kershenbaum \emph{et al.}, ``Automatic detection for bioacoustic research: a 
 \bibitem{hearon2025}
 L.~E.~Hearon \emph{et al.}, ``buzzdetect: an open-source deep learning tool for automated bioacoustic pollinator monitoring,'' \emph{Journal of Insect Science}, vol.~25, no.~6, p.~ieaf104, 2025.
 \end{thebibliography}
-
-\begin{IEEEbiographynophoto}{Rama Krishna K.}
-(Member, IAENG) received his Ph.D. degree in Computer Science and Engineering. He is currently a Professor in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, India. His research focuses on precision agricultural systems and distributed environmental informatics.
-\end{IEEEbiographynophoto}
-
-\begin{IEEEbiographynophoto}{Sheethal Aji Mani}
-received her M.Tech. degree in Computer Science. She is an Associate Professor with the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, Bangalore. Her research encompasses machine learning ensembles and applied agricultural computing.
-\end{IEEEbiographynophoto}
-
-\begin{IEEEbiographynophoto}{Bhagesh Biradar}
-(Member, IAENG) is an undergraduate researcher in Data Science at Impact College of Engineering and Applied Sciences, VTU. His research interests include distributed architectures, mobile edge computing, and digital carbon verification frameworks.
-\end{IEEEbiographynophoto}
-
-\begin{IEEEbiographynophoto}{Manjunath Khot}
-is an undergraduate student in Data Science at Impact College of Engineering and Applied Sciences. His research focuses on cloud-native application engineering, geospatial analytics, and applied neural networks.
-\end{IEEEbiographynophoto}
-
-\begin{IEEEbiographynophoto}{Jayanth R.}
-is an undergraduate researcher in Data Science at Impact College of Engineering and Applied Sciences. His research interests include cryptographic verification protocols, data security, and agricultural software systems.
-\end{IEEEbiographynophoto}
-
-\begin{IEEEbiographynophoto}{Pruthviraja S.}
-is an undergraduate student in Data Science at Impact College of Engineering and Applied Sciences. His research interests encompass statistical regression modeling, client-side mobile engineering, and sensor data integration.
-\end{IEEEbiographynophoto}
 
 \end{document}

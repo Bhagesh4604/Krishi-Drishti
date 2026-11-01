@@ -8,14 +8,12 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 import ee
 from dotenv import load_dotenv
 
-from ..ml_models.soc_estimator import estimate_soc
 
 ROOT_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(ROOT_ENV_PATH)
 
 ACRES_TO_HECTARES = 0.404686
 SQM_PER_HECTARE = 10000.0
-DEFAULT_BUFFER_POOL_PERCENTAGE = 15.0
 SIMULATED_IMAGE_URL = (
     "https://images.unsplash.com/photo-1500382017468-9049fed747ef"
     "?w=1200&q=80&auto=format&fit=crop"
@@ -301,40 +299,8 @@ class EarthEngineService:
         return timeline
 
     def _methodology_profile(self, methodology: str) -> Dict[str, Any]:
-        normalized = (methodology or "Cover-Crop").strip()
-        profiles = {
-            "Cover-Crop": {
-                "multiplier": 1.15,
-                "verification_cost_usd": 1800.0,
-                "requires_soil_sample": True,
-                "requirements": [
-                    "Geotagged sowing photo",
-                    "Seed purchase receipt or seed source proof",
-                    "Field photo showing live cover within 30-45 days",
-                ],
-            },
-            "No-Till": {
-                "multiplier": 1.3,
-                "verification_cost_usd": 2200.0,
-                "requires_soil_sample": True,
-                "requirements": [
-                    "Residue cover photo before sowing",
-                    "Zero-till or minimum-till equipment proof",
-                    "Geotagged field photo after seeding into residue",
-                ],
-            },
-            "Agroforestry": {
-                "multiplier": 1.75,
-                "verification_cost_usd": 2600.0,
-                "requires_soil_sample": False,
-                "requirements": [
-                    "Geotagged tree-row or sapling photos",
-                    "Sapling purchase or nursery receipt",
-                    "Survival-count evidence after establishment",
-                ],
-            },
-        }
-        return profiles.get(normalized, profiles["Cover-Crop"]) | {"name": normalized}
+        # Methodology rules and quantification belong to the programme, not this satellite screen.
+        return {"name": (methodology or "Unselected practice").strip()}
 
     def _build_response(
         self,
@@ -365,57 +331,19 @@ class EarthEngineService:
     ) -> Dict[str, Any]:
         profile = self._methodology_profile(methodology)
         effective_area_hectares = round(area_hectares or (declared_area or 0.0), 2)
-
-        current_soc = estimate_soc(current_ndvi, current_evi, moisture, 365.0)
-        baseline_soc = estimate_soc(baseline_ndvi, baseline_evi, max(moisture * 0.95, 5.0), 365.0)
-
         ndvi_change = current_ndvi - baseline_ndvi
-        incremental_carbon_tons_per_ha = max(current_soc - baseline_soc, 0.0)
-        incremental_tco2e_per_ha = incremental_carbon_tons_per_ha * 3.67
-
-        gross_credits = incremental_tco2e_per_ha * effective_area_hectares * profile["multiplier"]
-        buffer_pool_credits = gross_credits * (DEFAULT_BUFFER_POOL_PERCENTAGE / 100.0)
-        issuable_credits = max(gross_credits - buffer_pool_credits, 0.0)
-
-        vegetation_strength = _clamp(current_ndvi / 0.8, 0.0, 1.0)
-        gain_score = _clamp((ndvi_change + 0.02) / 0.16, 0.0, 1.0)
-        moisture_score = 1.0 - _clamp(abs(moisture - 35.0) / 30.0, 0.0, 1.0)
-        area_score = _clamp(effective_area_hectares / 2.5, 0.25, 1.0)
-        eligibility_score = round(
-            (gain_score * 0.45) + (vegetation_strength * 0.25) + (moisture_score * 0.15) + (area_score * 0.15),
-            2,
-        )
-
-        eligible = bool(ndvi_change >= 0.03 and current_ndvi >= 0.35 and gross_credits >= 0.25)
-
-        eligibility_reasons: List[str] = []
         risk_flags: List[str] = []
-
-        if ndvi_change >= 0.03:
-            eligibility_reasons.append("Vegetation is improving versus the same season last year.")
-        else:
-            eligibility_reasons.append("Vegetation gain is still weak and may need another monitoring cycle.")
-
         if moisture < 22:
-            risk_flags.append("Low soil moisture may limit sequestration gains.")
+            risk_flags.append("Low moisture signal; confirm conditions with a field measurement.")
         elif moisture > 55:
-            risk_flags.append("High soil moisture can complicate field verification and residue survival.")
-        else:
-            eligibility_reasons.append("Soil moisture is within a workable range for carbon-practice monitoring.")
-
+            risk_flags.append("High moisture signal; confirm conditions with a field observation.")
         if current_ndvi < 0.35:
-            risk_flags.append("Current vegetation cover is too low for a strong credit claim.")
-
-        if effective_area_hectares < 0.2:
-            risk_flags.append("Very small field size reduces project economics.")
-
-        confidence = 0.86 if status == "earth_engine" else 0.58
-
+            risk_flags.append("Vegetation index is low; check current field conditions.")
         if timeline and len(timeline) >= 2:
             first_ndvi = timeline[0].get("ndvi")
             last_ndvi = timeline[-1].get("ndvi")
             if first_ndvi is not None and last_ndvi is not None and last_ndvi < first_ndvi - 0.08:
-                risk_flags.append("Recent time-series shows a short-term vegetation decline.")
+                risk_flags.append("Recent time series shows a vegetation decline; confirm with field observations.")
 
         return {
             "status": status,
@@ -465,22 +393,13 @@ class EarthEngineService:
             },
             "timeline": timeline,
             "carbon": {
-                "eligible": eligible,
-                "eligibility_score": eligibility_score,
-                "eligibility_reasons": eligibility_reasons,
-                "estimated_soc_tons_per_ha": round(current_soc, 2),
-                "baseline_soc_tons_per_ha": round(baseline_soc, 2),
-                "incremental_carbon_tons_per_ha": round(incremental_carbon_tons_per_ha, 2),
-                "incremental_tco2e_per_ha": round(incremental_tco2e_per_ha, 2),
-                "gross_credits": round(gross_credits, 2),
-                "buffer_pool_percentage": DEFAULT_BUFFER_POOL_PERCENTAGE,
-                "buffer_pool_credits": round(buffer_pool_credits, 2),
-                "issuable_credits": round(issuable_credits, 2),
-                "estimated_value_inr": round(issuable_credits * 1200, 2),
-                "confidence": confidence,
-                "verification_cost_usd": profile["verification_cost_usd"],
-                "requires_soil_sample": profile["requires_soil_sample"],
-                "verification_requirements": profile["requirements"],
+                "screening_only": True,
+                "eligible": None,
+                "eligibility_score": None,
+                "eligibility_reasons": [
+                    "Satellite indicators are not an approved carbon quantification or eligibility determination."
+                ],
+                "issuance_status": "not_assessed",
             },
             "risk_flags": risk_flags,
             "geometry": {"type": "Polygon", "coordinates": [list(ring)]},

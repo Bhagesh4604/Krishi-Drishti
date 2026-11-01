@@ -36,7 +36,6 @@
       min-height: 100vh;
       overflow-x: hidden;
     }
-
     /* ── Login Screen ─────────────────────────────────────────── */
     #login-screen {
       position: fixed; inset: 0; z-index: 9999;
@@ -53,7 +52,6 @@
       animation: pulse-bg 6s ease-in-out infinite alternate;
     }
     @keyframes pulse-bg { from { opacity: 0.6 } to { opacity: 1 } }
-
     .login-card {
       position: relative; z-index: 1;
       background: rgba(255,255,255,0.95);
@@ -67,7 +65,6 @@
       animation: slideUp 0.6s cubic-bezier(.22,1,.36,1) both;
     }
     @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
     .login-logo {
       width: 64px; height: 64px;
       background: linear-gradient(135deg, var(--teal), var(--teal-dark));
@@ -78,7 +75,6 @@
     }
     .login-card h1 { font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
     .login-card p { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
-
     .login-input {
       width: 100%; padding: 14px 16px;
       background: rgba(0,157,174,0.04);
@@ -104,10 +100,8 @@
     }
     .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--teal-glow); }
     .login-err { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 20px; }
-
     /* ── App Shell ─────────────────────────────────────────────── */
     #app { display: none; min-height: 100vh; }
-
     /* ── Sidebar ───────────────────────────────────────────────── */
     .sidebar {
       position: fixed; top: 0; left: 0; bottom: 0;
@@ -133,7 +127,6 @@
     .sidebar-logo .brand { display: flex; flex-direction: column; }
     .sidebar-logo .brand-name { font-weight: 700; font-size: 14px; color: var(--white); }
     .sidebar-logo .brand-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
-
     .nav-section { padding: 16px 12px 8px; }
     .nav-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); padding: 0 8px 8px; }
     .nav-item {
@@ -159,7 +152,6 @@
       min-width: 20px; text-align: center;
     }
     @keyframes pulse-badge { 0%,100% { opacity: 1 } 50% { opacity: 0.6 } }
-
     .sidebar-footer {
       margin-top: auto;
       padding: 16px;
@@ -174,10 +166,8 @@
       transition: all 0.2s;
     }
     .logout-btn:hover { background: rgba(255,77,109,0.2); }
-
     /* ── Main Content ──────────────────────────────────────────── */
     .main { margin-left: 240px; min-height: 100vh; }
-
     /* ── Topbar ────────────────────────────────────────────────── */
     .topbar {
       position: sticky; top: 0; z-index: 90;
@@ -202,12 +192,10 @@
       animation: blink 2s infinite;
     }
     @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: 0 } }
-
     /* ── Content Pages ─────────────────────────────────────────── */
     .page { display: none; padding: 28px; animation: fadeIn 0.4s ease; }
     .page.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-
     /* ── Hero Stats ────────────────────────────────────────────── */
     .stats-row {
       display: grid;
@@ -232,7 +220,6 @@
     .stat-card.red::before { background: linear-gradient(90deg, var(--red), transparent); }
     .stat-card.purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
     .stat-card.green::before { background: linear-gradient(90deg, var(--green), transparent); }
-
     .stat-icon { font-size: 28px; margin-bottom: 12px; }
     .stat-value {
       font-size: 32px; font-weight: 800;
@@ -241,7 +228,6 @@
     }
     .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
     .stat-change { font-size: 12px; color: var(--green); margin-top: 8px; }
-
     /* ── Charts Row ────────────────────────────────────────────── */
     .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
     .chart-card {
@@ -253,7 +239,6 @@
     .chart-title { font-size: 14px; font-weight: 600; color: var(--white); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
     .chart-title span { font-size: 16px; }
     canvas { width: 100% !important; }
-
     /* ── District Row ──────────────────────────────────────────── */
     .district-list { display: flex; flex-direction: column; gap: 10px; }
     .district-row { display: flex; align-items: center; gap: 10px; }
@@ -261,7 +246,6 @@
     .district-bar-wrap { flex: 2; background: rgba(255,255,255,0.06); border-radius: 20px; height: 6px; overflow: hidden; }
     .district-bar { height: 100%; background: linear-gradient(90deg, var(--teal), var(--teal-dark)); border-radius: 20px; transition: width 1s ease; }
     .district-count { font-size: 12px; color: var(--muted); width: 28px; text-align: right; font-family: 'JetBrains Mono', monospace; }
-
     /* ── Tables ────────────────────────────────────────────────── */
     .section-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -282,14 +266,33 @@
     .filter-input:focus, .filter-select:focus { border-color: var(--teal); }
     .filter-input { flex: 1; min-width: 200px; }
     .filter-select option { background: var(--navy-mid); }
-
     .table-wrap {
       background: var(--navy-card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      overflow: hidden;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+      scrollbar-color: #9CA3AF #E5E7EB;
     }
-    table { width: 100%; border-collapse: collapse; }
+    .table-wrap::-webkit-scrollbar { height: 10px; }
+    .table-wrap::-webkit-scrollbar-track { background: #E5E7EB; }
+    .table-wrap::-webkit-scrollbar-thumb { background: #9CA3AF; border-radius: 999px; }
+    table { width: 100%; min-width: 100%; border-collapse: collapse; }
+    #queue-content { width: 100%; min-width: 0; }
+    #queue-content .table-wrap {
+      max-height: calc(100vh - 260px);
+      min-height: 300px;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    #queue-content .queue-table { min-width: 1160px; }
+    #queue-content .queue-table thead th { position: sticky; top: 0; z-index: 2; }
+    .table-wrap:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
     thead th {
       background: rgba(0,180,159,0.06);
       padding: 13px 16px;
@@ -307,7 +310,6 @@
     }
     tbody tr:hover { background: rgba(0,180,159,0.05); }
     tbody td { padding: 13px 16px; font-size: 13px; }
-
     /* ── Status badges ─────────────────────────────────────────── */
     .badge {
       display: inline-flex; align-items: center; gap: 5px;
@@ -325,12 +327,10 @@
     .badge-potential   { background: rgba(91,136,150,0.15); color: var(--muted); }
     .badge-stale       { background: rgba(255,77,109,0.12); color: var(--red); border: 1px solid rgba(255,77,109,0.2); }
     .badge-ok          { background: rgba(0,196,154,0.12); color: var(--green); border: 1px solid rgba(0,196,154,0.2); }
-
     /* ── Health bars ───────────────────────────────────────────── */
     .health-wrap { display: flex; align-items: center; gap: 8px; }
     .health-bar { width: 60px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 20px; overflow: hidden; }
     .health-fill { height: 100%; border-radius: 20px; transition: width 0.8s ease; }
-
     /* ── Action buttons ────────────────────────────────────────── */
     .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; }
     .btn-approve { background: rgba(0,196,154,0.15); color: var(--green); border: 1px solid rgba(0,196,154,0.3); }
@@ -341,7 +341,6 @@
     .btn-view:hover { background: rgba(0,180,159,0.2); }
     .btn-export { background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: white; }
     .btn-export:hover { transform: translateY(-2px); box-shadow: 0 4px 16px var(--teal-glow); }
-
     /* ── Drawer / Detail Panel ─────────────────────────────────── */
     #drawer-overlay {
       position: fixed; inset: 0; z-index: 200;
@@ -367,18 +366,14 @@
       transition: all 0.2s;
     }
     .drawer-close:hover { background: var(--red); color: white; }
-
     .drawer-title { font-size: 18px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
     .drawer-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
-
     .drawer-section { margin-bottom: 24px; }
     .drawer-section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-
     .kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .kv-item { background: rgba(0,0,0,0.03); border-radius: 8px; padding: 12px 14px; }
     .kv-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.8px; }
     .kv-value { font-size: 15px; font-weight: 600; color: var(--white); font-family: 'JetBrains Mono', monospace; }
-
     .evidence-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .evidence-card { background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
     .evidence-img { width: 100%; height: 100px; object-fit: cover; background: rgba(0,180,159,0.1); display: flex; align-items: center; justify-content: center; font-size: 32px; }
@@ -386,7 +381,6 @@
     .evidence-info { padding: 8px 10px; }
     .evidence-desc { font-size: 12px; color: var(--muted); }
     .evidence-gps { font-size: 10px; color: var(--teal); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
-
     /* ── Approve / Reject modal ────────────────────────────────── */
     #modal-overlay {
       position: fixed; inset: 0; z-index: 300;
@@ -399,7 +393,9 @@
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 32px;
-      width: 460px;
+      width: min(720px, 94vw);
+      max-height: 90vh;
+      overflow-y: auto;
       box-shadow: var(--shadow);
       animation: zoomIn 0.3s cubic-bezier(.22,1,.36,1);
     }
@@ -419,7 +415,6 @@
     .btn-cancel:hover { background: rgba(255,255,255,0.1); }
     .btn-confirm-approve { background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: white; }
     .btn-confirm-reject { background: linear-gradient(135deg, var(--red), #CC004B); color: white; }
-
     /* ── Loading / Empty ───────────────────────────────────────── */
     .loading { text-align: center; padding: 48px; color: var(--muted); font-size: 14px; }
     .spinner {
@@ -433,7 +428,6 @@
     @keyframes spin { to { transform: rotate(360deg) } }
     .empty { text-align: center; padding: 48px; color: var(--muted); }
     .empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
-
     /* ── Ops Log ───────────────────────────────────────────────── */
     .log-feed { display: flex; flex-direction: column; gap: 8px; }
     .log-item {
@@ -451,7 +445,6 @@
     .log-op { font-size: 12px; color: var(--teal); font-weight: 500; margin: 2px 0; }
     .log-detail { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .log-time { font-size: 11px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
-
     /* ── Toast ─────────────────────────────────────────────────── */
     #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
     .toast {
@@ -465,7 +458,6 @@
     .toast.success { border-color: rgba(0,196,154,0.4); }
     .toast.error { border-color: rgba(255,77,109,0.4); }
     @keyframes toastIn { from { transform: translateX(40px); opacity: 0 } to { transform: none; opacity: 1 } }
-
     /* ── Responsive ────────────────────────────────────────────── */
     @media (max-width: 900px) {
       .sidebar { transform: translateX(-240px); }
@@ -475,7 +467,6 @@
   </style>
 </head>
 <body>
-
 <!-- ═══════════════════ LOGIN ═══════════════════ -->
 <div id="login-screen">
   <div class="login-card">
@@ -487,10 +478,8 @@
     <div id="login-err" class="login-err"></div>
   </div>
 </div>
-
 <!-- ═══════════════════ APP SHELL ═══════════════════ -->
 <div id="app">
-
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -500,14 +489,12 @@
         <span class="brand-sub">Ops Console</span>
       </div>
     </div>
-
     <div class="nav-section">
       <div class="nav-label">Overview</div>
       <div class="nav-item active" data-page="dashboard">
         <span class="nav-icon">📊</span> Dashboard
       </div>
     </div>
-
     <div class="nav-section">
       <div class="nav-label">Carbon Credits</div>
       <div class="nav-item" data-page="queue">
@@ -515,7 +502,6 @@
         <span class="nav-badge" id="queue-badge">0</span>
       </div>
     </div>
-
     <div class="nav-section">
       <div class="nav-label">Farmers & Fields</div>
       <div class="nav-item" data-page="farmers">
@@ -525,19 +511,16 @@
         <span class="nav-icon">🛰️</span> Field Monitor
       </div>
     </div>
-
     <div class="nav-section">
       <div class="nav-label">Audit</div>
       <div class="nav-item" data-page="ops">
         <span class="nav-icon">📋</span> Operations Log
       </div>
     </div>
-
     <div class="sidebar-footer">
       <button class="logout-btn" onclick="doLogout()">🚪 Sign Out</button>
     </div>
   </aside>
-
   <!-- Main -->
   <main class="main">
     <header class="topbar">
@@ -547,9 +530,15 @@
         <button class="btn btn-export" onclick="exportCSV()">⬇ Export CSV</button>
       </div>
     </header>
-
     <!-- ─── Dashboard ─── -->
     <div class="page active" id="page-dashboard">
+      <div class="chart-card" style="display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px">
+        <div>
+          <div class="chart-title">Carbon project operations</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:5px">Review farmer submissions and record references from each external project step.</div>
+        </div>
+        <button class="btn btn-approve" onclick="openAdminPage('queue')">Open issuance queue →</button>
+      </div>
       <div class="stats-row" id="stats-row"></div>
       <div class="charts-row">
         <div class="chart-card">
@@ -567,12 +556,11 @@
           <canvas id="status-chart" height="220"></canvas>
         </div>
         <div class="chart-card">
-          <div class="chart-title"><span>🧪</span> Methodology Distribution</div>
+          <div class="chart-title"><span>🧪</span> Activity / practice distribution</div>
           <canvas id="method-chart" height="220"></canvas>
         </div>
       </div>
     </div>
-
     <!-- ─── Credit Queue ─── -->
     <div class="page" id="page-queue">
       <div class="section-header">
@@ -581,15 +569,30 @@
       </div>
       <div class="filter-row">
         <select class="filter-select" id="queue-status" onchange="loadQueue()">
+          <option value="">All active workflow stages</option>
+          <option value="Intake_Submitted">Farmer intake</option>
+          <option value="Entity_Onboarding">Entity onboarding</option>
+          <option value="PDD_Preparation">Project design</option>
+          <option value="Validation">Independent project validation</option>
+          <option value="Registered">Registered</option>
+          <option value="Monitoring">Monitoring</option>
+          <option value="Participant_Records_Ready">Farmer records packaged</option>
+          <option value="Aggregate_Report_Submitted_To_ACVA">Project report submitted</option>
+          <option value="Monitoring_Report_Ready">Legacy monitoring package ready</option>
+          <option value="Verification_Pending">Independent verification</option>
+          <option value="Issuance_Request_Submitted">Issuance request</option>
+          <option value="Issuance_Review">Registry issuance review</option>
+          <option value="Under_Review">Awaiting evidence review</option>
           <option value="Evidence_Pending">Evidence Pending</option>
-          <option value="Verified">Verified</option>
+          <option value="Verified">Independently verified</option>
           <option value="Issued">Issued</option>
+          <option value="Allocation_Pending">Farmer decision pending</option>
+          <option value="Farmer_Allocated">Farmer share accepted</option>
           <option value="Audit_Failed">Audit Failed</option>
         </select>
       </div>
       <div id="queue-content" class="loading"><div class="spinner"></div><br>Loading...</div>
     </div>
-
     <!-- ─── Farmers ─── -->
     <div class="page" id="page-farmers">
       <div class="section-header"><div class="section-title">👨‍🌾 Farmer Registry</div></div>
@@ -599,13 +602,11 @@
       </div>
       <div id="farmer-content" class="loading"><div class="spinner"></div><br>Loading...</div>
     </div>
-
     <!-- ─── Fields ─── -->
     <div class="page" id="page-fields">
       <div class="section-header"><div class="section-title">🛰️ Field Monitor</div></div>
       <div id="fields-content" class="loading"><div class="spinner"></div><br>Loading...</div>
     </div>
-
     <!-- ─── Ops Log ─── -->
     <div class="page" id="page-ops">
       <div class="section-header">
@@ -628,14 +629,12 @@
     </div>
   </main>
 </div>
-
 <!-- ─── Drawer ─── -->
 <div id="drawer-overlay" onclick="closeDrawer()"></div>
 <div id="drawer">
   <button class="drawer-close" onclick="closeDrawer()">✕</button>
   <div id="drawer-content"></div>
 </div>
-
 <!-- ─── Modal ─── -->
 <div id="modal-overlay">
   <div id="modal">
@@ -645,24 +644,24 @@
     <div class="modal-actions" id="modal-actions"></div>
   </div>
 </div>
-
 <!-- ─── Toasts ─── -->
 <div id="toast-container"></div>
-
 <script>
   // ─── State ───────────────────────────────────────────────────────────────
   let TOKEN = '';
-  const API = '';
-
+  // A local file or a frontend dev server is a different origin from FastAPI.
+  // Use the local API port in those cases; deployed dashboards stay same-origin.
+  const IS_LOCAL_DEV = window.location.protocol === 'file:'
+    || (['localhost', '127.0.0.1'].includes(window.location.hostname) && window.location.port !== '8000');
+  const API = IS_LOCAL_DEV ? 'http://127.0.0.1:8000' : '';
   // ─── Chart instances ─────────────────────────────────────────────────────
   let creditsChart, statusChart, methodChart;
-
   // ─── Login ───────────────────────────────────────────────────────────────
   async function doLogin() {
     const t = document.getElementById('token-input').value.trim();
     if (!t) { showErr('Please enter the admin token'); return; }
     try {
-      const r = await fetch(`${API}/api/admin/stats?token=${encodeURIComponent(t)}`);
+      const r = await fetch(`${API}/api/admin/stats`, { headers: { Authorization: `Bearer ${t}` } });
       if (r.status === 401) { showErr('Invalid token — access denied'); return; }
       if (!r.ok) {
         let detail = `Server error ${r.status}`;
@@ -680,7 +679,6 @@
   }
   function showErr(msg) { document.getElementById('login-err').textContent = msg; }
   document.getElementById('token-input').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-
   function doLogout() {
     TOKEN = '';
     document.getElementById('login-screen').style.opacity = '1';
@@ -688,7 +686,6 @@
     document.getElementById('app').style.display = 'none';
     document.getElementById('token-input').value = '';
   }
-
   // ─── Navigation ──────────────────────────────────────────────────────────
   const pageLoaders = {
     dashboard: loadDashboard,
@@ -697,6 +694,9 @@
     fields: loadFields,
     ops: loadOps,
   };
+  function openAdminPage(page) {
+    document.querySelector(`.nav-item[data-page="${page}"]`)?.click();
+  }
   const pageTitles = {
     dashboard: 'Platform Overview',
     queue: 'Credit Issuance Queue',
@@ -704,7 +704,6 @@
     fields: 'Field Monitor',
     ops: 'Operations Log',
   };
-
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
       const page = item.dataset.page;
@@ -716,22 +715,18 @@
       if (pageLoaders[page]) pageLoaders[page]();
     });
   });
-
   // ─── Init ─────────────────────────────────────────────────────────────────
   async function initApp() {
     await loadDashboard();
     // Poll queue badge every 30s
     setInterval(updateQueueBadge, 30000);
   }
-
   // ─── API helper ───────────────────────────────────────────────────────────
   async function api(path) {
-    const sep = path.includes('?') ? '&' : '?';
-    const r = await fetch(`${API}${path}${sep}token=${encodeURIComponent(TOKEN)}`);
+    const r = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${TOKEN}` } });
     if (!r.ok) throw new Error(`API error ${r.status}`);
     return r.json();
   }
-
   // ─── Dashboard ────────────────────────────────────────────────────────────
   async function loadDashboard() {
     try {
@@ -744,7 +739,6 @@
       document.getElementById('queue-badge').textContent = d.pending_queue;
     } catch(e) { toast('Failed to load dashboard', 'error'); }
   }
-
   function animateCount(el, target, suffix='', decimals=0) {
     const start = 0;
     const duration = 1200;
@@ -758,7 +752,6 @@
     }
     requestAnimationFrame(step);
   }
-
   function renderStats(d) {
     const cards = [
       { label: 'Total Farmers', value: d.total_farmers, icon: '👨‍🌾', cls: 'teal', suffix: '', decimals: 0 },
@@ -782,7 +775,6 @@
       setTimeout(() => animateCount(document.getElementById('sv-'+i), c.value, c.suffix, c.decimals), i * 80);
     });
   }
-
   function renderCreditsChart(data) {
     const ctx = document.getElementById('credits-chart').getContext('2d');
     if (creditsChart) creditsChart.destroy();
@@ -810,7 +802,6 @@
       }
     });
   }
-
   function renderDistrictList(districts) {
     const max = Math.max(1, ...districts.map(d => d.count));
     document.getElementById('district-list').innerHTML = districts.slice(0,8).map(d => `
@@ -823,7 +814,6 @@
       </div>
     `).join('') || '<div class="empty"><div class="icon">📍</div>No district data yet</div>';
   }
-
   function renderStatusChart(data) {
     const ctx = document.getElementById('status-chart').getContext('2d');
     if (statusChart) statusChart.destroy();
@@ -847,7 +837,6 @@
       }
     });
   }
-
   function renderMethodChart(data) {
     const ctx = document.getElementById('method-chart').getContext('2d');
     if (methodChart) methodChart.destroy();
@@ -867,8 +856,157 @@
       }
     });
   }
-
   // ─── Credit Queue ─────────────────────────────────────────────────────────
+  const carbonNextStage = {
+    Enrolled: 'Intake_Submitted',
+    Intake_Submitted: 'Entity_Onboarding',
+    Entity_Onboarding: 'PDD_Preparation',
+    PDD_Preparation: 'Validation',
+    Validation: 'Registered',
+    Registered: 'Monitoring',
+    Participant_Records_Ready: 'Aggregate_Report_Submitted_To_ACVA',
+    Monitoring_Report_Ready: 'Aggregate_Report_Submitted_To_ACVA',
+    Aggregate_Report_Submitted_To_ACVA: 'Verification_Pending',
+    Verified: 'Issuance_Request_Submitted',
+    Issuance_Request_Submitted: 'Issuance_Review',
+    // Older records can still move forward into the common registry review step.
+    Public_Consultation: 'Validation',
+    Registration_Review: 'Registered',
+    ICM_Administrator_Review: 'Issuance_Review',
+    Technical_Committee_Review: 'Issuance_Review',
+    NSC_Recommendation: 'Issuance_Review',
+  };
+  const carbonStageLabels = {
+    Enrolled: 'Farmer enrollment record', Evidence_Pending: 'Farmer evidence submitted', Under_Review: 'Evidence review pending', Audit_Failed: 'Changes requested from farmer',
+    Intake_Submitted: 'Farmer enrollment + consent', Entity_Onboarding: 'Project partner onboarding',
+    PDD_Preparation: 'Baseline + project plan', Validation: 'Independent validation',
+    Registered: 'Project + farmer roster registered', Monitoring: 'Field monitoring',
+    Participant_Records_Ready: 'Farmer season report', Aggregate_Report_Submitted_To_ACVA: 'Project report submitted',
+    Verification_Pending: 'Independent verification', Verified: 'Verified quantity recorded',
+    Issuance_Request_Submitted: 'Registry issue requested', Issuance_Review: 'Registry review',
+    Issued: 'External registry issue recorded', Allocation_Pending: 'Farmer allocation awaiting consent', Farmer_Allocated: 'Farmer allocation accepted',
+    Public_Consultation: 'Project information shared', Registration_Review: 'Project registration review',
+    ICM_Administrator_Review: 'Registry review', Technical_Committee_Review: 'Registry review', NSC_Recommendation: 'Registry decision',
+  };
+  const carbonStageFields = {
+    Intake_Submitted: [['Farmer enrollment consent reference','farmer_consent_reference','Signed consent form ID / record reference']],
+    Entity_Onboarding: [['Project partner / entity','entity_name','Partner organization'],['Partner account reference','entity_account_reference','Partner ID / account reference']],
+    PDD_Preparation: [['Project coordinator','project_coordinator','Responsible coordinator / organization'],['Project plan reference','project_plan_reference','Project plan ID / file reference']],
+    Validation: [['Independent validator','validation_agency','Organization name'],['Validation report reference','validation_report_reference','Report ID / document URL']],
+    Registered: [['External project reference','project_registry_reference','Project ID from the registry'],['Farmer / field participant ID','participant_roster_reference','Farmer or plot ID in the project roster']],
+    Monitoring: [['Monitoring period start','monitoring_period_start','','date'],['Monitoring period end','monitoring_period_end','','date']],
+    Aggregate_Report_Submitted_To_ACVA: [['Project monitoring report reference','aggregate_monitoring_report_reference','Partner report ID / file reference'],['Report period start','aggregate_monitoring_report_period_start','','date'],['Report period end','aggregate_monitoring_report_period_end','','date']],
+    Verification_Pending: [['Independent verifier','verification_agency','Organization separate from project operator'],['Verifier engagement reference','verifier_engagement_reference','Contract / engagement reference']],
+    Issuance_Request_Submitted: [['Registry issuance request reference','issuance_request_reference','External submission ID']],
+    Issuance_Review: [['Registry review reference','issuance_review_reference','External case / review ID']],
+  };
+  const displayCarbonStage = stage => carbonStageLabels[stage] || String(stage || '').replaceAll('_', ' ');
+  function renderProjectActions(p) {
+    const id = Number(p.project_id);
+    let primary = '<span style="font-size:11px;color:var(--muted)">No action at this workflow stage</span>';
+
+    let settlementActions = '';
+    const sales = p.sales || [];
+    const payouts = p.payouts || [];
+    const unpaidSale = sales.find(sale => {
+      const paid = payouts.filter(payment => payment.sale_reference === sale.sale_reference).reduce((sum, payment) => sum + Number(payment.amount_paid_inr || 0), 0);
+      return Number(sale.farmer_share_due_inr || 0) > paid + 0.009;
+    });
+    const availableCredits = Number(p.available_credits || 0);
+
+    const canSettleFarmerShare = availableCredits > 0 && p.registry_issuance_reference && p.farmer_allocation_agreement_reference;
+
+    if (canSettleFarmerShare) {
+
+      primary = `<button class="btn btn-approve" onclick="event.stopPropagation();openTransfer(${id}, ${escapeHtml(JSON.stringify(p.registry_issuance_reference))}, ${availableCredits}, ${escapeHtml(JSON.stringify(p.farmer_allocation_agreement_reference))})">Record completed registry transfer</button>`;
+
+      if (!unpaidSale && Number(p.farmer_share_percentage || 0) > 0) {
+
+        settlementActions = `<button class="btn btn-view" onclick="event.stopPropagation();openSale(${id}, ${escapeHtml(JSON.stringify(p.registry_issuance_reference))}, ${availableCredits}, ${escapeHtml(JSON.stringify(p.farmer_allocation_agreement_reference))}, ${Number(p.farmer_share_percentage || 0)})">Record settled buyer sale</button>`;
+
+      }
+
+    }
+    if (unpaidSale) {
+      const paid = payouts.filter(payment => payment.sale_reference === unpaidSale.sale_reference).reduce((sum, payment) => sum + Number(payment.amount_paid_inr || 0), 0);
+      primary = `<button class="btn btn-approve" onclick="event.stopPropagation();openPayout(${id}, ${escapeHtml(JSON.stringify(unpaidSale.sale_reference))}, ${Number(unpaidSale.farmer_share_due_inr || 0)}, ${paid})">Record farmer payment</button>`;
+    } else if (p.status === 'Under_Review') {
+      primary = `<button class="btn btn-approve" onclick="event.stopPropagation();openEvidenceReview(${id})">Review farmer evidence</button>`;
+    } else if (p.status === 'Verification_Pending') {
+      primary = `<button class="btn btn-approve" onclick="event.stopPropagation();openApprove(${id})">Record independent verification</button>`;
+    } else if (p.status === 'Issuance_Review') {
+      primary = `<button class="btn btn-approve" onclick="event.stopPropagation();openIssue(${id}, ${Number(p.verified_credits || 0)})">Record external registry issue</button>`;
+    } else if (p.registry_issuance_reference && p.participant_roster_reference && ['Participant_Records_Ready','Aggregate_Report_Submitted_To_ACVA','Monitoring_Report_Ready','Verified','Issued'].includes(p.status)) {
+      primary = `<button class="btn btn-approve" onclick="event.stopPropagation();openAllocation(${id}, ${escapeHtml(JSON.stringify(p.registry_issuance_reference))}, ${Number(p.registry_issued_credits || 0)})">Propose farmer share</button>`;
+    } else if (p.status === 'Issued' && p.registry_issuance_reference) {
+      primary = `<button class="btn btn-approve" onclick="event.stopPropagation();openAllocation(${id}, ${escapeHtml(JSON.stringify(p.registry_issuance_reference))}, ${Number(p.registry_issued_credits || 0)})">Propose farmer allocation</button>`;
+    } else if (p.status === 'Allocation_Pending') {
+      primary = '<span style="font-size:11px;color:var(--amber)">Waiting for farmer consent</span>';
+    } else if (p.status === 'Farmer_Allocated' && !canSettleFarmerShare) {
+      primary = '<span style="font-size:11px;color:var(--green)">Farmer share accepted</span>';
+    } else if (carbonNextStage[p.status]) {
+      primary = `<button class="btn btn-approve" onclick="event.stopPropagation();openWorkflowAdvance(${id}, '${carbonNextStage[p.status]}')">${p.status === 'Enrolled' ? 'Start partner onboarding →' : 'Record next partner step →'}</button>`;
+    } else if (p.status === 'Evidence_Pending') {
+      primary = '<span style="font-size:11px;color:var(--muted)">Waiting for farmer evidence</span>';
+    }
+    const projectArg = escapeHtml(JSON.stringify(JSON.stringify(p)));
+    const review = `<button class="btn btn-view" onclick="event.stopPropagation();openProjectDrawer(${projectArg})">Review</button>`;
+    const reject = ['Intake_Submitted','Evidence_Pending','Under_Review','Audit_Failed'].includes(p.status)
+      ? `<button class="btn btn-reject" onclick="event.stopPropagation();openReject(${id})">Reject</button>` : '';
+    return `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${primary}${settlementActions}${review}${reject}</div>`;
+  }
+  function openEvidenceReview(projectId) {
+    document.getElementById('modal-title').textContent = 'Review farmer evidence';
+    document.getElementById('modal-sub').textContent = `Project #${projectId}: inspect the submitted photos, GPS coordinates, and field photos and practice records in the project record. This is an internal evidence check, not independent verification or credit issuance.`;
+    document.getElementById('modal-body').innerHTML = `
+      <label style="display:block;font-size:11px;color:var(--muted);margin:4px 0 3px" for="evidence-review-note">Review note</label>
+      <textarea id="evidence-review-note" class="modal-input" rows="3" placeholder="Explain any missing or unclear evidence"></textarea>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted);margin:12px 0"><input id="evidence-review-confirmed" type="checkbox" style="margin-top:2px"> I inspected the submitted evidence and GPS details.</label>
+      <p style="font-size:11px;color:var(--amber);margin-top:8px">Accepting moves the record to partner onboarding. Independent verification and registry issuance remain separate external steps.</p>`;
+    document.getElementById('modal-actions').innerHTML = `
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-reject" onclick="confirmEvidenceReview(${projectId}, 'request_changes')">Request changes</button>
+      <button class="btn btn-confirm-approve" onclick="confirmEvidenceReview(${projectId}, 'accept')">Accept evidence</button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+  }
+  async function confirmEvidenceReview(projectId, decision) {
+    const admin_note = document.getElementById('evidence-review-note').value.trim();
+    const confirmed = document.getElementById('evidence-review-confirmed').checked;
+    if (decision === 'accept' && !confirmed) { toast('Confirm that you inspected the evidence first', 'error'); return; }
+    if (decision === 'request_changes' && !admin_note) { toast('Add a note describing the needed corrections', 'error'); return; }
+    closeModal();
+    try {
+      const result = await postAPI(`/api/admin/carbon/${projectId}/evidence-review`, {decision, admin_note, confirmed});
+      toast(result.message || 'Evidence review saved', 'success');
+      loadQueue(); loadDashboard();
+    } catch(e) { toast('Evidence review failed: ' + e.message, 'error'); }
+  }
+  function openWorkflowAdvance(projectId, stage) {
+    const title = displayCarbonStage(stage);
+    document.getElementById('modal-title').textContent = `Record ${displayCarbonStage(stage)}`;
+    document.getElementById('modal-sub').textContent = stage === 'Intake_Submitted'
+      ? `Project #${projectId}: record the farmer's signed enrollment consent and partner enrollment reference. This starts internal tracking; it does not create registry credits.`
+      : `Project #${projectId}: enter the external project document or partner reference already issued for this step. This app saves the reference; it does not submit to the partner or registry.`;
+    const fields = carbonStageFields[stage] || [];
+    document.getElementById('modal-body').innerHTML = fields.map(([label,id,placeholder,type]) => type === 'checkbox'
+      ? `<label style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted);margin:10px 0"><input id="wf-${id}" type="checkbox" style="margin-top:2px"> I confirm this project record was checked.</label>`
+      : field(label, `wf-${id}`, placeholder || '', type || 'text')).join('') + '<p style="font-size:11px;color:var(--amber);margin-top:8px">References are audit records. They do not replace signed documents, partner work, independent review or registry status checks.</p>';
+    document.getElementById('modal-actions').innerHTML = `<button class="btn btn-cancel" onclick="closeModal()">Cancel</button><button class="btn btn-confirm-approve" onclick="confirmWorkflowAdvance(${projectId}, '${stage}')">Save stage record</button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+  }
+  async function confirmWorkflowAdvance(projectId, stage) {
+    const metadata = {};
+    for (const [label,id,,type] of (carbonStageFields[stage] || [])) {
+      metadata[id] = type === 'checkbox' ? document.getElementById(`wf-${id}`).checked : document.getElementById(`wf-${id}`).value.trim();
+    }
+    if (Object.values(metadata).some(value => !value)) { toast('Complete every required partner reference or date', 'error'); return; }
+    closeModal();
+    try {
+      await postAPI(`/api/admin/carbon/${projectId}/workflow/advance`, {to_stage: stage, metadata});
+      toast(`${displayCarbonStage(stage)} record saved`, 'success');
+      loadQueue(); loadDashboard();
+    } catch(e) { toast('Could not advance workflow: ' + e.message, 'error'); }
+  }
   async function loadQueue() {
     const status = document.getElementById('queue-status').value;
     const el = document.getElementById('queue-content');
@@ -879,11 +1017,11 @@
       document.getElementById('queue-badge').textContent = d.count;
       if (!d.projects.length) { el.innerHTML = '<div class="empty"><div class="icon">✅</div>Queue is empty</div>'; return; }
       el.innerHTML = `
-        <div class="table-wrap">
-          <table>
+        <div class="table-wrap" role="region" aria-label="Carbon project workflow queue" tabindex="0">
+            <table class="queue-table">
             <thead><tr>
-              <th>Project</th><th>Farmer</th><th>District</th><th>Methodology</th>
-              <th>Est. Credits</th><th>Additionality</th><th>Evidence</th><th>Actions</th>
+              <th>Project</th><th>Farmer</th><th>District</th><th>Farm practice</th>
+              <th>Credits & farmer balance</th><th>Workflow stage</th><th>Evidence</th><th>Actions</th>
             </tr></thead>
             <tbody>${d.projects.map(p => `
               <tr onclick="openProjectDrawer(${JSON.stringify(JSON.stringify(p)).slice(1,-1)})">
@@ -891,62 +1029,92 @@
                 <td><div style="font-weight:600;color:var(--white)">${p.farmer_name}</div><div style="font-size:11px;color:var(--muted)">${p.farmer_phone}</div></td>
                 <td>${p.district}</td>
                 <td><span class="badge badge-enrolled">${p.methodology}</span></td>
-                <td style="font-family:'JetBrains Mono',monospace;color:var(--teal)">${p.projected_credits.toFixed(2)} t</td>
-                <td>${p.additionality_passes
-                  ? `<span class="badge badge-issued">Pass (${(p.additionality_score*100).toFixed(0)}%)</span>`
-                  : `<span class="badge badge-failed">Fail (${(p.additionality_score*100).toFixed(0)}%)</span>`}</td>
+                <td style="font-size:11px;color:var(--muted)">${p.registry_issuance_reference ? `Issue ${escapeHtml(p.registry_issuance_reference)} · ${Number(p.registry_issued_credits || 0).toFixed(4)} tCO₂e` : p.status === 'Verified' ? `${Number(p.verified_credits || 0).toFixed(4)} tCO₂e independently verified` : 'No verified quantity recorded'}<br>Farmer share ${Number(p.farmer_allocation_credits || 0).toFixed(4)} · transferred ${Number(p.credits_transferred || 0).toFixed(4)} · sold ${Number(p.credits_sold || 0).toFixed(4)} · available ${Number(p.available_credits || 0).toFixed(4)} tCO₂e</td>
+                <td><span class="badge badge-pending">${displayCarbonStage(p.status)}</span></td>
                 <td>${p.evidence_count} photos</td>
-                <td onclick="event.stopPropagation()" style="white-space:nowrap">
-                  <button class="btn btn-approve" onclick="openApprove(${p.project_id}, ${p.projected_credits.toFixed(2)})">✓ Approve</button>
-                  <button class="btn btn-reject" style="margin-left:6px" onclick="openReject(${p.project_id})">✗ Reject</button>
-                </td>
+                <td onclick="event.stopPropagation()" style="min-width:190px">${renderProjectActions(p)}</td>
               </tr>
             `).join('')}</tbody>
           </table>
         </div>`;
     } catch(e) { el.innerHTML = `<div class="empty"><div class="icon">⚠️</div>Error loading queue</div>`; }
   }
-
   async function updateQueueBadge() {
     try {
       const d = await api('/api/admin/carbon/queue');
       document.getElementById('queue-badge').textContent = d.count;
     } catch {}
   }
-
   // ─── Project Drawer ───────────────────────────────────────────────────────
+  function escapeHtml(value) {
+    return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+  }
   function openProjectDrawer(jsonStr) {
     const p = JSON.parse(jsonStr);
     const ndviLabels = p.ndvi_trend.map(n => n.date ? n.date.substring(0,10) : '');
     const ndviVals = p.ndvi_trend.map(n => n.ndvi || 0);
-
+    const drawerSales = p.sales || [];
+    const drawerPayouts = p.payouts || [];
+    const drawerUnpaidSale = drawerSales.find(sale => {
+      const paid = drawerPayouts.filter(payment => payment.sale_reference === sale.sale_reference).reduce((sum, payment) => sum + Number(payment.amount_paid_inr || 0), 0);
+      return Number(sale.farmer_share_due_inr || 0) > paid + 0.009;
+    });
+    const drawerUnpaidAmount = drawerUnpaidSale ? Math.max(0, Number(drawerUnpaidSale.farmer_share_due_inr || 0) - drawerPayouts.filter(payment => payment.sale_reference === drawerUnpaidSale.sale_reference).reduce((sum, payment) => sum + Number(payment.amount_paid_inr || 0), 0)) : 0;
     document.getElementById('drawer-content').innerHTML = `
       <div class="drawer-title">Project #${p.project_id}</div>
       <div class="drawer-sub">${p.farmer_name} • ${p.district} • ${p.methodology}</div>
-
       <div class="drawer-section">
         <div class="drawer-section-title">Farm & Carbon Details</div>
         <div class="kv-grid">
           <div class="kv-item"><div class="kv-label">Plot Name</div><div class="kv-value">${p.plot_name}</div></div>
-          <div class="kv-item"><div class="kv-label">Area</div><div class="kv-value">${p.plot_area} acres</div></div>
+          <div class="kv-item"><div class="kv-label">Area</div><div class="kv-value">${Number(p.plot_area || 0).toFixed(2)} acres</div></div>
           <div class="kv-item"><div class="kv-label">Crop</div><div class="kv-value">${p.crop_type}</div></div>
           <div class="kv-item"><div class="kv-label">NDVI (Health)</div><div class="kv-value">${(p.health_score*100).toFixed(0)}%</div></div>
-          <div class="kv-item"><div class="kv-label">Soil Moisture</div><div class="kv-value">${p.moisture}%</div></div>
+          <div class="kv-item"><div class="kv-label">Soil Moisture</div><div class="kv-value">${p.moisture == null ? '—' : Number(p.moisture).toFixed(1) + '%'}</div></div>
           <div class="kv-item"><div class="kv-label">Last Scan</div><div class="kv-value" style="font-size:11px">${p.last_scan ? p.last_scan.substring(0,10) : 'Never'}</div></div>
-          <div class="kv-item"><div class="kv-label">Est. Credits</div><div class="kv-value" style="color:var(--teal)">${p.projected_credits.toFixed(2)} t</div></div>
-          <div class="kv-item"><div class="kv-label">Additionality</div><div class="kv-value" style="color:${p.additionality_passes?'var(--green)':'var(--red)'}">
-            ${p.additionality_passes ? '✓ Passes' : '✗ Fails'} (${(p.additionality_score*100).toFixed(0)}%)
-          </div></div>
+          <div class="kv-item"><div class="kv-label">Independent verified quantity</div><div class="kv-value" style="color:var(--teal)">${p.registry_issuance_reference ? Number(p.registry_issued_credits || 0).toFixed(4) + ' tCO₂e in group batch (not farmer share)' : p.status === 'Verified' ? Number(p.verified_credits || 0).toFixed(4) + ' tCO₂e' : 'Project report required'}</div></div>
+          <div class="kv-item"><div class="kv-label">Farmer share accepted</div><div class="kv-value">${Number(p.farmer_allocation_credits || 0).toFixed(4)} tCO₂e · ${p.farmer_share_percentage == null ? 'share % not recorded' : Number(p.farmer_share_percentage).toFixed(2) + '% of net sale'}</div></div>
+          <div class="kv-item"><div class="kv-label">Transferred / sold / remaining</div><div class="kv-value">${Number(p.credits_transferred || 0).toFixed(4)} / ${Number(p.credits_sold || 0).toFixed(4)} / ${Number(p.available_credits || 0).toFixed(4)} tCO₂e</div></div>
+          <div class="kv-item"><div class="kv-label">Farmer proceeds due / paid</div><div class="kv-value">₹${Number(p.farmer_payout_due_inr || 0).toFixed(2)} / ₹${Number(p.farmer_payout_paid_inr || 0).toFixed(2)}</div></div>
+          <div class="kv-item"><div class="kv-label">Registry issue</div><div class="kv-value">${p.registry_issuance_reference || 'Not recorded'}</div></div>
         </div>
       </div>
-
+      <div class="drawer-section">
+        <div class="drawer-section-title">Project and external reference trail</div>
+        <div class="kv-grid">
+          <div class="kv-item"><div class="kv-label">Programme / protocol (if provided)</div><div class="kv-value">${p.crediting_program || '—'} · ${p.methodology_code || '—'}</div></div>
+          <div class="kv-item"><div class="kv-label">Registered project</div><div class="kv-value">${p.project_registry_reference || 'Not recorded'}</div></div>
+          <div class="kv-item"><div class="kv-label">Farmer participant roster ID</div><div class="kv-value">${p.participant_roster_reference || 'Not recorded'}</div></div>
+          <div class="kv-item"><div class="kv-label">Validation</div><div class="kv-value">${p.validation_agency || '—'} · ${p.validation_report_reference || 'Report reference not recorded'}</div></div>
+          <div class="kv-item"><div class="kv-label">Independent verification</div><div class="kv-value">${p.verification_agency || '—'} · ${p.verification_report_reference || 'Report reference not recorded'}</div></div>
+          <div class="kv-item"><div class="kv-label">Project monitoring report</div><div class="kv-value">${p.aggregate_monitoring_report_reference || 'Not recorded'}</div></div>
+          <div class="kv-item"><div class="kv-label">Monitoring period</div><div class="kv-value">${p.monitoring_period_start || '—'} to ${p.monitoring_period_end || '—'}</div></div>
+          <div class="kv-item"><div class="kv-label">Registry / issue</div><div class="kv-value">${p.registry_name || 'Not issued'} · ${p.registry_issuance_reference || '—'}</div></div>
+          <div class="kv-item"><div class="kv-label">Registry serial</div><div class="kv-value">${p.registry_serial_reference || '—'}</div></div>
+          <div class="kv-item"><div class="kv-label">Farmer allocation</div><div class="kv-value">${p.farmer_allocation_credits == null ? '—' : Number(p.farmer_allocation_credits).toFixed(4) + ' tCO₂e'} · ${p.farmer_allocation_agreement_reference || 'Agreement reference not recorded'}</div></div>
+        </div>
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-section-title">Farmer outcome ledger</div>
+        <pre style="white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);padding:10px;border-radius:8px;font-size:11px;color:var(--white)">${escapeHtml(JSON.stringify({registry_transfers: p.transfers || [], buyer_sales: drawerSales, farmer_payments: drawerPayouts}, null, 2))}</pre>
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-section-title">Farmer intake and monitoring records</div>
+        <div class="kv-item"><div class="kv-label">Current workflow stage</div><div class="kv-value">${escapeHtml(p.workflow_stage || p.status)}</div></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">Farmer declarations · not a partner approval or credit calculation</div>
+        <pre style="white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);padding:10px;border-radius:8px;font-size:11px;color:var(--white)">${escapeHtml(JSON.stringify(p.intake_data || {}, null, 2))}</pre>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">Farmer field activity log (${(p.monitoring_records || []).length} records)</div>
+        <pre style="white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);padding:10px;border-radius:8px;font-size:11px;color:var(--white)">${escapeHtml(JSON.stringify(p.monitoring_records || [], null, 2))}</pre>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">Workflow event references (${(p.workflow_history || []).length} events)</div>
+        <pre style="white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);padding:10px;border-radius:8px;font-size:11px;color:var(--white)">${escapeHtml(JSON.stringify(p.workflow_history || [], null, 2))}</pre>
+      </div>
       ${p.ndvi_trend.length > 0 ? `
       <div class="drawer-section">
         <div class="drawer-section-title">NDVI Trend (Vegetation Health)</div>
         <canvas id="drawer-ndvi-chart" height="140"></canvas>
       </div>` : ''}
-
       <div class="drawer-section">
+
         <div class="drawer-section-title">Evidence Photos (${p.evidence_count})</div>
         <div class="evidence-grid">
           ${p.evidence.map(e => `
@@ -957,20 +1125,27 @@
               <div class="evidence-info">
                 <div class="evidence-desc">${e.description}</div>
                 <div class="evidence-gps">${e.geo_lat?.toFixed(4)}, ${e.geo_lng?.toFixed(4)}</div>
+                <div style="font-size:10px;color:${e.verified ? 'var(--green)' : 'var(--amber)'};margin-top:4px">${e.verified ? 'Reviewed by admin' : 'Awaiting admin review'}</div>
               </div>
             </div>
           `).join('') || '<div style="color:var(--muted);font-size:13px;">No photos uploaded</div>'}
         </div>
       </div>
+      <div class="drawer-section" style="display:flex;gap:10px;flex-wrap:wrap">
+        ${p.status === 'Under_Review' ? `<button class="btn btn-approve" onclick="closeDrawer();openEvidenceReview(${p.project_id})">Review farmer evidence</button>` : ''}
+        ${p.status === 'Verification_Pending' ? `<button class="btn btn-approve" onclick="closeDrawer();openApprove(${p.project_id})">Record independent verification</button>` : ''}
+        ${p.status === 'Issuance_Review' ? `<button class="btn btn-approve" onclick="closeDrawer();openIssue(${p.project_id}, ${Number(p.verified_credits || 0)})">Record external registry issue</button>` : ''}
+        ${p.registry_issuance_reference && p.participant_roster_reference && ['Participant_Records_Ready','Aggregate_Report_Submitted_To_ACVA','Monitoring_Report_Ready','Verification_Pending','Verified'].includes(p.status) ? `<button class="btn btn-approve" onclick="closeDrawer();openAllocation(${p.project_id}, ${escapeHtml(JSON.stringify(p.registry_issuance_reference))}, ${Number(p.registry_issued_credits || 0)})">Propose farmer share</button>` : ''}
+        ${p.status === 'Issued' ? `<button class="btn btn-approve" onclick="closeDrawer();openAllocation(${p.project_id}, ${escapeHtml(JSON.stringify(p.registry_issuance_reference || ''))}, ${Number(p.registry_issued_credits || 0)})">Propose farmer allocation</button>` : ''}
+        ${drawerUnpaidSale ? `<button class="btn btn-approve" onclick="closeDrawer();openPayout(${p.project_id}, ${escapeHtml(JSON.stringify(drawerUnpaidSale.sale_reference))}, ${Number(drawerUnpaidSale.farmer_share_due_inr || 0)}, ${Number(drawerUnpaidSale.farmer_share_due_inr || 0) - drawerUnpaidAmount})">Record farmer payment</button>` : ''}
+        ${Number(p.available_credits || 0) > 0 && p.registry_issuance_reference && p.farmer_allocation_agreement_reference ? `<button class="btn btn-approve" onclick="closeDrawer();openTransfer(${p.project_id}, ${escapeHtml(JSON.stringify(p.registry_issuance_reference))}, ${Number(p.available_credits || 0)}, ${escapeHtml(JSON.stringify(p.farmer_allocation_agreement_reference))})">Record completed registry transfer</button>` : ''}
 
-      <div class="drawer-section" style="display:flex;gap:10px">
-        <button class="btn btn-approve" onclick="closeDrawer();openApprove(${p.project_id}, ${p.projected_credits.toFixed(2)})">✓ Approve Credits</button>
-        <button class="btn btn-reject" onclick="closeDrawer();openReject(${p.project_id})">✗ Reject Project</button>
+        ${!drawerUnpaidSale && Number(p.available_credits || 0) > 0 && Number(p.farmer_share_percentage || 0) > 0 && p.registry_issuance_reference && p.farmer_allocation_agreement_reference ? `<button class="btn btn-view" onclick="closeDrawer();openSale(${p.project_id}, ${escapeHtml(JSON.stringify(p.registry_issuance_reference))}, ${Number(p.available_credits || 0)}, ${escapeHtml(JSON.stringify(p.farmer_allocation_agreement_reference))}, ${Number(p.farmer_share_percentage || 0)})">Record settled buyer sale</button>` : ''}
+        ${carbonNextStage[p.status] ? `<button class="btn btn-approve" onclick="closeDrawer();openWorkflowAdvance(${p.project_id}, '${carbonNextStage[p.status]}')">Record partner step →</button>` : ''}
+        ${['Intake_Submitted','Evidence_Pending','Under_Review','Audit_Failed'].includes(p.status) ? `<button class="btn btn-reject" onclick="closeDrawer();openReject(${p.project_id})">Reject Project</button>` : ''}
       </div>
     `;
-
     openDrawer();
-
     if (p.ndvi_trend.length > 0) {
       setTimeout(() => {
         const ctx2 = document.getElementById('drawer-ndvi-chart')?.getContext('2d');
@@ -997,37 +1172,299 @@
       }, 100);
     }
   }
-
   // ─── Approve / Reject modals ──────────────────────────────────────────────
-  function openApprove(projectId, suggestedCredits) {
-    document.getElementById('modal-title').textContent = '✓ Issue Carbon Credits';
-    document.getElementById('modal-sub').textContent = `Approve Project #${projectId} and issue credits to farmer.`;
+  function field(label, id, placeholder, type='text', value='') {
+    return `<label style="display:block;font-size:11px;color:var(--muted);margin:4px 0 3px">${label}</label>
+      <input class="modal-input" id="${id}" type="${type}" placeholder="${placeholder}" value="${value}" ${type === 'number' ? 'step="0.0001" min="0"' : ''}>`;
+  }
+  function openApprove(projectId) {
+    document.getElementById('modal-title').textContent = 'Record external verification';
+    document.getElementById('modal-sub').textContent = `Project #${projectId}: record the project references and quantity stated in the independent verification report. This does not issue credits.`;
     document.getElementById('modal-body').innerHTML = `
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Credits to Issue (tCO₂e)</div>
-      <input class="modal-input" id="credits-input" type="number" step="0.01" min="0" value="${suggestedCredits}" placeholder="e.g. 12.50">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Admin Note (optional)</div>
-      <input class="modal-input" id="note-input" type="text" placeholder="Verified via satellite + 3 photos...">
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">15% buffer pool will be deducted automatically. Farmer receives 85%.</div>
+      <label style="display:block;font-size:11px;color:var(--muted);margin:4px 0 3px">External programme (optional)</label>
+      <input class="modal-input" id="crediting-program" type="text" placeholder="Programme / registry name">
+      ${field('Protocol / activity identifier (optional)','methodology-code','Partner method name or version')}
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted);margin:10px 0"><input id="external-report-confirmed" type="checkbox" style="margin-top:2px"> I checked that the independent verification report matches the project, reporting period, and quantity shown.</label>
+      ${field('Registered project reference','project-registry-reference','Project ID from the external registry')}
+      ${field('Validation agency','validation-agency','Independent validation body')}
+      ${field('Validation report reference','validation-report-reference','Registry URL or report ID')}
+      ${field('Verification agency','verification-agency','Independent verification body')}
+      ${field('Verification report reference','verification-report-reference','Registry URL or report ID')}
+      ${field('Project monitoring report reference','aggregate-monitoring-report-reference','Consolidated report / document reference')}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>${field('Monitoring start','monitoring-period-start','','date')}</div>
+        <div>${field('Monitoring end','monitoring-period-end','','date')}</div>
+      </div>
+      ${field('Verified quantity from report (tCO₂e)','verified-credits','Amount stated in the independent report','number')}
+      ${field('Admin note','verification-note','Optional note')}
+      <p style="font-size:11px;color:var(--amber);margin-top:4px">Remote sensing and AI are screening aids. Do not copy their estimates into this field.</p>
     `;
     document.getElementById('modal-actions').innerHTML = `
       <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-confirm-approve" onclick="confirmApprove(${projectId})">Confirm Issuance</button>
-    `;
+      <button class="btn btn-confirm-approve" onclick="confirmApprove(${projectId})">Record verification</button>`;
     document.getElementById('modal-overlay').style.display = 'flex';
   }
-
   async function confirmApprove(projectId) {
-    const credits = parseFloat(document.getElementById('credits-input').value);
-    const note = document.getElementById('note-input').value;
-    if (!credits || credits <= 0) { toast('Enter a valid credit amount', 'error'); return; }
+    const body = {
+      verified_credits: parseFloat(document.getElementById('verified-credits').value),
+      crediting_program: document.getElementById('crediting-program').value,
+      methodology_code: document.getElementById('methodology-code').value.trim(),
+      project_registry_reference: document.getElementById('project-registry-reference').value.trim(),
+      validation_agency: document.getElementById('validation-agency').value.trim(),
+      validation_report_reference: document.getElementById('validation-report-reference').value.trim(),
+      verification_agency: document.getElementById('verification-agency').value.trim(),
+      verification_report_reference: document.getElementById('verification-report-reference').value.trim(),
+      aggregate_monitoring_report_reference: document.getElementById('aggregate-monitoring-report-reference').value.trim(),
+      monitoring_period_start: document.getElementById('monitoring-period-start').value,
+      monitoring_period_end: document.getElementById('monitoring-period-end').value,
+      external_report_confirmed: document.getElementById('external-report-confirmed').checked,
+      admin_note: document.getElementById('verification-note').value.trim(),
+    };
+    if (!body.external_report_confirmed) { toast('Confirm the independent verification report is accurate', 'error'); return; }
+    if (!body.verified_credits || Object.entries(body).some(([key, value]) => !['admin_note', 'crediting_program', 'methodology_code'].includes(key) && !value)) {
+      toast('Complete all verifier, project, period and report references; enter the verified quantity', 'error'); return;
+    }
     closeModal();
     try {
-      await postAPI(`/api/admin/carbon/${projectId}/approve`, { credits_to_issue: credits, admin_note: note });
-      toast(`✓ ${credits} tCO₂e issued for Project #${projectId}`, 'success');
+      await postAPI(`/api/admin/carbon/${projectId}/approve`, body);
+      toast(`External verification recorded for Project #${projectId}; no credits issued yet`, 'success');
       loadQueue(); loadDashboard();
-    } catch(e) { toast('Failed to approve: ' + e.message, 'error'); }
+    } catch(e) { toast('Failed to record verification: ' + e.message, 'error'); }
+  }
+  function openIssue(projectId, verifiedCredits) {
+    document.getElementById('modal-title').textContent = 'Record registry issuance';
+    document.getElementById('modal-sub').textContent = `Project #${projectId}: copy the final external registry record. Independently verified amount: ${Number(verifiedCredits).toFixed(4)} tCO₂e. Farmer allocation is a separate step.`;
+    document.getElementById('modal-body').innerHTML = `
+      ${field('Registry name','registry-name','Name of the external credit registry')}
+      ${field('Registry project reference','registry-project-reference','Must match the verified project reference')}
+      ${field('Registry issuance reference','registry-issuance-reference','Official issuance transaction/reference')}
+      ${field('Serial number or serial range','registry-serial-reference','Registry serial number / range')}
+      ${field('Registry-issued quantity (tCO₂e)','credits-issued','Must not exceed verified amount','number')}
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted);margin:10px 0"><input id="registry-issuance-confirmed" type="checkbox" style="margin-top:2px"> I checked the external registry and confirmed this issuance is final; the issue and serial references above match.</label>
+      ${field('Admin note','issuance-note','Optional note')}
+      <p style="font-size:11px;color:var(--amber);margin-top:4px">This records an issuance that already exists in the external registry. It does not submit an issuance request or create a registry credit.</p>
+    `;
+    document.getElementById('modal-actions').innerHTML = `
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-confirm-approve" onclick="confirmIssue(${projectId}, ${Number(verifiedCredits)})">Record registry issue</button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+  }
+  async function confirmIssue(projectId, verifiedCredits) {
+    const body = {
+      registry_name: document.getElementById('registry-name').value.trim(),
+      registry_project_reference: document.getElementById('registry-project-reference').value.trim(),
+      registry_issuance_reference: document.getElementById('registry-issuance-reference').value.trim(),
+      registry_serial_reference: document.getElementById('registry-serial-reference').value.trim(),
+      credits_issued: parseFloat(document.getElementById('credits-issued').value),
+      registry_issuance_confirmed: document.getElementById('registry-issuance-confirmed').checked,
+      admin_note: document.getElementById('issuance-note').value.trim(),
+    };
+    if (!body.credits_issued || Object.entries(body).some(([key, value]) => !['admin_note', 'crediting_program', 'methodology_code'].includes(key) && !value)) {
+      toast('Complete registry issue references and quantity', 'error'); return;
+    }
+    if (!body.registry_issuance_confirmed) { toast('Confirm final issuance against the external registry first', 'error'); return; }
+    if (body.credits_issued > verifiedCredits) {
+      toast('Registry issue exceeds the independently verified quantity', 'error'); return;
+    }
+    closeModal();
+    try {
+      await postAPI(`/api/admin/carbon/${projectId}/issue`, body);
+      toast(`External registry issuance recorded for Project #${projectId}; farmer allocation remains separate`, 'success');
+      loadQueue(); loadDashboard();
+    } catch(e) { toast('Failed to record registry issue: ' + e.message, 'error'); }
+  }
+  function openTransfer(projectId, issuanceReference, availableCredits, agreementReference) {
+
+    document.getElementById('modal-title').textContent = 'Record completed registry transfer';
+
+    document.getElementById('modal-sub').textContent = `Project #${projectId}: record farmer units only after the external registry shows the transfer in the farmer's account. Remaining allocation: ${Number(availableCredits).toFixed(4)} tCO₂e.`;
+
+    document.getElementById('modal-body').innerHTML = `
+
+      ${field('External registry issue reference','transfer-issue-reference','Registry issue ID','text',issuanceReference)}
+
+      ${field('Completed registry transfer reference','transfer-reference','Transfer ID from registry')}
+
+      ${field('Farmer registry account ID','transfer-account-reference','Farmer account / beneficiary ID')}
+
+      ${field('Transferred serials or serial range','transfer-serial-reference','Registry serial numbers for these units')}
+
+      ${field('Quantity transferred (tCO₂e)','transfer-credits','Available: ' + Number(availableCredits).toFixed(4),'number')}
+
+      ${field('Signed farmer agreement reference','transfer-agreement-reference','Must match the accepted agreement','text',agreementReference)}
+
+      ${field('Transfer date','transfer-date','','date',new Date().toISOString().slice(0,10))}
+
+      ${field('Admin note','transfer-note','Optional reconciliation note')}
+
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted);margin:10px 0"><input id="transfer-confirmed" type="checkbox" style="margin-top:2px"> I checked the external registry and confirmed the units arrived in this farmer's account.</label>
+
+      <p style="font-size:11px;color:var(--amber);margin-top:4px">This saves evidence of a completed external transfer. The app does not connect to the registry or move units.</p>`;
+
+    document.getElementById('modal-actions').innerHTML = `<button class="btn btn-cancel" onclick="closeModal()">Cancel</button><button class="btn btn-confirm-approve" onclick="confirmTransfer(${projectId}, ${Number(availableCredits)})">Record transfer</button>`;
+
+    document.getElementById('modal-overlay').style.display = 'flex';
+
   }
 
+  async function confirmTransfer(projectId, availableCredits) {
+
+    const body = {
+
+      registry_issuance_reference: document.getElementById('transfer-issue-reference').value.trim(),
+
+      transfer_reference: document.getElementById('transfer-reference').value.trim(),
+
+      registry_account_reference: document.getElementById('transfer-account-reference').value.trim(),
+
+      serial_reference: document.getElementById('transfer-serial-reference').value.trim(),
+
+      credits_transferred: parseFloat(document.getElementById('transfer-credits').value),
+
+      agreement_reference: document.getElementById('transfer-agreement-reference').value.trim(),
+
+      transfer_date: document.getElementById('transfer-date').value,
+
+      transfer_confirmed: document.getElementById('transfer-confirmed').checked,
+
+      admin_note: document.getElementById('transfer-note')?.value.trim() || ''
+
+    };
+
+    if (!body.registry_issuance_reference || !body.transfer_reference || !body.registry_account_reference || !body.serial_reference || !body.agreement_reference || !body.transfer_date || !Number.isFinite(body.credits_transferred) || body.credits_transferred <= 0 || body.credits_transferred > availableCredits + 0.00001) {
+
+      toast('Enter the registry references, farmer account, serials, date, agreement, and a quantity within the available allocation', 'error'); return;
+
+    }
+
+    if (!body.transfer_confirmed) { toast('Confirm the registry transfer has completed to the farmer account', 'error'); return; }
+
+    closeModal();
+
+    try {
+
+      const result = await postAPI(`/api/admin/carbon/${projectId}/transfer`, body);
+
+      toast(`Registry transfer recorded: ${Number(result.credits_transferred || 0).toFixed(4)} tCO₂e`, 'success');
+
+      loadQueue(); loadDashboard();
+
+    } catch(e) { toast('Failed to record registry transfer: ' + e.message, 'error'); }
+
+  }
+
+  function openAllocation(projectId, issuanceReference, issuedCredits) {
+    document.getElementById('modal-title').textContent = 'Propose farmer allocation';
+    document.getElementById('modal-sub').textContent = `Project #${projectId}: record the signed farmer agreement and proposed share from the confirmed ${issuanceReference} issue (${Number(issuedCredits).toFixed(4)} tCO₂e). The farmer must accept before credits enter their wallet.`;
+    document.getElementById('modal-body').innerHTML = `
+      ${field('External registry issue reference','allocation-issue-reference','Registry issue ID','text',issuanceReference)}
+      ${field('Farmer credit allocation (tCO₂e)','allocation-credits','Must fit within unallocated registry issue','number')}
+      ${field('Farmer share of net sale proceeds (%)','allocation-share-percentage','Leave blank for a direct registry transfer agreement','number')}
+      ${field('Signed farmer agreement reference','allocation-agreement-reference','Signed agreement ID or document reference')}
+      ${field('Admin note','allocation-note','Optional note')}
+      <p style="font-size:11px;color:var(--amber);margin-top:6px">This creates an offer for the farmer to accept or decline. It does not change the farmer wallet yet.</p>`;
+    document.getElementById('modal-actions').innerHTML = `<button class="btn btn-cancel" onclick="closeModal()">Cancel</button><button class="btn btn-confirm-approve" onclick="confirmAllocation(${projectId})">Send allocation proposal</button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+  }
+  async function confirmAllocation(projectId) {
+    const body = {
+      registry_issuance_reference: document.getElementById('allocation-issue-reference').value.trim(),
+      credits: parseFloat(document.getElementById('allocation-credits').value),
+      agreement_reference: document.getElementById('allocation-agreement-reference').value.trim(),
+      farmer_share_percentage: document.getElementById('allocation-share-percentage').value.trim() === '' ? null : parseFloat(document.getElementById('allocation-share-percentage').value),
+      admin_note: document.getElementById('allocation-note').value.trim()
+    };
+    if (!body.registry_issuance_reference || !Number.isFinite(body.credits) || body.credits <= 0 || !body.agreement_reference || (body.farmer_share_percentage !== null && (!Number.isFinite(body.farmer_share_percentage) || body.farmer_share_percentage < 0 || body.farmer_share_percentage > 100))) { toast('Enter the issue, a positive farmer quantity, the signed agreement, and an optional sale share from 0 to 100%', 'error'); return; }
+    closeModal();
+    try {
+      await postAPI(`/api/admin/carbon/${projectId}/allocate`, body);
+      toast('Allocation proposal sent to the farmer for consent', 'success');
+      loadQueue(); loadDashboard();
+    } catch(e) { toast('Failed to propose allocation: ' + e.message, 'error'); }
+  }
+  function openSale(projectId, issuanceReference, availableCredits, agreementReference, sharePercentage) {
+    document.getElementById('modal-title').textContent = 'Record settled buyer sale';
+    document.getElementById('modal-sub').textContent = `Project #${projectId}: record credits sold from the farmer's accepted ${agreementReference} allocation. Only save this after the buyer's money has settled.`;
+    document.getElementById('modal-body').innerHTML = `
+      ${field('External registry issue reference','sale-issue-reference','Registry issue ID','text',issuanceReference)}
+      ${field('Sale / invoice reference','sale-reference','Buyer sale or invoice ID')}
+      ${field('Buyer','sale-buyer','Buyer organization')}
+      ${field('Credits sold (tCO₂e)','sale-credits','Available: ' + Number(availableCredits).toFixed(4),'number')}
+      ${field('Gross settled proceeds (₹)','sale-gross','Buyer settlement amount','number')}
+      ${field('Documented deductions (₹)','sale-deductions','Fees / agreed deductions; enter 0 if none','number','0')}
+      ${field('Farmer share of net proceeds (%)','sale-share-percentage','Must match signed farmer agreement','number',sharePercentage > 0 ? sharePercentage : '')}
+      ${field('Signed farmer agreement reference','sale-agreement-reference','Must match accepted allocation','text',agreementReference)}
+      ${field('Buyer settlement reference','sale-settlement-reference','Bank receipt / buyer remittance ID')}
+      ${field('Buyer settlement date','sale-settlement-date','','date',new Date().toISOString().slice(0,10))}
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted);margin:10px 0"><input id="sale-settled" type="checkbox" style="margin-top:2px"> Buyer funds have settled and the quantity / amount match the sale evidence.</label>
+      ${field('Admin note','sale-note','Optional note')}
+      <p style="font-size:11px;color:var(--amber);margin-top:4px">The app calculates the farmer's agreed share from net proceeds. This action records a sale; it does not move registry units or transfer money.</p>`;
+    document.getElementById('modal-actions').innerHTML = `<button class="btn btn-cancel" onclick="closeModal()">Cancel</button><button class="btn btn-confirm-approve" onclick="confirmSale(${projectId}, ${Number(availableCredits)})">Record settled sale</button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+  }
+  async function confirmSale(projectId, availableCredits) {
+    const body = {
+      registry_issuance_reference: document.getElementById('sale-issue-reference').value.trim(),
+      sale_reference: document.getElementById('sale-reference').value.trim(),
+      buyer_name: document.getElementById('sale-buyer').value.trim(),
+      credits_sold: parseFloat(document.getElementById('sale-credits').value),
+      gross_proceeds_inr: parseFloat(document.getElementById('sale-gross').value),
+      deductions_inr: parseFloat(document.getElementById('sale-deductions').value || '0'),
+      farmer_share_percentage: parseFloat(document.getElementById('sale-share-percentage').value),
+      agreement_reference: document.getElementById('sale-agreement-reference').value.trim(),
+      settlement_reference: document.getElementById('sale-settlement-reference').value.trim(),
+      settlement_date: document.getElementById('sale-settlement-date').value,
+      buyer_settlement_confirmed: document.getElementById('sale-settled').checked,
+      admin_note: document.getElementById('sale-note').value.trim(),
+    };
+    if (!body.sale_reference || !body.buyer_name || !body.registry_issuance_reference || !body.agreement_reference || !body.settlement_reference || !body.settlement_date || !Number.isFinite(body.credits_sold) || body.credits_sold <= 0 || body.credits_sold > availableCredits || !Number.isFinite(body.gross_proceeds_inr) || body.gross_proceeds_inr <= 0 || !Number.isFinite(body.deductions_inr) || body.deductions_inr < 0 || !Number.isFinite(body.farmer_share_percentage) || body.farmer_share_percentage <= 0 || body.farmer_share_percentage > 100) {
+      toast('Complete sale details, positive proceeds, available quantity, and the agreed farmer share', 'error'); return;
+    }
+    if (!body.buyer_settlement_confirmed) { toast('Confirm buyer settlement before recording the sale', 'error'); return; }
+    closeModal();
+    try {
+      const result = await postAPI(`/api/admin/carbon/${projectId}/sale`, body);
+      toast(`Sale recorded; farmer share due ₹${Number(result.farmer_share_due_inr || 0).toFixed(2)}`, 'success');
+      loadQueue(); loadDashboard();
+    } catch(e) { toast('Failed to record buyer sale: ' + e.message, 'error'); }
+  }
+  function openPayout(projectId, saleReference, amountDue, amountPaid) {
+    const remaining = Math.max(0, Number(amountDue) - Number(amountPaid));
+    document.getElementById('modal-title').textContent = 'Record completed farmer payment';
+    document.getElementById('modal-sub').textContent = `Project #${projectId}, sale ${saleReference}: ₹${remaining.toFixed(2)} remains unpaid from the farmer's agreed share.`;
+    document.getElementById('modal-body').innerHTML = `
+      ${field('Sale reference','payout-sale-reference','Sale reference','text',saleReference)}
+      ${field('Amount transferred (₹)','payout-amount','Unpaid amount: ₹' + remaining.toFixed(2),'number',remaining.toFixed(2))}
+      ${field('Payment method','payout-method','UPI / NEFT / IMPS / other')}
+      ${field('Bank / UPI transfer reference','payout-reference','UTR or provider transaction ID')}
+      ${field('Transfer date','payout-date','','date',new Date().toISOString().slice(0,10))}
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--muted);margin:10px 0"><input id="payout-confirmed" type="checkbox" style="margin-top:2px"> I confirmed the transfer completed to the farmer.</label>
+      ${field('Admin note','payout-note','Optional note')}
+      <p style="font-size:11px;color:var(--amber);margin-top:4px">This records an already completed transfer. The app does not initiate bank or UPI payments.</p>`;
+    document.getElementById('modal-actions').innerHTML = `<button class="btn btn-cancel" onclick="closeModal()">Cancel</button><button class="btn btn-confirm-approve" onclick="confirmPayout(${projectId}, ${remaining})">Record payment</button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+  }
+  async function confirmPayout(projectId, remaining) {
+    const body = {
+      sale_reference: document.getElementById('payout-sale-reference').value.trim(),
+      amount_paid_inr: parseFloat(document.getElementById('payout-amount').value),
+      payment_method: document.getElementById('payout-method').value.trim(),
+      payment_reference: document.getElementById('payout-reference').value.trim(),
+      payment_date: document.getElementById('payout-date').value,
+      payment_confirmed: document.getElementById('payout-confirmed').checked,
+      admin_note: document.getElementById('payout-note').value.trim(),
+    };
+    if (!body.sale_reference || !body.payment_method || !body.payment_reference || !body.payment_date || !Number.isFinite(body.amount_paid_inr) || body.amount_paid_inr <= 0 || body.amount_paid_inr > remaining + 0.009) {
+      toast('Enter a valid transfer amount, date, method, and unique bank / UPI reference', 'error'); return;
+    }
+    if (!body.payment_confirmed) { toast('Confirm the farmer transfer is complete before recording it', 'error'); return; }
+    closeModal();
+    try {
+      await postAPI(`/api/admin/carbon/${projectId}/payout`, body);
+      toast('Completed farmer payment recorded', 'success');
+      loadQueue(); loadDashboard();
+    } catch(e) { toast('Failed to record farmer payment: ' + e.message, 'error'); }
+  }
   function openReject(projectId) {
     document.getElementById('modal-title').textContent = '✗ Reject Project';
     document.getElementById('modal-sub').textContent = `Reject Project #${projectId}. Farmer will be notified.`;
@@ -1043,7 +1480,6 @@
     `;
     document.getElementById('modal-overlay').style.display = 'flex';
   }
-
   async function confirmReject(projectId) {
     const reason = document.getElementById('reason-input').value.trim();
     const note = document.getElementById('note2-input').value;
@@ -1055,7 +1491,6 @@
       loadQueue(); loadDashboard();
     } catch(e) { toast('Failed to reject: ' + e.message, 'error'); }
   }
-
   // ─── Farmers ──────────────────────────────────────────────────────────────
   let farmerTimeout;
   async function loadFarmers() {
@@ -1094,7 +1529,6 @@
         <div style="font-size:13px;color:var(--muted);padding:12px 0">Showing ${d.farmers.length} of ${d.total} farmers</div>`;
     } catch(e) { el.innerHTML = `<div class="empty"><div class="icon">⚠️</div>Error loading farmers</div>`; }
   }
-
   async function openFarmerDrawer(id) {
     document.getElementById('drawer-content').innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading...</div>';
     openDrawer();
@@ -1104,7 +1538,6 @@
       document.getElementById('drawer-content').innerHTML = `
         <div class="drawer-title">${f.name || 'Unnamed Farmer'}</div>
         <div class="drawer-sub">${f.phone} • ${f.district || '—'}</div>
-
         <div class="drawer-section">
           <div class="drawer-section-title">Farmer Profile</div>
           <div class="kv-grid">
@@ -1114,32 +1547,30 @@
             <div class="kv-item"><div class="kv-label">Trust Score</div><div class="kv-value" style="color:var(--teal)">${f.trust_score}/1000</div></div>
           </div>
         </div>
-
         <div class="drawer-section">
           <div class="drawer-section-title">Plots (${d.plots.length})</div>
           ${d.plots.map(p => `
             <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 14px;margin-bottom:8px">
               <div style="font-weight:600;color:var(--white);font-size:13px">${p.name}</div>
               <div style="font-size:12px;color:var(--muted)">${p.crop_type || 'No crop'} • ${p.area} acres • NDVI: ${(p.health_score*100).toFixed(0)}%</div>
-              <div style="font-size:12px;color:var(--teal);margin-top:2px">${p.carbon_credits.toFixed(2)} credits</div>
+              <div style="font-size:12px;color:var(--teal);margin-top:2px">Registry allocation: ${Number(p.carbon_credits || 0).toFixed(2)} tCO₂e</div>
             </div>
           `).join('') || '<div style="color:var(--muted);font-size:13px">No plots registered</div>'}
         </div>
-
         <div class="drawer-section">
           <div class="drawer-section-title">Carbon Projects (${d.projects.length})</div>
           ${d.projects.map(p => `
             <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
               <div style="flex:1">
                 <div style="font-size:13px;color:var(--white)">#${p.id} — ${p.methodology}</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px">Additionality: ${(p.additionality_score*100).toFixed(0)}%</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">External verification recorded: ${Number(p.verified_credits || 0).toFixed(3)} tCO₂e</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">Farmer allocation: ${Number(p.available_credits || 0).toFixed(3)} tCO₂e${p.registry_issuance_reference ? ` · ${p.registry_issuance_reference}` : ''}</div>
               </div>
               <div>${statusBadge(p.status)}</div>
-              <div style="color:var(--teal);font-family:'JetBrains Mono',monospace;font-size:13px">${p.verified_credits.toFixed(2)} t</div>
+              <div style="color:var(--teal);font-family:'JetBrains Mono',monospace;font-size:13px">${Number(p.verified_credits || 0).toFixed(2)} t verified</div>
             </div>
           `).join('') || '<div style="color:var(--muted);font-size:13px">No carbon projects</div>'}
         </div>
-
         <div class="drawer-section">
           <div class="drawer-section-title">Recent Operations</div>
           <div class="log-feed">
@@ -1158,7 +1589,6 @@
       `;
     } catch(e) { document.getElementById('drawer-content').innerHTML = '<div class="empty"><div class="icon">⚠️</div>Error loading farmer data</div>'; }
   }
-
   // ─── Fields ───────────────────────────────────────────────────────────────
   async function loadFields() {
     const el = document.getElementById('fields-content');
@@ -1196,7 +1626,6 @@
         <div style="font-size:13px;color:var(--muted);padding:12px 0">Showing ${d.plots.length} of ${d.total} plots</div>`;
     } catch(e) { el.innerHTML = `<div class="empty"><div class="icon">⚠️</div>Error loading plots</div>`; }
   }
-
   async function openPlotDrawer(id) {
     document.getElementById('drawer-content').innerHTML = '<div class="loading"><div class="spinner"></div><br>Loading...</div>';
     openDrawer();
@@ -1206,7 +1635,6 @@
       document.getElementById('drawer-content').innerHTML = `
         <div class="drawer-title">${p.name}</div>
         <div class="drawer-sub">${d.farmer.name} • ${d.farmer.district}</div>
-
         <div class="drawer-section">
           <div class="drawer-section-title">Plot Status</div>
           <div class="kv-grid">
@@ -1214,17 +1642,15 @@
             <div class="kv-item"><div class="kv-label">Crop</div><div class="kv-value">${p.crop_type || '—'}</div></div>
             <div class="kv-item"><div class="kv-label">NDVI Health</div><div class="kv-value" style="color:${healthColor(p.health_score)}">${(p.health_score*100).toFixed(0)}%</div></div>
             <div class="kv-item"><div class="kv-label">Soil Moisture</div><div class="kv-value">${p.moisture?.toFixed(1)}%</div></div>
-            <div class="kv-item"><div class="kv-label">Carbon Credits</div><div class="kv-value" style="color:var(--teal)">${p.carbon_credits?.toFixed(2)} t</div></div>
+            <div class="kv-item"><div class="kv-label">Registry allocation</div><div class="kv-value" style="color:var(--teal)">${Number(p.carbon_credits || 0).toFixed(2)} tCO₂e</div></div>
             <div class="kv-item"><div class="kv-label">Last Scan</div><div class="kv-value" style="font-size:11px">${p.last_scan_date ? p.last_scan_date.substring(0,10) : 'Never'}</div></div>
           </div>
         </div>
-
         ${d.ndvi_history.length > 0 ? `
         <div class="drawer-section">
           <div class="drawer-section-title">NDVI History</div>
           <canvas id="plot-ndvi-chart" height="120"></canvas>
         </div>` : ''}
-
         ${d.disease_alerts.length > 0 ? `
         <div class="drawer-section">
           <div class="drawer-section-title">Disease Alerts (${d.disease_alerts.length})</div>
@@ -1235,7 +1661,6 @@
             </div>
           `).join('')}
         </div>` : ''}
-
         <div class="drawer-section">
           <div class="drawer-section-title">Operations (${d.operation_log.length})</div>
           <div class="log-feed">
@@ -1249,7 +1674,6 @@
           </div>
         </div>
       `;
-
       if (d.ndvi_history.length > 0) {
         setTimeout(() => {
           const ctx = document.getElementById('plot-ndvi-chart')?.getContext('2d');
@@ -1278,7 +1702,6 @@
       }
     } catch(e) { document.getElementById('drawer-content').innerHTML = '<div class="empty"><div class="icon">⚠️</div>Error loading plot</div>'; }
   }
-
   // ─── Ops Log ──────────────────────────────────────────────────────────────
   async function loadOps() {
     const opType = document.getElementById('ops-type').value;
@@ -1306,12 +1729,24 @@
         <div style="font-size:13px;color:var(--muted);padding:12px 0">Showing ${d.logs.length} of ${d.total} entries</div>`;
     } catch(e) { el.innerHTML = `<div class="empty"><div class="icon">⚠️</div>Error loading logs</div>`; }
   }
-
   // ─── CSV Export ───────────────────────────────────────────────────────────
-  function exportCSV() {
-    window.open(`${API}/api/admin/export/credits?token=${encodeURIComponent(TOKEN)}`, '_blank');
+  async function exportCSV() {
+    try {
+      const response = await fetch(API + '/api/admin/export/credits', {
+        headers: { Authorization: 'Bearer ' + TOKEN },
+      });
+      if (!response.ok) throw new Error('Export failed (' + response.status + ')');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'carbon-registry-issuance.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast(error.message || 'Could not export registry issuance records', 'error');
+    }
   }
-
   // ─── Drawer helpers ───────────────────────────────────────────────────────
   function openDrawer() {
     document.getElementById('drawer-overlay').style.display = 'block';
@@ -1323,18 +1758,16 @@
   }
   function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
   document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
-
   // ─── POST helper ──────────────────────────────────────────────────────────
   async function postAPI(path, body) {
-    const r = await fetch(`${API}${path}?token=${encodeURIComponent(TOKEN)}`, {
+    const r = await fetch(`${API}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
       body: JSON.stringify(body),
     });
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
     return r.json();
   }
-
   // ─── Utilities ────────────────────────────────────────────────────────────
   function toast(msg, type='success') {
     const el = document.createElement('div');
@@ -1344,18 +1777,15 @@
     setTimeout(() => el.style.opacity = '0', 3500);
     setTimeout(() => el.remove(), 4000);
   }
-
   function statusBadge(s) {
     const map = { 'Issued': 'issued', 'Verified': 'verified', 'Evidence_Pending': 'pending', 'Enrolled': 'enrolled', 'Audit_Failed': 'failed', 'Potential': 'potential' };
     return `<span class="badge badge-${map[s]||'potential'}">${s}</span>`;
   }
-
   function healthColor(score) {
     if (score >= 0.7) return 'var(--teal)';
     if (score >= 0.4) return 'var(--amber)';
     return 'var(--red)';
   }
-
   function opIcon(op) {
     const icons = {
       plot_created: '🗺️', plot_scan: '🛰️', disease_alert_triggered: '⚠️',
@@ -1364,7 +1794,6 @@
     };
     return icons[op] || '📝';
   }
-
   function timeAgo(isoStr) {
     if (!isoStr) return '—';
     const d = new Date(isoStr + (isoStr.endsWith('Z') ? '' : 'Z'));

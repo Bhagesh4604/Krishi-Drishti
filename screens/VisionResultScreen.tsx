@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, Language, VisionMode } from '../types';
-import { ArrowLeft, Leaf, Droplets, ThermometerSun, AlertCircle, CheckCircle2, ChevronRight, Download, Share2, RefreshCw, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Leaf, AlertCircle, CheckCircle2, ChevronRight, Download, Share2, RefreshCw, RotateCcw, Camera } from 'lucide-react';
 import { aiService } from '../src/services/api';
 import { imageWorkerClient } from '../src/utils/imageWorkerClient';
 
@@ -10,9 +10,12 @@ interface VisionResultScreenProps {
   mode: VisionMode;
   language: Language;
   t: any;
+  cropType?: string;
+  growthStage?: string;
+  symptoms?: string;
 }
 
-const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, image, mode, language, t }) => {
+const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, image, mode, language, t, cropType = '', growthStage = '', symptoms = '' }) => {
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -24,7 +27,7 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
       // Offload Base64 decoding & Blob creation to Web Worker background thread
       const blob = await imageWorkerClient.dataUriToBlob(image);
       const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
-      const data = await aiService.diagnose(file, mode);
+      const data = await aiService.diagnose(file, mode, { cropType, growthStage, symptoms });
       
       setResult(data);
     } catch (e: any) {
@@ -56,11 +59,23 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
     analyzeImage();
   }, [image, mode]);
 
-  const isHealthy = result?.diagnosis?.toLowerCase().includes('healthy') || (result?.health_score && result?.health_score >= 80);
+  const needsReview = result?.analysis_status === 'needs_review'
+    || result?.confidence_level === 'low'
+    || (typeof result?.confidence === 'number' && result.confidence < 35)
+    || result?.isError
+    || result?.diagnosis === 'Connection Failed';
+  const isHealthy = !needsReview && result?.diagnosis?.toLowerCase().includes('healthy');
+  const certaintyLabel = needsReview
+    ? 'Low — rescan'
+    : result?.confidence_level === 'high'
+      ? 'High (AI estimate)'
+      : result?.confidence_level === 'moderate'
+        ? 'Moderate (AI estimate)'
+        : 'Screening only';
 
   const handleDownload = () => {
     if (!result) return;
-    const textContent = `Krishi-Drishti Analysis Report\nDate: ${new Date().toLocaleDateString()}\n\nDiagnosis: ${result.diagnosis}\nConfidence: ${result.confidence}%\nHealth Score: ${result.health_score}%\n\nSummary:\n${result.summary}\n\nRecommended Protocol:\n${result.remedies?.map((r: any, i: number) => `${i + 1}. ${r.title} (${r.type})\n${r.desc}`).join('\n\n') || 'None'}`;
+    const textContent = `Krishi-Drishti Crop Screening\nDate: ${new Date().toLocaleDateString()}\nCrop reported: ${cropType || 'Not provided'}\nSymptoms reported: ${symptoms || 'Not provided'}\n\nScreening result: ${result.diagnosis}\nAI certainty band: ${certaintyLabel}\n\nSummary:\n${result.summary}\n\nVisible signs:\n${result.observed_symptoms?.join(', ') || 'Not recorded'}\n\nNext steps:\n${result.next_steps?.join('\n') || 'Confirm with a local agronomist before treatment.'}`;
     const blob = new Blob([textContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -72,7 +87,7 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
 
   const handleShare = async () => {
     if (!result) return;
-    const text = `Krishi-Drishti detected ${result.diagnosis} with ${result.health_score}% health.`;
+    const text = `Krishi-Drishti crop screening: ${result.diagnosis}. ${result.summary} This is an AI screening result, not a confirmed diagnosis.`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -134,13 +149,13 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
           <div className="px-4 mb-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
               <div className="flex justify-between items-start mb-3">
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold ${isHealthy ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold ${needsReview ? 'bg-amber-50 text-amber-800' : isHealthy ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>
                   {isHealthy ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                  {isHealthy ? 'Condition: Optimal' : 'Action Recommended'}
+                  {needsReview ? 'Needs clearer photo' : isHealthy ? 'Possible healthy match' : 'Possible finding'}
                 </div>
                 <div className="text-right">
-                  <span className="block text-2xl font-bold text-gray-900 leading-none">{result.confidence || 0}%</span>
-                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Confidence</span>
+                  <span className="block text-xs font-bold text-gray-900 leading-tight">{certaintyLabel}</span>
+                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Not a validated probability</span>
                 </div>
               </div>
               
@@ -150,6 +165,18 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
               <p className="text-gray-600 text-sm leading-relaxed">
                 {result.summary || 'No detailed summary provided.'}
               </p>
+              <p className="mt-3 text-[11px] text-gray-400">
+                {result.analysis_method || 'AI vision'} screening · certainty is not a validated probability
+              </p>
+
+              {needsReview && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <strong>No reliable diagnosis was made.</strong> Try a sharp close-up in daylight, include the leaf underside, and avoid spraying based on this result.
+                  {Array.isArray(result.next_steps) && result.next_steps.length > 0 && (
+                    <p className="mt-2">{result.next_steps[0]}</p>
+                  )}
+                </div>
+              )}
 
               {(result.isError || result.diagnosis === 'Connection Failed') && (
                 <div className="mt-4 pt-3 border-t border-red-100 flex items-center gap-3">
@@ -173,35 +200,40 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
             </div>
           </div>
 
+          {Array.isArray(result.differential_diagnoses) && result.differential_diagnoses.length > 0 && (
+            <div className="px-4 mb-6">
+              <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                <h3 className="text-sm font-bold text-gray-900 mb-2">Other possibilities to check</h3>
+                <ul className="space-y-1 text-sm text-gray-600 list-disc pl-5">
+                  {result.differential_diagnoses.slice(0, 3).map((item: string, index: number) => <li key={index}>{item}</li>)}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* ── METRICS GRID ── */}
-          <div className="px-4 mb-8 grid grid-cols-3 gap-3">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-2">
-                <Leaf size={20} />
-              </div>
-              <span className="text-xl font-bold text-gray-900">{result.health_score || 0}%</span>
-              <span className="text-xs font-medium text-gray-500 mt-0.5">Crop Health</span>
+          <div className="px-4 mb-8 grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 text-green-700 mb-2"><Leaf size={18} /><span className="text-xs font-semibold uppercase tracking-wide">Crop</span></div>
+              <span className="text-sm font-semibold text-gray-900">{result.crop_identification || cropType || 'Not identified'}</span>
             </div>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
-                <Droplets size={20} />
-              </div>
-              <span className="text-lg font-bold text-gray-900">Fair</span>
-              <span className="text-xs font-medium text-gray-500 mt-0.5">Hydration</span>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 text-blue-700 mb-2"><Camera size={18} /><span className="text-xs font-semibold uppercase tracking-wide">Photo quality</span></div>
+              <span className="text-sm font-semibold text-gray-900 capitalize">{result.image_quality || 'Not assessed'}</span>
             </div>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-2">
-                <ThermometerSun size={20} />
-              </div>
-              <span className="text-lg font-bold text-gray-900">Optimal</span>
-              <span className="text-xs font-medium text-gray-500 mt-0.5">Climate</span>
+            <div className="col-span-2 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+              <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Visible signs</span>
+              <span className="text-sm text-gray-800">{result.observed_symptoms?.length ? result.observed_symptoms.join(', ') : 'No visual signs were recorded.'}</span>
+              {symptoms && <p className="mt-2 text-xs text-gray-500">Your note: {symptoms}</p>}
+              {growthStage && <p className="mt-1 text-xs text-gray-500">Growth stage: {growthStage}</p>}
             </div>
           </div>
 
           {/* ── RECOMMENDED ACTIONS ── */}
-          {result.remedies && result.remedies.length > 0 && (
+          {!needsReview && result.remedies && result.remedies.length > 0 && (
             <div className="px-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Recommended Protocol</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Suggested next steps</h3>
+              <p className="text-xs text-gray-500 mb-4">Screening guidance only. Confirm the cause locally before using a treatment.</p>
               <div className="space-y-3">
                 {result.remedies.map((remedy: any, idx: number) => (
                   <div key={idx} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-4">
@@ -230,7 +262,7 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
       {/* ── BOTTOM ACTION BAR ── */}
       {!loading && result && (
         <div className="sticky bottom-0 w-full p-4 bg-white border-t border-gray-200 z-30">
-          {(result.isError || result.diagnosis === 'Connection Failed') ? (
+          {needsReview ? (
             <div className="flex gap-3">
               <button
                 onClick={() => navigateTo('vision')}
@@ -249,8 +281,8 @@ const VisionResultScreen: React.FC<VisionResultScreenProps> = ({ navigateTo, ima
               </button>
             </div>
           ) : (
-            <button onClick={() => navigateTo('chat', { initialMessage: `I just scanned my crop and it was diagnosed with ${result.diagnosis} (Health: ${result.health_score}%). Can you explain exactly what causes this and what my immediate next steps should be?` })} className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors">
-              Consult Agronomist AI
+              <button onClick={() => navigateTo('chat', { initialMessage: `Help me review this crop photo screening. Crop: ${cropType || 'not provided'}. Growth stage: ${growthStage || 'not provided'}. Farmer-noted symptoms: ${symptoms || 'not provided'}. AI screening result: ${result.diagnosis}. Summary: ${result.summary}. Please explain likely alternatives and what field observations would help confirm the cause. Do not treat the AI result as confirmed.` })} className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors">
+              Review with Agronomist AI
               <ChevronRight size={18} />
             </button>
           )}

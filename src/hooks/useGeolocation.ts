@@ -21,15 +21,25 @@ const useGeolocation = (): GeolocationHook => {
   const requestPermissions = async (): Promise<boolean> => {
     try {
       if (!Capacitor.isNativePlatform()) {
+        const available = typeof navigator !== 'undefined' && 'geolocation' in navigator;
+        if (!available) setError('Location is unavailable in this browser. Use HTTPS or the installed app.');
+        return available;
+      }
+
+      const currentStatus = await Geolocation.checkPermissions();
+      if (currentStatus.location === 'granted') {
         return true;
       }
-      const permissionStatus = await Geolocation.requestPermissions();
-      if (permissionStatus.location === 'granted' || permissionStatus.location === 'prompt') {
-        return true;
-      } else {
-        setError('Location permission denied.');
+      if (currentStatus.location === 'denied') {
+        setError('Location permission is blocked. Enable it for Krishi-Drishti in app settings, then retry.');
         return false;
       }
+
+      const requestedStatus = await Geolocation.requestPermissions();
+      if (requestedStatus.location === 'granted') return true;
+
+      setError('Location permission was not granted. Allow it in app settings, then retry.');
+      return false;
     } catch (err) {
       console.warn('Capacitor Geolocation permissions failed, falling back:', err);
       return true;
@@ -37,19 +47,28 @@ const useGeolocation = (): GeolocationHook => {
   };
 
   const getCurrentLocation = async (): Promise<Position | null> => {
+    setError(null);
     try {
+      if (!Capacitor.isNativePlatform() && typeof window !== 'undefined' && !window.isSecureContext) {
+        throw new Error('Location requires HTTPS or localhost.');
+      }
+
       const hasPermission = await requestPermissions();
       if (!hasPermission) return null;
       
       try {
         // Try High Accuracy (GPS) first for mobile
-        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
         setPosition(pos);
         return pos;
       } catch (highAccErr) {
+        const errorCode = Number((highAccErr as { code?: number })?.code);
+        const errorMessage = String((highAccErr as { message?: string })?.message || '');
+        if (errorCode === 1 || /permission|denied/i.test(errorMessage)) throw highAccErr;
+
         // Fallback to Wi-Fi triangulation (Crucial for Desktop/Windows 11)
         console.warn('High accuracy failed, trying Wi-Fi triangulation...', highAccErr);
-        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 15000, maximumAge: 0 });
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 });
         setPosition(pos);
         return pos;
       }

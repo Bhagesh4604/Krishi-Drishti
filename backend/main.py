@@ -14,6 +14,10 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="google.generat
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
+_here = os.path.dirname(os.path.abspath(__file__))
+_parent = os.path.dirname(_here)
+load_dotenv(os.path.join(_parent, ".env"), override=True)
+load_dotenv(os.path.join(_here, ".env"), override=True)
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -185,23 +189,32 @@ def startup_event():
     else:
         configure_eager_fallback()
 
-    # --- Warm-start Disease Vision Model ---
-    # Load the TF/Keras model in a background thread at server startup so that
-    # the FIRST user request doesn't block on a ~19s cold load and time out.
-    import threading
-    def _warmup_disease_model():
-        try:
-            api_logger.info("[startup] Pre-loading local disease vision model...")
-            from .ml_models.local_disease_predictor import is_model_ready
-            ready, err = is_model_ready()
-            if ready:
-                api_logger.info("[startup] Local disease model warm-started successfully.")
-            else:
-                api_logger.warning("[startup] Local disease model NOT ready: %s", err)
-        except Exception as e:
-            api_logger.warning("[startup] Disease model warm-start failed: %s", e)
+    # --- Optional local disease-model warm-up ---
+    # Gemini is the primary image-analysis path by default. Loading TensorFlow
+    # on every cloud-first deployment consumes memory, so warm the local model
+    # only when it is selected, Gemini is not configured, or explicitly requested.
+    warm_local_model = (
+        os.getenv("USE_LOCAL_DISEASE_MODEL", "false").strip().lower() == "true"
+        or not os.getenv("GEMINI_API_KEY", "").strip()
+        or os.getenv("WARM_LOCAL_DISEASE_MODEL", "false").strip().lower() == "true"
+    )
+    if warm_local_model:
+        import threading
+        def _warmup_disease_model():
+            try:
+                api_logger.info("[startup] Pre-loading local disease vision fallback...")
+                from .ml_models.local_disease_predictor import is_model_ready
+                ready, err = is_model_ready()
+                if ready:
+                    api_logger.info("[startup] Local disease model warm-started successfully.")
+                else:
+                    api_logger.warning("[startup] Local disease model NOT ready: %s", err)
+            except Exception as e:
+                api_logger.warning("[startup] Disease model warm-start failed: %s", e)
 
-    threading.Thread(target=_warmup_disease_model, daemon=True, name="model-warmup").start()
+        threading.Thread(target=_warmup_disease_model, daemon=True, name="model-warmup").start()
+    else:
+        api_logger.info("[startup] Skipping TensorFlow disease-model warm-up; cloud vision is primary.")
 
     # --- Background ML Scheduler ---
     scheduler = BackgroundScheduler()

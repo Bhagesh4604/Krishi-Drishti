@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Screen, VisionMode } from '../types';
-import { ArrowLeft, Zap, Image as ImageIcon, ScanLine, X, Leaf, Sparkles, Crosshair, Camera, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Zap, Image as ImageIcon, ScanLine, X, Leaf, Sparkles, Crosshair, Camera, AlertCircle, RefreshCw, Loader2, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCameraFSM } from '../src/hooks/useCameraFSM';
 
@@ -15,6 +15,10 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [flash, setFlash] = useState(false);
   const [isScanning, setIsScanning] = useState(true);
+  const [cropType, setCropType] = useState('');
+  const [growthStage, setGrowthStage] = useState('');
+  const [symptoms, setSymptoms] = useState('');
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   // ── Camera Permission & Hardware Finite State Machine (FSM) ───────────────
   // Strict states: IDLE -> REQUESTING_PERMISSION -> GRANTED -> INITIALIZING_HARDWARE -> Active (or DENIED)
@@ -51,7 +55,7 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
         );
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
         setTimeout(() => {
-          navigateTo('vision-result', { image: dataUrl, mode: 'diagnosis' });
+          navigateTo('vision-result', { image: dataUrl, mode: 'diagnosis', cropType, growthStage, symptoms });
         }, 300);
       }
     }
@@ -63,7 +67,7 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
       const reader = new FileReader();
       reader.onload = (ev) => {
         if (ev.target?.result) {
-          navigateTo('vision-result', { image: ev.target.result as string, mode: 'diagnosis' });
+          navigateTo('vision-result', { image: ev.target.result as string, mode: 'diagnosis', cropType, growthStage, symptoms });
         }
       };
       reader.readAsDataURL(file);
@@ -147,7 +151,7 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
       </div>
 
       {/* Header UI */}
-      <div className="relative z-20 w-full flex justify-between items-start p-5 pt-12 pointer-events-auto">
+      <div className="relative z-20 w-full flex justify-between items-start p-4 pt-10 pointer-events-auto">
         <button
           onClick={() => navigateTo('home')}
           className="w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-90 transition-all"
@@ -179,7 +183,7 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
       {/* Center Targeting Reticle */}
       <div className="relative z-10 flex-1 w-full flex items-center justify-center pointer-events-none">
         {isScanning && stream && (
-          <div className="relative w-[280px] h-[280px]">
+          <div className="relative w-[min(62vw,240px)] h-[min(62vw,240px)]">
             {/* Corner brackets */}
             <div className="absolute -top-1 -left-1 w-12 h-12 border-t-4 border-l-4 border-[#00FF87] rounded-tl-3xl opacity-80" />
             <div className="absolute -top-1 -right-1 w-12 h-12 border-t-4 border-r-4 border-[#00FF87] rounded-tr-3xl opacity-80" />
@@ -188,7 +192,7 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
 
             {/* Scanning Laser */}
             <motion.div
-              animate={{ y: [0, 276, 0] }}
+              animate={{ y: [0, 236, 0] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
               className="absolute left-0 right-0 h-1 bg-[#00FF87] shadow-[0_0_20px_#00FF87]"
             />
@@ -209,13 +213,55 @@ const VisionScreen: React.FC<VisionScreenProps> = ({ navigateTo, t }) => {
       </div>
 
       {/* Helper Text */}
-      <div className="relative z-20 text-center mb-8 pointer-events-none px-6">
-        <h2 className="text-xl font-black text-white mb-2 tracking-tight">Scan Crop Disease</h2>
-        <p className="text-sm font-medium text-white/60">Position the affected leaf or fruit<br />within the frame to analyze.</p>
+      <div className="relative z-20 text-center mb-3 pointer-events-auto px-5 w-full max-w-lg">
+        <h2 className="text-xl font-black text-white mb-1 tracking-tight">Scan for crop issues</h2>
+        <p className="text-xs font-medium text-white/70">Use a clear close-up in daylight. AI results are screening guidance.</p>
+        <button type="button" onClick={() => setDetailsOpen(open => !open)} className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90">
+          {detailsOpen ? 'Hide crop details' : 'Add crop details (optional)'}
+          <ChevronDown size={14} className={detailsOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+        </button>
       </div>
 
+      {detailsOpen && <div className="absolute z-30 bottom-36 left-4 right-4 max-h-[35dvh] overflow-y-auto rounded-2xl border border-white/15 bg-[#07130e]/95 p-3 shadow-2xl backdrop-blur-xl">
+          <label className="text-left">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1">Crop (optional)</span>
+            <input
+              value={cropType}
+              onChange={event => setCropType(event.target.value)}
+              placeholder="e.g. tomato, rice"
+              maxLength={80}
+              className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-emerald-400"
+            />
+          </label>
+          <label className="text-left">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1">Growth stage</span>
+            <select
+              value={growthStage}
+              onChange={event => setGrowthStage(event.target.value)}
+              className="w-full rounded-xl border border-white/15 bg-[#101914] px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400"
+            >
+              <option value="">Not sure</option>
+              <option value="Seedling">Seedling</option>
+              <option value="Vegetative">Vegetative</option>
+              <option value="Flowering">Flowering</option>
+              <option value="Fruiting or grain filling">Fruiting / grain filling</option>
+              <option value="Maturity or harvest">Maturity / harvest</option>
+            </select>
+          </label>
+          <label className="col-span-2 text-left">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1">What do you see?</span>
+            <input
+              value={symptoms}
+              onChange={event => setSymptoms(event.target.value)}
+              placeholder="Spots, curling, insects, when it started…"
+              maxLength={500}
+              className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-emerald-400"
+            />
+          </label>
+      </div>}
+
       {/* Bottom Controls Panel */}
-      <div className="relative z-20 w-full px-8 pb-12 pt-6 flex items-center justify-between">
+      <div className="relative z-20 w-full px-8 pb-8 pt-4 flex items-center justify-between">
         {/* Upload Button */}
         <button
           onClick={() => fileInputRef.current?.click()}

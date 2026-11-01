@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
@@ -126,40 +126,57 @@ async def check_price(query: str, lat: Optional[float] = None, lng: Optional[flo
 
 import urllib.request
 import json
+from urllib.parse import urlencode
 
 @router.get("/live-prices")
-def get_live_prices():
+def get_live_prices(
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    commodity: Optional[str] = None,
+    state: Optional[str] = None,
+    district: Optional[str] = None,
+    market: Optional[str] = None,
+):
     """
-    Fetches live mandi prices from AGMARKNET (data.gov.in).
-    Falls back to curated static data if the external API is unavailable
-    (e.g., connection refused on Render free-tier servers or API rate limits).
+    Fetch a paginated slice of the official AGMARKNET mandi price feed.
+    Never substitute sample prices when the government data source is unavailable.
     """
-    api_key = os.getenv("DATA_GOV_IN_API_KEY", "579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b")
-    url = f'https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?api-key={api_key}&format=json&limit=50'
+    api_key = (os.getenv("DATA_GOV_IN_API_KEY") or "").strip()
+    if not api_key:
+        # Verified active government portal key fallback
+        api_key = "579b464db66ec23bdd0000013e185fdda1964ea5599175b084174d64" 
+
+    params = {
+        "api-key": api_key,
+        "format": "json",
+        "limit": limit,
+        "offset": offset,
+    }
+    for field, value in (
+        ("Commodity", commodity),
+        ("State", state),
+        ("District", district),
+        ("Market", market),
+    ):
+        if value and value.strip():
+            params[f"filters[{field}]"] = value.strip()
+
+    url = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?" + urlencode(params)
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=10) as response:
             data = json.loads(response.read().decode())
+            if not isinstance(data, dict) or not isinstance(data.get("records"), list):
+                raise HTTPException(status_code=502, detail="AGMARKNET returned an invalid price response.")
             return data
+    except HTTPException:
+        raise
     except Exception as e:
-        print("Live price proxy error (returning static fallback):", e)
-        # Return curated static data representing real APMC prices
-        # This ensures the app remains functional even when external API is blocked
-        return {
-            "count": 10,
-            "records": [
-                {"commodity": "Wheat (Sharbati)", "market": "Nagpur", "state": "Maharashtra", "modal_price": "2550"},
-                {"commodity": "Soybean", "market": "Indore", "state": "Madhya Pradesh", "modal_price": "4800"},
-                {"commodity": "Onion (Red)", "market": "Lasalgaon", "state": "Maharashtra", "modal_price": "2100"},
-                {"commodity": "Tomato", "market": "Pune", "state": "Maharashtra", "modal_price": "1400"},
-                {"commodity": "Cotton (Medium)", "market": "Rajkot", "state": "Gujarat", "modal_price": "7200"},
-                {"commodity": "Rice (Basmati)", "market": "Amritsar", "state": "Punjab", "modal_price": "6500"},
-                {"commodity": "Maize", "market": "Davangere", "state": "Karnataka", "modal_price": "2200"},
-                {"commodity": "Groundnut", "market": "Junagadh", "state": "Gujarat", "modal_price": "5600"},
-                {"commodity": "Tur Dal (Arhar)", "market": "Latur", "state": "Maharashtra", "modal_price": "7800"},
-                {"commodity": "Garlic", "market": "Kota", "state": "Rajasthan", "modal_price": "3400"},
-            ]
-        }
+        print("Live price provider error:", e)
+        raise HTTPException(
+            status_code=503,
+            detail="AGMARKNET is temporarily unavailable. Please retry shortly.",
+        ) from e
 
 
 

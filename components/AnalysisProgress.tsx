@@ -29,7 +29,7 @@ const STAGE_LABELS: { threshold: number; label: string }[] = [
   { threshold: 10, label: 'Fetching Sentinel-2 imagery...'      },
   { threshold: 30, label: 'Computing NDVI & EVI indices...'     },
   { threshold: 50, label: 'Querying NASA SMAP soil moisture...' },
-  { threshold: 70, label: 'Calculating carbon sequestration...' },
+  { threshold: 70, label: 'Summarising field indicators...' },
   { threshold: 85, label: 'Finalising analysis...'              },
 ];
 

@@ -62,21 +62,21 @@
   \vspace{10pt}
 
   {\fontsize{12}{14}\selectfont
-   Rama Krishna K.$^{a}$, Sheethal Aji Mani$^{a}$,
-   Bhagesh Biradar$^{a}$, Manjunath Khot$^{a}$,
+   Sheethal Aji Mani$^{a}$, Bhagesh Biradar$^{a}$,
+   Manjunath Khot$^{a}$,
    Jayanth R.$^{a}$, and Pruthviraja S.$^{a}$\par}
 
   \vspace{6pt}
 
   {\fontsize{10}{12}\selectfont
-   $^{a}$Department of CSE Data Science,
+   $^{a}$Department of Computer Science and Engineering (Data Science),
    Impact College of Engineering and Applied Sciences,
    Visvesvaraya Technological University,
    Bangalore, Karnataka, India 560000\par}
 
   \vspace{4pt}
   {\fontsize{9}{11}\selectfont
-   *ramakrishna@example.com; phone +91\,80\,0000\,0001;\,impact.edu.in\par}
+   *sheethal.ajimani@impact.edu.in; impact.edu.in\par}
 \end{center}
 
 \vspace{8pt}
@@ -310,7 +310,8 @@ Table\,4 compares Krishi-Drishti with related agricultural AI and remote sensing
   \caption{Comparison of agricultural sensing and digital verification frameworks.}
   \label{tab:comp_spie}
   \centering
-  \begin{tabularx}{\textwidth}{p{3.2cm}p{4.2cm}cX}
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabularx}{\textwidth}{l l c >{\raggedright\arraybackslash}X}
     \toprule
     \textbf{Investigated System} & \textbf{Primary Modality} & \textbf{Performance} & \textbf{Structural Limitations} \\
     \midrule
@@ -319,6 +320,7 @@ Table\,4 compares Krishi-Drishti with related agricultural AI and remote sensing
     Saha et al.\textsuperscript{9}    & In-situ IoT sensor grid     & 97.3\% acc.    & Capital-intensive hardware; no dMRV. \\
     Iswarya \& Tamizhazhagan\textsuperscript{11} & Quantile RF on Sentinel-2 & High $R^2$ & Cartographic mapping only; no audit loop. \\
     Xiao et al.\textsuperscript{12}    & Support Vector Regression   & $R^2 = 0.96$   & Requires expensive supplementary covariates. \\
+    \midrule
     \textbf{Krishi-Drishti (Ours)}     & \textbf{Multispectral dMRV + Stacking ML} & \textbf{$R^2 = 0.89$; 88.1\%} & \textbf{Autonomous end-to-end certification without physical sensors.} \\
     \bottomrule
   \end{tabularx}
@@ -339,6 +341,16 @@ As summarized in Table~\ref{tab:comp_spie}, existing agricultural remote sensing
 This investigation demonstrates that spaceborne multispectral surface reflectance from Sentinel-2, paired with cloud-masked temporal compositing and stacking ensemble learning, provides a scientifically rigorous and cost-effective surrogate for conventional laboratory soil analysis in smallholder carbon certification. Achieving an $R^2$ of 0.89 and RMSE of 1.52\,g/kg, the optical remote sensing architecture satisfies regulatory measurement thresholds while compressing certification turnaround from over twelve months to under 48 hours. By eliminating physical sensor deployment costs and integrating mobile optical crop health diagnostics, the proposed framework establishes a scalable paradigm for democratic smallholder access to environmental carbon markets.
 
 % ====================================================================
+\section{Contribution of the Authors}
+
+\noindent \textbf{Conceptualization and academic guidance:} Dr. Sheethal Aji Mani. \\
+\textbf{Carbon Vault Architecture, Software Development, Methodology, Writing -- Original Draft:} Bhagesh Biradar. \\
+\textbf{Data Curation, Satellite Pipeline Development, Formal Analysis:} Manjunath Khot. \\
+\textbf{Investigation, Field Testing, Resources:} Jayanth R. \\
+\textbf{Visualization, Digital Twin Development, UI/UX Design:} Pruthviraja S.
+
+\vspace{10pt}
+
 \section*{Disclosures}
 % ====================================================================
 
@@ -415,7 +427,7 @@ Hearon, L.~E., Burk, T.~R., and Seltzer, C.~M., `buzzdetect: an open-source deep
 \section*{Author Biographies}
 % ====================================================================
 
-\textbf{Rama Krishna K.} is a Professor in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences, VTU, Bangalore, India. His research interests include remote sensing, geospatial analytics, and precision agricultural informatics.
+
 
 \textbf{Sheethal Aji Mani} is an Associate Professor in the Department of CSE Data Science, Impact College of Engineering and Applied Sciences. Her research focuses on machine learning ensembles, digital soil mapping, and environmental monitoring.
 
